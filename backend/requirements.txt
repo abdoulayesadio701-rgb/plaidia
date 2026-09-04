@@ -1,0 +1,18 @@
+# --- API web -----------------------------------------------------------
+fastapi>=0.111.0,<1.0.0
+uvicorn[standard]>=0.29.0
+python-multipart>=0.0.9
+python-dotenv>=1.0.0
+pydantic>=2.6.0,<3.0.0
+slowapi>=0.1.9,<1.0.0
+
+# --- Modules métier réutilisés tels quels (racine du projet) -----------
+# Ces paquets sont les dépendances de analyse.py, db.py, judilibre.py,
+# legifrance.py, extract.py et export.py — identiques à requirements.txt
+# à la racine du projet.
+anthropic>=0.40.0
+pdfplumber>=0.11.0
+python-docx>=1.1.0
+requests>=2.31.0
+reportlab>=4.0.0
+openpyxl>=3.1.0

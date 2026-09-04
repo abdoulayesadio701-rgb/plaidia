@@ -1,0 +1,286 @@
+/**
+ * LandingPage — vitrine publique de Plaid'IA, sur "/" (voir router.tsx).
+ * Partageable tel quel (CV, réseaux) : aucun chrome applicatif, pas de
+ * dossier requis. Reprend l'atmosphère "grain + lueurs + fenêtre produit"
+ * spécifiée pour le hero dans DESIGN.md §4 plutôt qu'une nouvelle identité
+ * visuelle ad hoc.
+ *
+ * TODO(liens sociaux) : URL_GITHUB / URL_LINKEDIN ci-dessous sont des
+ * marqueurs en attente des vraies URLs fournies par Abdoulaye Sadio --
+ * à remplacer avant publication du lien.
+ */
+
+import { useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { useAppStore } from "@/store/useAppStore";
+import Logo from "@/components/Logo";
+import Button from "@/components/Button";
+import ArgumentCard from "@/components/ArgumentCard";
+import type { Argument } from "@/api";
+
+const URL_GITHUB = "#"; // TODO: remplacer par l'URL réelle du dépôt GitHub
+const URL_LINKEDIN = "#"; // TODO: remplacer par l'URL réelle du profil LinkedIn
+
+const ARGUMENT_VITRINE: Argument = {
+  resume: "Les trois retards des 5, 8 et 9 février 2024 caractérisent un manquement réitéré à l'obligation de ponctualité.",
+  fondement: "Relevé de badgeuse produit en pièce 4 par l'employeur, faisant état de trois retards de 22 à 41 minutes.",
+  raisonnement: {
+    probleme_de_droit: "Des retards répétés, même de courte durée, peuvent-ils à eux seuls caractériser une faute grave ?",
+    regle_applicable: "La faute grave suppose un manquement rendant impossible le maintien du salarié dans l'entreprise pendant le préavis. À VÉRIFIER : la qualification retenue pour des retards isolés sans avertissement préalable.",
+    application_aux_faits: "M. Diallo n'a fait l'objet d'aucune sanction en cinq ans d'ancienneté ; les retards coïncident avec un mouvement de grève RER B (pièce 7), ce qui affaiblit le caractère fautif retenu par l'employeur.",
+  },
+  risque: "Moyen",
+  justification_risque: "L'absence d'antécédent et la coïncidence avec la grève fragilisent la qualification de faute grave, sans l'exclure totalement.",
+  refutations: [
+    { angle: "Factuel", piste: "Produire l'attestation SNCF de perturbation du trafic aux dates visées." },
+    { angle: "Juridique", piste: "À VÉRIFIER : rechercher un arrêt excluant la faute grave en cas de grève des transports." },
+  ],
+};
+
+const FONCTIONNALITES = [
+  {
+    icone: "⚖",
+    titre: "Analyser des conclusions adverses",
+    description: "Chaque argument décomposé en syllogisme — problème de droit, règle applicable, application aux faits — avec niveau de risque et pistes de réfutation.",
+  },
+  {
+    icone: "🗣",
+    titre: "Chat juridique",
+    description: "Posez une question précise, obtenez une réponse structurée appuyée sur la juridiction active, avec le garde-fou « À VÉRIFIER » intégré.",
+  },
+  {
+    icone: "🎤",
+    titre: "Plan de plaidoirie chronométré",
+    description: "Accroche, points minutés, conclusion — un plan prêt à l'oral, calé sur le temps de parole imparti.",
+  },
+  {
+    icone: "🧭",
+    titre: "Simulateur d'objections",
+    description: "Anticipez les questions pièges du magistrat ou de la partie adverse, avec une piste de réponse pour chacune.",
+  },
+  {
+    icone: "📅",
+    titre: "Chronologie automatique",
+    description: "Reconstitue la timeline d'une affaire à partir des pièces du dossier, période couverte et éléments manquants inclus.",
+  },
+  {
+    icone: "🧾",
+    titre: "Vérification procédurale",
+    description: "Échéances identifiées avec leur statut, actes de procédure potentiellement manquants, points d'attention.",
+  },
+];
+
+const ETAPES = [
+  {
+    numero: "01",
+    titre: "Créez un dossier — ou essayez la démo",
+    description: "Un dossier fictif de droit du travail, déjà rempli, est prêt à explorer sans inscription ni configuration.",
+  },
+  {
+    numero: "02",
+    titre: "Collez vos pièces ou décrivez la situation",
+    description: "Conclusions adverses, notes d'audience, question libre : le format d'entrée s'adapte à ce que vous avez sous la main.",
+  },
+  {
+    numero: "03",
+    titre: "Obtenez une analyse structurée et vérifiable",
+    description: "Chaque réponse signale elle-même ses propres limites — jamais une affirmation présentée comme acquise sans base solide.",
+  },
+];
+
+export default function LandingPage() {
+  const navigate = useNavigate();
+  const chargerConfiguration = useAppStore((s) => s.chargerConfiguration);
+  const demoMode = useAppStore((s) => s.demoMode);
+
+  useEffect(() => {
+    // Précharge l'état démo pour que le bandeau de AppLayout n'apparaisse
+    // pas avec un temps de retard visible juste après le clic "Essayer".
+    void chargerConfiguration();
+  }, [chargerConfiguration]);
+
+  const essayerLaDemo = () => navigate("/app/chemise/dossiers");
+
+  return (
+    <div className="relative min-h-screen overflow-x-hidden bg-void text-ivory">
+      <div className="grain" aria-hidden="true" />
+
+      {/* --- Nav ------------------------------------------------------ */}
+      <header className="relative z-10 mx-auto flex max-w-6xl items-center justify-between gap-4 px-6 py-6">
+        <Logo />
+        <nav className="hidden items-center gap-6 text-sm text-warmgray md:flex">
+          <a href="#fonctionnalites" className="transition-colors hover:text-ivory">
+            Fonctionnalités
+          </a>
+          <a href="#comment-ca-marche" className="transition-colors hover:text-ivory">
+            Comment ça marche
+          </a>
+          <a href="#garde-fou" className="transition-colors hover:text-ivory">
+            Garde-fou anti-hallucination
+          </a>
+        </nav>
+        <div className="flex items-center gap-3">
+          <a
+            href={URL_GITHUB}
+            target="_blank"
+            rel="noreferrer"
+            className="hidden text-warmgray transition-colors hover:text-ivory sm:inline-flex"
+            aria-label="Code source sur GitHub"
+            title="GitHub"
+          >
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true">
+              <path d="M12 .5C5.65.5.5 5.65.5 12c0 5.09 3.29 9.4 7.86 10.93.58.1.79-.25.79-.56 0-.27-.01-1.17-.02-2.12-3.2.7-3.88-1.36-3.88-1.36-.52-1.33-1.28-1.69-1.28-1.69-1.04-.71.08-.7.08-.7 1.15.08 1.76 1.18 1.76 1.18 1.03 1.76 2.7 1.25 3.36.96.1-.75.4-1.25.73-1.54-2.56-.29-5.26-1.28-5.26-5.69 0-1.26.45-2.29 1.18-3.09-.12-.29-.51-1.46.11-3.05 0 0 .97-.31 3.18 1.18a11.05 11.05 0 0 1 5.8 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.24 2.76.12 3.05.74.8 1.18 1.83 1.18 3.09 0 4.42-2.71 5.4-5.28 5.68.42.36.78 1.08.78 2.17 0 1.56-.01 2.82-.01 3.2 0 .31.2.67.8.56A10.52 10.52 0 0 0 23.5 12C23.5 5.65 18.35.5 12 .5Z" />
+            </svg>
+          </a>
+          <Button variant="primary" onClick={essayerLaDemo}>
+            Essayer la démo →
+          </Button>
+        </div>
+      </header>
+
+      {/* --- Hero ------------------------------------------------------ */}
+      <section className="relative mx-auto grid max-w-6xl grid-cols-1 items-center gap-14 px-6 pb-24 pt-8 lg:grid-cols-[1.05fr_1fr] lg:pb-32">
+        <div className="glow -left-24 top-0 h-72 w-72 bg-gold-600/20" aria-hidden="true" />
+        <div className="glow -right-24 top-40 h-80 w-80 bg-amethyst-600/25" aria-hidden="true" />
+
+        <div className="relative z-10 space-y-6">
+          <p className="kicker">Assistant IA de préparation de plaidoirie — France &amp; espace OHADA</p>
+          <h1 className="font-display text-4xl font-bold leading-[1.1] text-gold-500 sm:text-5xl">
+            Préparez vos dossiers,
+            <br />
+            pas vos angoisses de dernière minute.
+          </h1>
+          <p className="max-w-prose text-base leading-relaxed text-warmgray sm:text-lg">
+            Plaid'IA analyse des conclusions adverses, chronomètre un plan de plaidoirie, simule les objections du
+            magistrat et vérifie la procédure — avec, à chaque réponse, un garde-fou qui signale lui-même ce qui reste
+            à vérifier.
+          </p>
+          <div className="flex flex-wrap items-center gap-4 pt-2">
+            <Button variant="primary" onClick={essayerLaDemo}>
+              Essayer la démo →
+            </Button>
+            <a href={URL_GITHUB} target="_blank" rel="noreferrer" className="btn-secondary">
+              Voir le code sur GitHub
+            </a>
+          </div>
+          {demoMode && (
+            <p className="text-xs text-muted">
+              🎭 Cette instance publique tourne en mode démo — la démo utilise un dossier fictif et des réponses
+              préenregistrées, indépendamment de toute clé API.
+            </p>
+          )}
+        </div>
+
+        {/* Fenêtre produit -- la thèse visuelle, pas un fond abstrait (DESIGN.md §4) */}
+        <div className="relative z-10 lg:rotate-1">
+          <div className="window">
+            <div className="window-bar">
+              <span className="window-dot" />
+              <span className="window-dot" />
+              <span className="window-dot" />
+              <span className="ml-2 text-xs text-warmgray">Analyser des conclusions adverses</span>
+            </div>
+            <div className="relative max-h-[420px] overflow-hidden p-5">
+              <ArgumentCard argument={ARGUMENT_VITRINE} index={0} />
+              <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-surface to-transparent" aria-hidden="true" />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* --- Fonctionnalités -------------------------------------------- */}
+      <section id="fonctionnalites" className="relative mx-auto max-w-6xl px-6 py-20">
+        <div className="mx-auto mb-12 max-w-2xl text-center">
+          <p className="kicker mx-auto">Ce que fait l'outil</p>
+          <h2 className="mt-2 font-serif text-h1 font-semibold text-gold-500">Six espaces de travail, un seul garde-fou</h2>
+        </div>
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          {FONCTIONNALITES.map((f) => (
+            <div key={f.titre} className="card space-y-3 p-6">
+              <span className="text-2xl" aria-hidden="true">
+                {f.icone}
+              </span>
+              <h3 className="font-serif text-h3 font-semibold text-ivory">{f.titre}</h3>
+              <p className="text-sm leading-relaxed text-warmgray">{f.description}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* --- Comment ça marche ------------------------------------------- */}
+      <section id="comment-ca-marche" className="relative mx-auto max-w-6xl px-6 py-20">
+        <div className="mx-auto mb-12 max-w-2xl text-center">
+          <p className="kicker mx-auto">Prise en main</p>
+          <h2 className="mt-2 font-serif text-h1 font-semibold text-gold-500">Comment ça marche</h2>
+        </div>
+        <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
+          {ETAPES.map((e) => (
+            <div key={e.numero} className="relative space-y-3 border-t-2 border-gold-600/40 pt-5">
+              <span className="font-mono text-sm text-amethyst-400">{e.numero}</span>
+              <h3 className="font-serif text-h3 font-semibold text-ivory">{e.titre}</h3>
+              <p className="text-sm leading-relaxed text-warmgray">{e.description}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* --- Garde-fou anti-hallucination --------------------------------- */}
+      <section id="garde-fou" className="relative mx-auto max-w-4xl px-6 py-20">
+        <div className="card space-y-4 border-gold-500/30 p-8 text-center">
+          <p className="kicker mx-auto">Le garde-fou</p>
+          <h2 className="font-serif text-h1 font-semibold text-gold-500">
+            Un <mark className="marker-verify">À VÉRIFIER</mark> plutôt qu'une fausse certitude
+          </h2>
+          <p className="mx-auto max-w-prose text-sm leading-relaxed text-warmgray sm:text-base">
+            Chaque fois que l'agent s'appuie sur une référence, une jurisprudence ou une règle qu'il n'a pas la
+            certitude de bien citer, il l'annonce lui-même — au lieu de l'affirmer comme un fait établi. Le marqueur
+            est visuel, impossible à manquer, et reste le même dans tout l'outil : conclusions adverses, chat,
+            simulateur d'objections. Une IA juridique qui ne sait pas dire « je ne suis pas sûr » est plus dangereuse
+            qu'utile — c'est le principe fondateur de Plaid'IA.
+          </p>
+        </div>
+      </section>
+
+      {/* --- Footer ------------------------------------------------------- */}
+      <footer className="relative border-t border-gold-600/15 bg-surface/60">
+        <div className="mx-auto max-w-6xl px-6 py-12">
+          <div className="grid grid-cols-1 gap-10 sm:grid-cols-3">
+            <div className="space-y-3">
+              <Logo iconClassName="h-6 w-6 text-gold-500" wordmarkClassName="font-display text-lg font-bold text-gold-500" />
+              <p className="max-w-xs text-sm text-warmgray">
+                Assistant de préparation de plaidoirie pour avocats et greffiers, France et espace OHADA.
+              </p>
+            </div>
+            <div className="space-y-2 text-sm">
+              <p className="text-micro font-medium uppercase tracking-wide text-warmgray">Le produit</p>
+              <a href="#fonctionnalites" className="block text-ivory hover:text-gold-500">
+                Fonctionnalités
+              </a>
+              <a href="#comment-ca-marche" className="block text-ivory hover:text-gold-500">
+                Comment ça marche
+              </a>
+              <Link to="/app/chemise/dossiers" className="block text-ivory hover:text-gold-500">
+                Essayer la démo
+              </Link>
+            </div>
+            <div className="space-y-2 text-sm">
+              <p className="text-micro font-medium uppercase tracking-wide text-warmgray">Contact</p>
+              <a href={URL_GITHUB} target="_blank" rel="noreferrer" className="block text-ivory hover:text-gold-500">
+                GitHub
+              </a>
+              <a href={URL_LINKEDIN} target="_blank" rel="noreferrer" className="block text-ivory hover:text-gold-500">
+                LinkedIn
+              </a>
+              <p className="pt-1 text-xs text-muted">Projet portfolio, Abdoulaye Sadio, NLP / TAL</p>
+            </div>
+          </div>
+
+          <div className="mt-10 border-t border-gold-600/10 pt-6 text-center text-xs text-muted">
+            Plaid'IA est un outil d'aide à la préparation — il ne remplace pas l'analyse d'un avocat. Aucune donnée
+            n'est conservée en mode démo.
+          </div>
+        </div>
+      </footer>
+    </div>
+  );
+}

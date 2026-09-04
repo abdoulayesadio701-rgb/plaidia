@@ -1,0 +1,340 @@
+/**
+ * globals.css — Variables CSS du design system Plaid'IA + classes composants.
+ *
+ * Thème sombre unique et permanent (voir DESIGN.md §0) : toutes les
+ * variables n'ont qu'une seule définition, dans :root, jamais de bascule
+ * media/[data-theme]. Les valeurs sont dupliquées ici et dans
+ * tailwind.config.js — DESIGN.md fait foi en cas de divergence.
+ */
+
+@import url("https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Cormorant+Garamond:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Fond — noir violacé */
+  --color-void: 11 10 15; /* #0B0A0F */
+  --color-surface: 20 17 28; /* #14111C */
+  --color-surface-2: 28 24 38; /* #1C1826 */
+  --color-surface-3: 36 30 51; /* #241E33 */
+
+  /* Or ancien — couleur principale */
+  --color-gold-300: 240 221 160; /* #F0DDA0 */
+  --color-gold-400: 230 199 106; /* #E6C76A */
+  --color-gold-500: 201 162 39; /* #C9A227 */
+  --color-gold-600: 184 134 11; /* #B8860B */
+  --color-gold-700: 138 101 8; /* #8A6508 */
+
+  /* Améthyste — accent d'état */
+  --color-amethyst-300: 196 181 253; /* #C4B5FD */
+  --color-amethyst-400: 139 92 246; /* #8B5CF6 */
+  --color-amethyst-600: 110 63 163; /* #6E3FA3 */
+  --color-amethyst-700: 85 49 127; /* #55317F */
+
+  /* Texte */
+  --color-ivory: 237 230 214; /* #EDE6D6 */
+  --color-warmgray: 154 146 133; /* #9A9285 */
+  --color-muted: 107 101 88; /* #6B6558 */
+  --color-ink: 11 10 15; /* #0B0A0F — texte sur fond doré */
+
+  /* Risque */
+  --color-risk-high: 179 38 30; /* #B3261E */
+  --color-risk-medium: 201 162 39; /* alias gold-500 */
+  --color-risk-low: 76 107 63; /* #4C6B3F */
+
+  /* Marqueur "À VÉRIFIER" — repris tel quel de gui.py (tag a_verifier) */
+  --color-verify-bg: 255 233 176; /* #FFE9B0 */
+  --color-verify-text: 122 74 0; /* #7A4A00 */
+
+  /* Motif d'arrière-plan secondaire — arche gothique au trait (voir DESIGN.md §4, usage imprimé uniquement) */
+  --motif-gothic-arch: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0MDAgNjAwIiBmaWxsPSJub25lIiBzdHJva2U9IiNDOUEyMjciIHN0cm9rZS13aWR0aD0iMS41Ij48cGF0aCBkPSJNNjAgNTYwIFY0MDAgQTI0MCAyNDAgMCAwIDEgMTgwIDE5MiBBMjQwIDI0MCAwIDAgMSAzMDAgNDAwIFY1NjAiLz48cGF0aCBkPSJNODQgNTYwIFY0MDQgQTIwMCAyMDAgMCAwIDEgMTgyIDIxNCBBMjAwIDIwMCAwIDAgMSAyNzYgNDA0IFY1NjAiIG9wYWNpdHk9IjAuNiIvPjxwYXRoIGQ9Ik0xMDYgNTYwIFY0MDggQTE3MCAxNzAgMCAwIDEgMTgwIDI0NSBBMTcwIDE3MCAwIDAgMSAyNTQgNDA4IFY1NjAiIG9wYWNpdHk9IjAuNCIvPjxwYXRoIGQ9Ik0xODAgNTYwIFYyNDUiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9IjE4MCIgY3k9IjE2NSIgcj0iMjQiIG9wYWNpdHk9IjAuOCIvPjxjaXJjbGUgY3g9IjE4MCIgY3k9IjE2NSIgcj0iMTMiLz48Y2lyY2xlIGN4PSIxODAiIGN5PSIxNTAiIHI9IjciLz48Y2lyY2xlIGN4PSIxODAiIGN5PSIxODAiIHI9IjciLz48Y2lyY2xlIGN4PSIxNjUiIGN5PSIxNjUiIHI9IjciLz48Y2lyY2xlIGN4PSIxOTUiIGN5PSIxNjUiIHI9IjciLz48Y2lyY2xlIGN4PSIxODAiIGN5PSIxNjUiIHI9IjMiIGZpbGw9IiM4QjVDRjYiIHN0cm9rZT0ibm9uZSIvPjwvc3ZnPg==");
+
+  /* Grain — texture de bruit du hero (voir .grain dans @layer components) */
+  --motif-grain: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMDAiIGhlaWdodD0iMjAwIj48ZmlsdGVyIGlkPSJuIj48ZmVUdXJidWxlbmNlIHR5cGU9ImZyYWN0YWxOb2lzZSIgYmFzZUZyZXF1ZW5jeT0iMC44NSIgbnVtT2N0YXZlcz0iMiIgc3RpdGNoVGlsZXM9InN0aXRjaCIvPjxmZUNvbG9yTWF0cml4IHR5cGU9InNhdHVyYXRlIiB2YWx1ZXM9IjAiLz48L2ZpbHRlcj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWx0ZXI9InVybCgjbikiLz48L3N2Zz4=");
+}
+
+@layer base {
+  html {
+    color-scheme: dark;
+  }
+
+  body {
+    background-color: rgb(var(--color-void));
+    color: rgb(var(--color-ivory));
+    font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+  }
+
+  h1, h2, h3, h4 {
+    font-family: "Cormorant Garamond", serif;
+    color: rgb(var(--color-gold-500));
+    text-wrap: balance;
+  }
+
+  ::selection {
+    background-color: rgb(var(--color-amethyst-600) / 0.4);
+    color: rgb(var(--color-ivory));
+  }
+
+  :focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgb(var(--color-amethyst-400) / 0.35);
+    border-radius: 4px;
+  }
+
+  /* Entrée douce (toasts, apparitions ponctuelles) — respecte prefers-reduced-motion. */
+  @media (prefers-reduced-motion: no-preference) {
+    @keyframes rise {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    @keyframes rise {
+      from { opacity: 1; }
+      to { opacity: 1; }
+    }
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Classes composants — recettes réutilisables du design system.      */
+/* Voir DESIGN.md §4 pour la règle derrière chaque choix.               */
+/* ------------------------------------------------------------------ */
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-md px-4 py-2.5 text-sm font-semibold transition-all duration-150 disabled:cursor-not-allowed;
+  }
+
+  .btn-primary {
+    @apply btn bg-gold-500 text-ink hover:bg-gold-400 hover:shadow-glow-gold active:bg-gold-700 disabled:bg-gold-500/30 disabled:text-muted disabled:shadow-none;
+  }
+
+  .btn-secondary {
+    @apply btn border border-gold-600/50 bg-transparent text-gold-500 hover:border-gold-500 hover:bg-gold-500/10 disabled:border-muted/30 disabled:text-muted;
+  }
+
+  .btn-ghost {
+    @apply btn text-amethyst-400 hover:underline disabled:text-muted disabled:no-underline;
+  }
+
+  .card {
+    @apply rounded-md border border-gold-600/20 bg-surface p-6 shadow-card transition-all duration-200;
+  }
+
+  .card-interactive {
+    @apply card cursor-pointer hover:-translate-y-0.5 hover:border-gold-500/40 hover:shadow-card-hover;
+  }
+
+  .input {
+    @apply w-full rounded-md border border-surface-3 bg-surface-2 px-3.5 py-2.5 text-ivory placeholder:text-muted transition-colors duration-150 focus-visible:border-amethyst-400;
+  }
+
+  .badge {
+    @apply inline-flex items-center gap-1.5 rounded-pill border px-3 py-1 text-micro font-medium uppercase tracking-wide;
+  }
+
+  .badge-risk-high {
+    @apply badge border-risk-high/30 bg-risk-high/15 text-risk-high;
+  }
+
+  .badge-risk-medium {
+    @apply badge border-risk-medium/30 bg-risk-medium/15 text-risk-medium;
+  }
+
+  .badge-risk-low {
+    @apply badge border-risk-low/30 bg-risk-low/15 text-risk-low;
+  }
+
+  .marker-verify {
+    @apply rounded-sm bg-verify-bg px-1 font-bold text-verify-text;
+  }
+
+  .tabs-list {
+    @apply flex gap-6 border-b border-gold-600/20;
+  }
+
+  .tab {
+    @apply -mb-px border-b-2 border-transparent px-1 pb-3 text-sm font-medium text-warmgray transition-colors hover:text-ivory;
+  }
+
+  .tab-active {
+    @apply tab border-amethyst-400 text-amethyst-400;
+  }
+
+  /* ---------- Atmosphère du hero (voir DESIGN.md §4) ---------- */
+  .grain {
+    @apply pointer-events-none fixed inset-0 z-40 opacity-[0.05];
+    mix-blend-mode: overlay;
+    background-image: var(--motif-grain);
+  }
+
+  .glow {
+    @apply pointer-events-none absolute rounded-full;
+    filter: blur(90px);
+  }
+
+  .kicker {
+    @apply font-mono text-xs uppercase tracking-[0.18em] text-amethyst-400;
+  }
+
+  /* Fenêtre de mockup produit — la thèse visuelle du hero, jamais un fond abstrait seul */
+  .window {
+    @apply overflow-hidden rounded-lg border border-gold-600/25 bg-surface;
+    box-shadow:
+      0 40px 80px -20px rgb(var(--color-void) / 0.8),
+      0 0 60px -10px rgb(var(--color-amethyst-600) / 0.25);
+  }
+
+  .window-bar {
+    @apply flex items-center gap-1.5 border-b border-gold-600/15 bg-surface-2/60 px-4 py-2.5;
+  }
+
+  .window-dot {
+    @apply h-2 w-2 rounded-pill bg-gold-600/40;
+  }
+
+  /* ---------- Depot de piece -- sceau de cire + parchemin ----------
+     Traitement bespoke pour "coller un texte long" (TexteLongModal) et
+     tout futur formulaire de depot de document long (ex. Analyser des
+     conclusions). Seule exception deliberee a la regle "fond sombre
+     partout" (voir DESIGN.md §0) : le parchemin est un ilot clair
+     volontaire, comme le marqueur "À VÉRIFIER" -- pas un oubli. */
+  .wax-seal {
+    @apply h-[52px] w-[52px] shrink-0;
+    filter: drop-shadow(0 6px 14px rgb(0 0 0 / 0.65));
+  }
+  .seal-photo-frame {
+    @apply relative h-full w-full overflow-hidden rounded-pill;
+    background: #000;
+    border: 2px solid rgb(var(--color-gold-600) / 0.6);
+  }
+  .seal-photo {
+    @apply h-full w-full object-cover;
+    filter: brightness(0.72) contrast(1.3) saturate(1.05);
+  }
+  .seal-vignette {
+    @apply pointer-events-none absolute inset-0 rounded-pill;
+    box-shadow: inset 0 0 16px 4px rgb(0 0 0 / 0.85);
+  }
+  .seal-crack-overlay {
+    @apply pointer-events-none absolute inset-0 h-full w-full;
+  }
+
+  .parchment-wrap {
+    @apply relative overflow-hidden rounded-sm;
+    box-shadow: 0 18px 40px -14px rgb(0 0 0 / 0.6), 0 0 0 1px rgb(0 0 0 / 0.25);
+  }
+  .parchment-textarea {
+    @apply block w-full resize-y border-none outline-none;
+    min-height: 300px;
+    background: radial-gradient(ellipse at 30% 0%, #f6efdf, #e9dcbe 65%, #ddcda3 100%);
+    color: #2b2016;
+    font-family: "Cormorant Garamond", serif;
+    font-size: 1.15rem;
+    line-height: 1.65;
+    padding: 2rem 2.25rem 1.5rem;
+    caret-color: rgb(var(--color-amethyst-600));
+    box-shadow: inset 0 0 60px rgb(80 55 20 / 0.22), inset 0 2px 10px rgb(80 55 20 / 0.15);
+  }
+  .parchment-textarea::selection {
+    background: rgb(var(--color-amethyst-600) / 0.25);
+  }
+  .parchment-fold {
+    @apply pointer-events-none absolute right-0 top-0;
+    width: 0;
+    height: 0;
+    border-style: solid;
+    border-width: 0 30px 30px 0;
+    border-color: transparent #cbb98f transparent transparent;
+    filter: drop-shadow(-3px 3px 4px rgb(0 0 0 / 0.4));
+    z-index: 2;
+  }
+  .parchment-watermark {
+    @apply pointer-events-none absolute inset-0 flex items-center justify-center px-8 text-center italic;
+    font-family: "Cormorant Garamond", serif;
+    font-size: 1.05rem;
+    line-height: 1.5;
+    color: #8a7455;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .wax-seal { animation: seal-in 0.5s cubic-bezier(0.2, 1.4, 0.4, 1) both; }
+    .seal-crack { animation: crack-in 0.4s ease 0.35s both; }
+    .parchment-wrap { transform-origin: top center; animation: parchment-in 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.2s both; }
+    @keyframes seal-in {
+      from { opacity: 0; transform: scale(1.35) rotate(-10deg); }
+      to { opacity: 1; transform: scale(1) rotate(0deg); }
+    }
+    @keyframes crack-in {
+      from { stroke-dasharray: 60; stroke-dashoffset: 60; }
+      to { stroke-dasharray: 60; stroke-dashoffset: 0; }
+    }
+    @keyframes parchment-in {
+      from { opacity: 0; clip-path: inset(0 0 100% 0); }
+      to { opacity: 1; clip-path: inset(0 0 0% 0); }
+    }
+  }
+
+  /* ---------- Pupitre d'intake -- coller + compteur (TexteLongModal) ---------- */
+  .intake-toolbar {
+    @apply mb-3.5 flex items-center justify-between gap-3 border-b border-dashed border-gold-600/25 pb-3.5;
+  }
+  .paste-btn {
+    @apply inline-flex items-center gap-2 rounded-md border border-gold-600/40 bg-surface-2 px-3.5 py-2 text-xs font-semibold text-gold-500 transition-all duration-150;
+  }
+  .paste-btn:hover {
+    @apply -translate-y-px border-gold-500;
+    box-shadow: 0 0 16px -5px rgb(var(--color-gold-400) / 0.6);
+  }
+  .paste-btn:active { transform: translateY(0); }
+  .paste-btn svg { @apply h-[15px] w-[15px] shrink-0; }
+  .char-counter {
+    @apply inline-flex items-center gap-1.5 whitespace-nowrap rounded-pill border border-surface-3 bg-surface-2/60 py-1.5 pl-2.5 pr-3 font-mono text-[.7rem] text-warmgray transition-colors duration-300;
+  }
+  .char-counter svg { @apply h-3 w-3 shrink-0 opacity-80; }
+  .char-counter.pulse { @apply border-amethyst-400 text-amethyst-400; }
+
+  /* ---------- Curseur de duree (PlanPage, RapportCompletPage) ---------- */
+  .range-slider {
+    @apply h-1.5 w-full cursor-pointer appearance-none rounded-pill bg-surface-3 outline-none;
+  }
+  .range-slider::-webkit-slider-thumb {
+    @apply h-[18px] w-[18px] appearance-none rounded-pill bg-amethyst-400;
+    box-shadow: 0 0 0 3px rgb(var(--color-void)), 0 0 12px -2px rgb(var(--color-amethyst-400) / 0.8);
+  }
+  .range-slider::-moz-range-thumb {
+    @apply h-[18px] w-[18px] rounded-pill border-none bg-amethyst-400;
+    box-shadow: 0 0 0 3px rgb(var(--color-void)), 0 0 12px -2px rgb(var(--color-amethyst-400) / 0.8);
+  }
+  .range-slider::-moz-range-track {
+    @apply h-1.5 rounded-pill bg-transparent;
+  }
+
+  /* ---------- Titre defilant d'une modale (voir Modal.tsx, prop titreDefile) ---------- */
+  .marquee-mini { @apply overflow-hidden; -webkit-mask-image: linear-gradient(90deg, transparent, black 8%, black 88%, transparent); mask-image: linear-gradient(90deg, transparent, black 8%, black 88%, transparent); }
+  .marquee-mini-track { @apply inline-flex items-center gap-4 whitespace-nowrap; width: max-content; }
+  @media (prefers-reduced-motion: no-preference) {
+    .marquee-mini-track { animation: marquee-scroll 7s linear infinite; }
+    .marquee-mini:hover .marquee-mini-track { animation-play-state: paused; }
+    @keyframes marquee-scroll {
+      from { transform: translateX(0); }
+      to { transform: translateX(-50%); }
+    }
+  }
+
+  /* ---------- Entrée des modales (voir Modal.tsx) ---------- */
+  @media (prefers-reduced-motion: no-preference) {
+    .modal-scrim { animation: modal-scrim-in 0.2s ease; }
+    .modal-pop { animation: modal-pop-in 0.25s cubic-bezier(0.16, 1, 0.3, 1); }
+    @keyframes modal-scrim-in {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    @keyframes modal-pop-in {
+      from { opacity: 0; transform: scale(0.96) translateY(8px); }
+      to { opacity: 1; transform: scale(1) translateY(0); }
+    }
+  }
+}

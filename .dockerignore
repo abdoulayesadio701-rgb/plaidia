@@ -1,0 +1,57 @@
+# .dockerignore — build du backend (voir backend/Dockerfile, contexte =
+# racine du dépôt). Le Dockerfile ne COPY que les fichiers explicitement
+# nécessaires (jamais un `COPY . .`), donc ce fichier n'est pas la seule
+# protection -- mais il garde le contexte envoyé au démon Docker petit et
+# garantit qu'aucun secret ne peut s'y glisser même par erreur.
+
+# Secrets -- ne doivent JAMAIS entrer dans une image Docker
+apikey.txt
+judilibre_key.txt
+legifrance_creds.txt
+*.pem
+*.key
+.env
+.env.*
+!.env.example
+
+# Base de données locale
+*.db
+*.db-shm
+*.db-wal
+*.sqlite*
+
+# Environnements virtuels / dépendances
+venv/
+env/
+ENV/
+**/venv/
+**/__pycache__/
+*.pyc
+frontend/node_modules/
+
+# Artefacts de build PyInstaller / anciens exécutables
+build/
+dist/
+*.spec
+
+# Scratch, doublons et scripts ponctuels de ce dépôt -- inutiles à l'API
+installer_complet_v*.py
+*- Copie*.py
+*Copie*.py
+textes/
+tests/
+*.log
+gui_log.txt
+sortie.txt
+resultat.txt
+entrees.txt
+plan_test.txt
+
+# Frontend (image backend séparée -- inutile ici)
+frontend/dist/
+frontend/src/
+
+# Git / IDE
+.git/
+.vscode/
+.idea/

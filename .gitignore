@@ -1,0 +1,100 @@
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# API Keys and credentials
+apikey.txt
+judilibre_key.txt
+legifrance_creds.txt
+*.key
+*.pem
+
+# Database
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# Export files
+exports/
+output/
+results/
+
+# Logs
+*.log
+logs/
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Doublons, scripts ponctuels et scories de développement (jamais du code
+# source réel du projet) -- ajouté avant le premier commit public pour ne
+# pas polluer un dépôt destiné à être partagé (CV, portfolio).
+*- Copie*.py
+*-Copie*.py
+* (2)*.py
+* (1)*.py
+installer_complet_v*.py
+legifrance_creds.txtpython
+cloude
+cloude code
+DIAGNOSTIC.md
+PlaidIA.spec
+PlaidIA_GUI.spec
+*.crdownload
+Ordinateur portable de*.url
+demarrer.bat
+gui_log.txt
+entrees.txt
+plan_test.txt
+resultat.txt
+sortie.txt
+test_notebook.ipynb
+/AUDCG.txt
+/AUS.txt

@@ -1,0 +1,327 @@
+/**
+ * types.ts — Types TypeScript alignés sur les schémas Pydantic du backend
+ * (backend/app/schemas/*.py). Un fichier miroir par router pour retrouver
+ * facilement la correspondance ; voir backend/README.md pour la liste des
+ * routes et /docs pour le détail exact généré depuis le code.
+ */
+
+// ---------------------------------------------------------------------
+// Dossiers (backend/app/schemas/dossiers.py)
+// ---------------------------------------------------------------------
+
+export interface Dossier {
+  id: number;
+  nom: string;
+  numero_dossier?: string;
+  domaine?: string;
+  parties?: string;
+  faits?: string;
+  statut: string;
+  date_creation: string;
+}
+
+export interface DossierCreateInput {
+  nom: string;
+  numero_dossier?: string;
+  domaine?: string;
+  parties?: string;
+  faits?: string;
+}
+
+export interface DocumentImporte {
+  nom_fichier: string;
+  texte_extrait: string;
+  caracteres_extraits: number;
+}
+
+export interface RechercheDossierResultat {
+  dossier: Dossier;
+  extraits: [string, string][];
+}
+
+export interface AnalyseHistorique {
+  id: number;
+  date: string;
+  arguments: Argument[];
+  points_attention: string[];
+}
+
+// ---------------------------------------------------------------------
+// Analyse (backend/app/schemas/analyse.py)
+// ---------------------------------------------------------------------
+
+export type NiveauRisque = "Faible" | "Moyen" | "Élevé" | string;
+
+export interface Raisonnement {
+  probleme_de_droit: string;
+  regle_applicable: string;
+  application_aux_faits: string;
+}
+
+export interface Refutation {
+  angle: string;
+  piste: string;
+}
+
+export interface Argument {
+  resume: string;
+  fondement: string;
+  raisonnement?: Raisonnement | null;
+  risque: NiveauRisque;
+  justification_risque: string;
+  refutations: Refutation[];
+}
+
+export interface ConclusionsResultat {
+  arguments: Argument[];
+  points_attention: string[];
+  analyse_id?: number | null;
+}
+
+export interface ResumeResultat {
+  resume_court: string;
+  points_cles: string[];
+  elements_manquants: string[];
+}
+
+export interface PointPlan {
+  point: string;
+  duree_minutes?: number | null;
+  argument_cle: string;
+  notes: string;
+}
+
+export interface PlanResultat {
+  accroche: string;
+  plan: PointPlan[];
+  conclusion: string;
+  points_attention: string[];
+}
+
+export interface Objection {
+  origine: string;
+  question: string;
+  piege: string;
+  piste_reponse: string;
+}
+
+export interface SimulateurResultat {
+  objections: Objection[];
+  point_le_plus_faible: string;
+}
+
+export interface RapportCompletResultat {
+  analyse?: ConclusionsResultat | null;
+  plan?: PlanResultat | null;
+  simulateur: SimulateurResultat;
+}
+
+export interface ElementStyle {
+  citation: string;
+  commentaire: string;
+}
+
+export interface StyleResultat {
+  langage_de_couverture: ElementStyle[];
+  affirmations_absolues: ElementStyle[];
+  voix_passive_suspecte: ElementStyle[];
+  ruptures_registre: ElementStyle[];
+  synthese_strategique: string;
+}
+
+// ---------------------------------------------------------------------
+// Jurisprudence (backend/app/schemas/jurisprudence.py)
+// ---------------------------------------------------------------------
+
+export interface Notions {
+  domaine: string;
+  qualification_juridique: string;
+  mots_cles_recherche: string[];
+  but: string;
+}
+
+export interface ConsulterResultat {
+  notions: Notions;
+  reponse: string;
+}
+
+export interface DecisionCollectee {
+  reference: string;
+  resume: string;
+  domaine?: string;
+  source?: string;
+}
+
+export interface CollecterResultat {
+  decisions: DecisionCollectee[];
+  nombre_collecte: number;
+}
+
+export interface Jurisprudence {
+  id: number;
+  reference: string;
+  resume?: string;
+  domaine?: string;
+  source?: string;
+  validee: number;
+}
+
+export interface CorpusImportInput {
+  source: string;
+  contenu: string;
+  pays?: string;
+  type_texte?: string;
+  domaine?: string;
+  reference?: string;
+  date_texte?: string;
+}
+
+export interface CorpusTexte {
+  id: number;
+  source: string;
+  pays?: string;
+  type_texte?: string;
+  domaine?: string;
+  reference?: string;
+  date_texte?: string;
+  statut?: string;
+  contenu: string;
+  validee: number;
+  date_import: string;
+}
+
+// ---------------------------------------------------------------------
+// Notes (backend/app/schemas/notes.py)
+// ---------------------------------------------------------------------
+
+export interface Note {
+  id: number;
+  note_brute: string;
+  note_structuree?: string;
+  actions: string[];
+  points: string[];
+  date_creation: string;
+}
+
+// ---------------------------------------------------------------------
+// Greffier (backend/app/schemas/greffier.py)
+// ---------------------------------------------------------------------
+
+export interface Evenement {
+  date: string;
+  evenement: string;
+}
+
+export interface ChronologieResultat {
+  periode_couverte: string;
+  evenements: Evenement[];
+  elements_manquants: string[];
+}
+
+export interface ExtractionResultat {
+  dates: string[];
+  personnes_et_parties: string[];
+  references: string[];
+  demandes: string[];
+  decisions: string[];
+}
+
+export interface ClassementResultat {
+  nature: string;
+  justification: string;
+  confiance: string;
+}
+
+export interface DocumentACoherence {
+  nom_document: string;
+  texte: string;
+}
+
+export interface Contradiction {
+  sujet: string;
+  document_1: string;
+  document_2: string;
+  gravite: string;
+}
+
+export interface CoherenceResultat {
+  elements_par_document: Record<string, ExtractionResultat>;
+  contradictions: Contradiction[];
+  elements_coherents: string[];
+  limites_analyse: string;
+}
+
+export interface Echeance {
+  echeance: string;
+  date: string;
+  statut: string;
+}
+
+export interface VerificationProceduraleResultat {
+  echeances_identifiees: Echeance[];
+  actes_potentiellement_manquants: string[];
+  points_attention: string[];
+}
+
+export interface PvAudienceResultat {
+  texte: string;
+}
+
+export interface RequisitoireResultat {
+  qualification_retenue: string;
+  faits_et_elements_invoques: string[];
+  circonstances_aggravantes: string[];
+  circonstances_attenuantes: string[];
+  peine_requise: string;
+  points_attention: string[];
+}
+
+export interface RapportInstructionResultat {
+  actes_instruction: string[];
+  elements_a_charge: string[];
+  elements_a_decharge: string[];
+  mesures_ordonnees: string[];
+  sens_propose: string;
+  points_attention: string[];
+}
+
+// ---------------------------------------------------------------------
+// Chat (backend/app/schemas/chat.py)
+// ---------------------------------------------------------------------
+
+export type RoleMessage = "user" | "assistant";
+
+export interface MessageChat {
+  role: RoleMessage;
+  content: string;
+}
+
+export interface ConversationResume {
+  id: number;
+  titre: string;
+  date_creation: string;
+  date_modification: string;
+}
+
+export interface ConversationDetail extends ConversationResume {
+  historique: MessageChat[];
+}
+
+/** Événements du flux SSE POST /api/chat/stream — voir backend/README.md */
+export type ChatStreamEvent =
+  | { event: "recherche_debut"; data: Record<string, never> }
+  | { event: "recherche_resultat"; data: { n_articles: number; n_jurisprudence: number } }
+  | { event: "delta"; data: { text: string } }
+  | { event: "done"; data: Record<string, never> }
+  | { event: "error"; data: { detail: string } };
+
+// ---------------------------------------------------------------------
+// Intention (backend/app/schemas/intention.py)
+// ---------------------------------------------------------------------
+
+export interface Intention {
+  action: string;
+  confiance: "haute" | "moyenne" | "basse" | string;
+  reformulation: string;
+  duree_minutes?: number | null;
+}

@@ -1,0 +1,50 @@
+# render.yaml — Blueprint Render pour le backend Plaid'IA.
+# Voir DEPLOIEMENT.md pour la procédure complète pas à pas.
+#
+# Render détecte ce fichier à la racine du dépôt et propose de créer le
+# service automatiquement ("New +" -> "Blueprint"). Le build utilise le
+# Dockerfile du backend avec la racine du dépôt comme contexte (nécessaire
+# pour les modules métier réutilisés tels quels, voir backend/Dockerfile).
+
+services:
+  - type: web
+    name: plaidia-api
+    env: docker
+    plan: free
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: .
+    healthCheckPath: /api/health
+    envVars:
+      # Mode démo recommandé sur un déploiement public partagé (CV, amis) :
+      # ne définissez PAS ANTHROPIC_API_KEY ici pour rester en mode démo,
+      # ou forcez-le explicitement avec DEMO_MODE=true même si une clé
+      # traîne. Voir backend/README.md, section "Mode démo".
+      - key: DEMO_MODE
+        value: "true"
+      - key: DEMO_RESET_DB
+        value: "true"
+      # Remplacez par l'URL Vercel réelle une fois le frontend déployé
+      # (voir étape 2 de DEPLOIEMENT.md) -- plusieurs origines séparées par
+      # des virgules si vous gardez aussi un front de développement local.
+      - key: CORS_ORIGINS
+        value: "https://plaidia.vercel.app,http://localhost:5173"
+      - key: RATE_LIMIT_DEFAUT
+        value: "60/minute"
+      - key: MAX_TEXTE_CARACTERES
+        value: "50000"
+      # Laissées vides intentionnellement : à renseigner dans le tableau de
+      # bord Render (Settings -> Environment) UNIQUEMENT si vous voulez
+      # désactiver le mode démo sur ce déploiement public, ou activer
+      # Judilibre/Légifrance. Jamais commitées dans ce fichier.
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: JUDILIBRE_KEY_ID
+        sync: false
+      - key: JUDILIBRE_ENV
+        value: production
+      - key: LEGIFRANCE_CLIENT_ID
+        sync: false
+      - key: LEGIFRANCE_CLIENT_SECRET
+        sync: false
+      - key: LEGIFRANCE_ENV
+        value: production
