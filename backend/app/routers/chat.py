@@ -22,6 +22,13 @@ import time
 
 from app.bootstrap import ROOT_DIR  # noqa: F401
 
+# print() plutôt que le module logging : uvicorn ne propage pas forcément
+# un logger applicatif vers la console selon sa config, alors qu'un print()
+# est garanti visible dans le terminal -- l'objectif ici est un diagnostic
+# immédiat pendant le débogage, pas une vraie infrastructure de logs.
+def _log_chat(message: str) -> None:
+    print(f"[chat] {message}", flush=True)
+
 import analyse as legacy_analyse
 import db
 import recherche_juridique as legacy_rj
@@ -83,6 +90,8 @@ def chat_stream(payload: ChatStreamIn):
         recherche_resultat simulés si demandé, puis delta mot à mot, puis
         done) mais avec une réponse préenregistrée -- indiscernable côté
         front, voir demo_data.py::reponse_demo_pour_question."""
+        nb_fragments = 0
+        _log_chat(f"debut du flux (mode demo, dossier_id={payload.dossier_id}, recherche_live={payload.recherche_live})")
         try:
             if payload.recherche_live:
                 yield _sse("recherche_debut", {})
@@ -94,13 +103,19 @@ def chat_stream(payload: ChatStreamIn):
             for i, mot in enumerate(mots):
                 fragment = mot if i == len(mots) - 1 else mot + " "
                 yield _sse("delta", {"text": fragment})
+                nb_fragments += 1
                 time.sleep(0.02)
 
             yield _sse("done", {})
         except Exception as e:
+            _log_chat(f"erreur en cours de flux (mode demo) : {e}")
             yield _sse("error", {"detail": str(e)})
+        finally:
+            _log_chat(f"fin du flux (mode demo) -- {nb_fragments} fragment(s) envoyé(s)")
 
     def event_stream():
+        nb_fragments = 0
+        _log_chat(f"debut du flux (mode reel, dossier_id={payload.dossier_id}, recherche_live={payload.recherche_live})")
         try:
             if payload.recherche_live:
                 yield _sse("recherche_debut", {})
@@ -114,13 +129,31 @@ def chat_stream(payload: ChatStreamIn):
 
             for fragment in legacy_analyse.repondre_conversation_stream(messages, contexte_recherche=contexte_recherche):
                 yield _sse("delta", {"text": fragment})
+                nb_fragments += 1
 
             yield _sse("done", {})
         except Exception as e:
+            _log_chat(f"erreur en cours de flux (mode reel) : {e}")
             yield _sse("error", {"detail": str(e)})
+        finally:
+            _log_chat(f"fin du flux (mode reel) -- {nb_fragments} fragment(s) envoyé(s)")
 
     generateur = event_stream_demo() if demo.mode_demo_effectif() else event_stream()
-    return StreamingResponse(generateur, media_type="text/event-stream")
+    return StreamingResponse(
+        generateur,
+        media_type="text/event-stream",
+        headers={
+            # Empêche tout proxy/serveur intermédiaire (Render, Nginx...) de
+            # mettre le flux en tampon avant de le relâcher d'un coup --
+            # sans ça, le navigateur peut sembler "bloqué" jusqu'à ce que le
+            # tampon se vide, même si le backend envoie bien ses trames au
+            # fil de l'eau. Sans effet en dev local direct (pas de proxy
+            # entre uvicorn et le navigateur), mais nécessaire derrière tout
+            # reverse proxy -- voir DEPLOIEMENT.md.
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+        },
+    )
 
 
 # --- Historique des conversations (persistance, sauvegarde côté front) ----

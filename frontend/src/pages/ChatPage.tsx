@@ -23,6 +23,7 @@ export default function ChatPage() {
   const chatHistorique = useAppStore((s) => s.chatHistorique);
   const ajouterMessageChat = useAppStore((s) => s.ajouterMessageChat);
   const remplacerDernierMessageChat = useAppStore((s) => s.remplacerDernierMessageChat);
+  const retirerDernierMessageSiVide = useAppStore((s) => s.retirerDernierMessageSiVide);
   const reinitialiserChat = useAppStore((s) => s.reinitialiserChat);
   const chargerConversationChat = useAppStore((s) => s.chargerConversationChat);
   const dossierActifId = useAppStore((s) => s.dossierActifId);
@@ -102,20 +103,39 @@ export default function ChatPage() {
       historiqueEnvoi,
       { rechercheLive, juridiction: juridictionActive, dossierId: dossierActifId, signal: controller.signal },
       {
-        onRechercheDebut: () => setStatutRecherche({ enCours: true, resultat: null }),
-        onRechercheResultat: (data) => setStatutRecherche({ enCours: false, resultat: data }),
+        onRechercheDebut: () => {
+          // eslint-disable-next-line no-console
+          console.log("[chat] recherche_debut");
+          setStatutRecherche({ enCours: true, resultat: null });
+        },
+        onRechercheResultat: (data) => {
+          // eslint-disable-next-line no-console
+          console.log("[chat] recherche_resultat", data);
+          setStatutRecherche({ enCours: false, resultat: data });
+        },
         onDelta: (fragment) => {
+          // eslint-disable-next-line no-console
+          console.log("[chat] delta", JSON.stringify(fragment));
           accumulateur += fragment;
           remplacerDernierMessageChat(accumulateur);
         },
         onDone: () => {
+          // eslint-disable-next-line no-console
+          console.log("[chat] done -- longueur finale:", accumulateur.length);
           setGenererEnCours(false);
           abortControllerRef.current = null;
           void sauvegarderConversation();
         },
         onError: (message) => {
+          // eslint-disable-next-line no-console
+          console.log("[chat] error", message);
           setGenererEnCours(false);
           abortControllerRef.current = null;
+          // Sans ça, une erreur survenue avant le moindre fragment (ex. clé
+          // API invalide) laisse une bulle assistant vide affichée sans
+          // aucune explication visible -- ça se lit comme un blocage, même
+          // si ce toast s'est bien déclenché à côté.
+          retirerDernierMessageSiVide();
           pousserToast("error", message);
         },
       }

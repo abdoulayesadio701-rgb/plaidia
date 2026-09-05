@@ -12,7 +12,11 @@
 
 /** @type {import('tailwindcss').Config} */
 export default {
-  darkMode: false, // thème sombre unique et permanent — pas de bascule clair/sombre
+  // Pas de bascule clair/sombre : thème unique et permanent (voir DESIGN.md §0).
+  // `darkMode` est volontairement omis plutôt que mis à `false` -- cette valeur
+  // est dépréciée par Tailwind (elle équivaut désormais à `media`) et aucune
+  // classe `dark:` n'existe nulle part dans ce projet, donc son absence est
+  // un no-op strict, sans le warning de build.
   content: ["./index.html", "./src/**/*.{js,ts,jsx,tsx}"],
   theme: {
     extend: {

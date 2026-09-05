@@ -1,11 +1,16 @@
 {
   "compilerOptions": {
     "composite": true,
+    // Un projet composite ne peut pas désactiver l'émission (TS6310) --
+    // on la redirige donc hors du code source plutôt que de la supprimer,
+    // pour ne plus voir vite.config.js/.d.ts apparaître à côté de
+    // vite.config.ts (voir .gitignore, ce dossier n'est jamais commité).
+    "outDir": "./.tsbuild-node",
     "skipLibCheck": true,
     "module": "ESNext",
     "moduleResolution": "bundler",
     "allowSyntheticDefaultImports": true,
     "strict": true
   },
-  "include": ["vite.config.ts"]
+  "include": ["vite.config.ts", "vitest.config.ts"]
 }

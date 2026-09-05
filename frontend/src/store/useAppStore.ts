@@ -63,6 +63,7 @@ interface AppState {
   remplacerDernierMessageChat: (content: string) => void;
   reinitialiserChat: () => void;
   chargerConversationChat: (id: number, historique: MessageChat[]) => void;
+  retirerDernierMessageSiVide: () => void;
 
   // --- Barre latérale --------------------------------------------------
   sidebarReplie: boolean;
@@ -190,6 +191,23 @@ export const useAppStore = create<AppState>((set, get) => ({
     }),
 
   reinitialiserChat: () => set({ chatHistorique: [], chatConversationId: null }),
+
+  // Si le flux échoue avant le moindre fragment (ex. clé API invalide), la
+  // bulle assistant vide ajoutée en prévision du streaming (voir ChatPage::
+  // envoyerMessage) ne doit pas rester affichée telle quelle : une bulle
+  // vide sans aucune trace de ce qui s'est passé se lit comme "l'app est
+  // bloquée", même si un toast d'erreur a bien été déclenché à côté (voir
+  // ChatPage::onError). On ne retire QUE si elle est encore vide -- un
+  // fragment partiel reçu avant l'erreur reste affiché, comme à l'arrêt
+  // volontaire d'une génération.
+  retirerDernierMessageSiVide: () =>
+    set((s) => {
+      const dernier = s.chatHistorique.at(-1);
+      if (dernier && dernier.role === "assistant" && dernier.content === "") {
+        return { chatHistorique: s.chatHistorique.slice(0, -1) };
+      }
+      return s;
+    }),
 
   chargerConversationChat: (id, historique) => set({ chatConversationId: id, chatHistorique: historique }),
 
