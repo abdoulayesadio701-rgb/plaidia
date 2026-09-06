@@ -8,6 +8,7 @@ import { useState } from "react";
 import { useAppStore } from "@/store/useAppStore";
 import Logo from "@/components/Logo";
 import Button from "@/components/Button";
+import FullscreenToggle from "@/components/FullscreenToggle";
 import NouveauDossierModal from "@/components/NouveauDossierModal";
 import DossierSelector from "./DossierSelector";
 
@@ -51,6 +52,7 @@ export default function TopBar() {
               </option>
             ))}
           </select>
+          <FullscreenToggle />
         </div>
       </header>
 
