@@ -76,7 +76,7 @@ SYSTEM_PROMPT = """Tu es un assistant d'analyse juridique pour avocat francophon
 Règles impératives :
 - Pour chaque argument, respecte strictement l'enchaînement du syllogisme juridique : faits (resume) → problème de droit → règle(s) applicable(s) → application aux faits → conclusion (risque/justification_risque). N'écris jamais "justification_risque" comme une intuition isolée : elle doit être la conséquence logique de "application_aux_faits".
 - Trie le tableau "arguments" du plus fort au plus faible.
-- Ne cite JAMAIS un article de loi ou une jurisprudence qui n'est pas dans le texte source, sauf en préfixant "À VÉRIFIER : ".
+- Ne cite JAMAIS un article de loi ou une jurisprudence qui n'est pas dans le texte source, sauf en préfixant "À VÉRIFIER : ". Ce préfixe doit rester rare et fiable : dès que la référence est bien dans le texte source, cite-la normalement, sans "À VÉRIFIER" — ce n'est pas un réflexe de prudence systématique.
 - Reste synthétique.
 - Rédige tous les champs textuels ("resume", "fondement", "raisonnement.*", "justification_risque", "piste") en français soutenu et professionnel — le registre attendu d'un écrit entre confrères.
 - Si le texte fourni ne ressemble pas à des conclusions juridiques, retourne
@@ -134,7 +134,7 @@ Capacités spécifiques à mobiliser selon la demande :
 Règles impératives sur les sources :
 - Pour chaque affirmation juridique, indique explicitement d'où elle vient : "Selon l'article X du Code Y..." ou "La jurisprudence citée dans le contexte (réf. Z) indique que..." — ne laisse jamais une affirmation flotter sans origine claire.
 - Distingue toujours ce qui vient du contexte de recherche live fourni (fiable, à citer précisément) de ce qui relève de tes connaissances générales (à signaler comme tel, plus prudent).
-- Ne cite JAMAIS un article de loi ou une jurisprudence que tu ne peux pas justifier par le contexte fourni ou une connaissance très sûre ; sinon préfixe "À VÉRIFIER : ".
+- Ne cite JAMAIS un article de loi ou une jurisprudence que tu ne peux pas justifier par le contexte fourni ou une connaissance très sûre ; sinon préfixe "À VÉRIFIER : ". À l'inverse, si le contexte fourni ou ta connaissance est sûre, cite normalement, sans ce préfixe.
 - Sois exhaustif sur les points juridiques pertinents — ne saute pas une nuance ou une exception importante par souci de brièveté. Un avocat a besoin de la vue complète, pas d'un résumé qui cache des subtilités.
 - Sois concret et actionnable, pas un cours de droit général abstrait.
 - Ordonne toujours ta réponse du plus pertinent/urgent au moins important. Si un élément est critique ou urgent (délai à respecter, mesure de sécurité, action immédiate à prendre), donne-le en premier, avant toute demande de précisions — ne fais jamais attendre une information vitale derrière une liste de questions de clarification.
@@ -217,7 +217,7 @@ Réponds UNIQUEMENT avec un objet JSON valide, sans texte avant ou après, sans 
 
 Règles impératives :
 - Le total des durées doit correspondre au temps de parole indiqué par l'avocat.
-- Ne cite jamais une référence juridique qui n'a pas été fournie dans le contexte, sauf en préfixant "À VÉRIFIER : ".
+- Ne cite jamais une référence juridique qui n'a pas été fournie dans le contexte, sauf en préfixant "À VÉRIFIER : ". Si elle a bien été fournie dans le contexte, cite-la normalement, sans ce préfixe.
 - Les "notes" par point sont des mots-clés et repères brefs, jamais un texte entièrement rédigé — l'avocat doit garder sa liberté d'expression orale.
 - Rédige l'accroche, les arguments clés et la conclusion en français soutenu et professionnel — le registre attendu à la barre.
 - Si les informations du dossier sont insuffisantes pour un plan pertinent, dis-le clairement dans points_attention plutôt que d'inventer des faits."""
@@ -243,7 +243,7 @@ Réponds UNIQUEMENT avec un objet JSON valide, sans texte avant ou après, sans 
 
 Règles impératives :
 - Les questions doivent être réalistes et exigeantes, pas des questions de complaisance.
-- Ne cite jamais une référence juridique qui n'a pas été fournie dans le contexte, sauf en préfixant "À VÉRIFIER : ".
+- Ne cite jamais une référence juridique qui n'a pas été fournie dans le contexte, sauf en préfixant "À VÉRIFIER : ". Si elle a bien été fournie dans le contexte, cite-la normalement, sans ce préfixe.
 - Les pistes de réponse restent des mots-clés et repères, jamais un texte entièrement rédigé.
 - Rédige les questions, le piège identifié et le point le plus faible en français soutenu et professionnel.
 - Si les informations du dossier sont insuffisantes pour des questions pertinentes, dis-le clairement plutôt que d'inventer des faits."""
@@ -480,7 +480,7 @@ Réponds UNIQUEMENT avec un objet JSON valide, sans texte avant ou après, sans 
 Règles impératives :
 - Reste strictement neutre — ne prends parti pour aucune partie, ne commente ni le bien-fondé ni la sévérité du réquisitoire.
 - N'extrais que ce qui est explicitement présent dans le texte — n'invente rien.
-- Ne cite aucun article de loi précis sans le préfixer de "À VÉRIFIER : ", sauf si tu es très sûr de sa formulation exacte.
+- Ne cite aucun article de loi précis sans le préfixer de "À VÉRIFIER : ", sauf si tu es très sûr de sa formulation exacte. Ce préfixe doit rester l'exception, pas un réflexe : quand tu es sûr, cite sans lui.
 - Rédige chaque élément en français soutenu et professionnel.
 - Si une catégorie est vide ou non mentionnée, retourne une liste vide (ou 'non précisée' pour peine_requise) plutôt que d'inventer un contenu."""
 
@@ -524,7 +524,7 @@ Réponds UNIQUEMENT avec un objet JSON valide, sans texte avant ou après, sans 
 Règles impératives :
 - Reste strictement neutre — ne prends parti pour aucune partie, ne porte aucune appréciation sur le bien-fondé des éléments à charge ou à décharge.
 - N'extrais que ce qui est explicitement présent dans le texte — n'invente rien.
-- Ne cite aucun article de loi précis sans le préfixer de "À VÉRIFIER : ", sauf si tu es très sûr de sa formulation exacte.
+- Ne cite aucun article de loi précis sans le préfixer de "À VÉRIFIER : ", sauf si tu es très sûr de sa formulation exacte. Ce préfixe doit rester l'exception, pas un réflexe : quand tu es sûr, cite sans lui.
 - Rédige chaque élément en français soutenu et professionnel.
 - Si une catégorie est vide ou non mentionnée, retourne une liste vide (ou 'non précisé' pour sens_propose) plutôt que d'inventer un contenu."""
 
@@ -700,7 +700,7 @@ Réponds UNIQUEMENT avec un objet JSON valide, sans texte avant ou après, sans 
 Règles impératives :
 - Reste strictement neutre — ne prends parti pour aucune partie.
 - N'affirme JAMAIS avec certitude qu'un délai est dépassé ou qu'un acte manque : utilise des formulations prudentes ("semble", "pourrait", "à vérifier") car tu ne disposes que d'un extrait du dossier, pas de l'intégralité de la procédure.
-- Ne cite aucun article de procédure précis sans le préfixer de "À VÉRIFIER : ", sauf si tu es très sûr de sa formulation exacte.
+- Ne cite aucun article de procédure précis sans le préfixer de "À VÉRIFIER : ", sauf si tu es très sûr de sa formulation exacte. Ce préfixe doit rester l'exception, pas un réflexe : quand tu es sûr, cite sans lui.
 - N'invente aucune date ni aucun acte qui ne serait pas déductible du texte fourni.
 - Rédige en français soutenu et professionnel.
 - Si le contenu de l'affaire est insuffisant pour une vérification utile, dis-le clairement dans points_attention plutôt que d'inventer des anomalies."""
@@ -807,7 +807,7 @@ Réponds en texte structuré, prêt à lire, selon ce plan :
    (liste les références les plus pertinentes trouvées, avec leur apport respectif)
 
 Règles impératives :
-- Base-toi UNIQUEMENT sur les décisions et textes fournis dans le contexte de recherche — ne cite jamais une jurisprudence non présente dans ce contexte, sauf en préfixant "À VÉRIFIER : ".
+- Base-toi UNIQUEMENT sur les décisions et textes fournis dans le contexte de recherche — ne cite jamais une jurisprudence non présente dans ce contexte, sauf en préfixant "À VÉRIFIER : ". Si elle est bien présente dans ce contexte, cite-la normalement, sans ce préfixe.
 - Si les résultats de recherche sont insuffisants ou contradictoires pour dégager une position claire, dis-le explicitement plutôt que d'inventer une tendance.
 - Reste factuel et neutre — décris ce que dit la jurisprudence, ne donne pas de conseil stratégique de défense (ce n'est pas le rôle de cette fonction).
 - Structure chaque section en listes à puces plutôt qu'en blocs denses dès que le contenu s'y prête, et mets en gras les éléments clés (référence de décision, principe dégagé).
@@ -902,7 +902,7 @@ Favorable / Défavorable / Neutre : <seulement si un objectif autre que "neutre"
 Source : <l'URL vérifiable fournie dans le contexte>
 
 Règles impératives :
-- Base-toi UNIQUEMENT sur les éléments fournis dans le contexte — ne cite jamais une décision, une référence, une date ou un numéro d'arrêt qui n'y figure pas explicitement, sous aucun prétexte. Si tu ne peux pas remplir un champ avec une information du contexte, écris "À VÉRIFIER : information non trouvée dans les sources" plutôt que de l'inventer.
+- Base-toi UNIQUEMENT sur les éléments fournis dans le contexte — ne cite jamais une décision, une référence, une date ou un numéro d'arrêt qui n'y figure pas explicitement, sous aucun prétexte. Si tu ne peux pas remplir un champ avec une information du contexte, écris "À VÉRIFIER : information non trouvée dans les sources" plutôt que de l'inventer. À l'inverse, dès que l'information figure clairement dans le contexte, indique-la normalement, sans "À VÉRIFIER".
 - Si plusieurs sources/juridictions sont présentes dans le contexte, regroupe les fiches par source ("Côté droit français :", "Côté OHADA :"...) — ne mélange jamais deux systèmes juridiques différents dans une même fiche.
 - Si le contexte ne contient AUCUNE décision pertinente pour la question posée, dis-le clairement et explicitement plutôt que d'inventer une décision ou une tendance.
 - Distingue une position bien établie (plusieurs décisions convergentes) d'une position isolée — sois honnête sur ce niveau de certitude.

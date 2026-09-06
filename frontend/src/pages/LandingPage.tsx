@@ -5,9 +5,6 @@
  * spécifiée pour le hero dans DESIGN.md §4 plutôt qu'une nouvelle identité
  * visuelle ad hoc.
  *
- * TODO(liens sociaux) : URL_GITHUB / URL_LINKEDIN ci-dessous sont des
- * marqueurs en attente des vraies URLs fournies par Abdoulaye Sadio --
- * à remplacer avant publication du lien.
  */
 
 import { useEffect } from "react";
@@ -17,9 +14,10 @@ import Logo from "@/components/Logo";
 import Button from "@/components/Button";
 import ArgumentCard from "@/components/ArgumentCard";
 import type { Argument } from "@/api";
+import justitiaBanniere from "@/assets/justitia-banniere.jpg";
 
-const URL_GITHUB = "#"; // TODO: remplacer par l'URL réelle du dépôt GitHub
-const URL_LINKEDIN = "#"; // TODO: remplacer par l'URL réelle du profil LinkedIn
+const URL_GITHUB = "https://github.com/abdoulayesadio701-rgb";
+const URL_LINKEDIN = "https://www.linkedin.com/in/abdoulaye-sadio";
 
 const ARGUMENT_VITRINE: Argument = {
   resume: "Les trois retards des 5, 8 et 9 février 2024 caractérisent un manquement réitéré à l'obligation de ponctualité.",
@@ -221,6 +219,22 @@ export default function LandingPage() {
               <p className="text-sm leading-relaxed text-warmgray">{e.description}</p>
             </div>
           ))}
+        </div>
+      </section>
+
+      {/* --- Bandeau photographique --------------------------------------- */}
+      <section className="banner-photo">
+        <img src={justitiaBanniere} alt="Statue de la Justice tenant une balance, en contre-plongée" />
+        <div className="banner-scrim" aria-hidden="true" />
+        <div className="banner-wash" aria-hidden="true" />
+        <div className="banner-edgefade" aria-hidden="true" />
+        <div className="relative z-10 mx-auto w-full max-w-6xl px-6 sm:px-10">
+          <p className="kicker">Ce que l'outil ne fera jamais</p>
+          <h2 className="mt-3 max-w-xl font-display text-3xl font-bold leading-tight text-ivory sm:text-4xl">
+            Peser chaque argument,
+            <br />
+            <span className="text-gold-500">jamais trancher à votre place.</span>
+          </h2>
         </div>
       </section>
 

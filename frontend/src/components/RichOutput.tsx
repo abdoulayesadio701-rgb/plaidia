@@ -15,14 +15,26 @@
  * le marqueur n'est pas entièrement arrivé, il s'affiche en texte brut ;
  * dès qu'il l'est, le rendu suivant le repère et l'habille — aucune
  * bufferisation à gérer côté composant.
+ *
+ * Les sources vérifiables (voir analyse.py : "Source : <URL fournie dans
+ * le contexte>") sont aussi transformées en lien cliquable, pour que
+ * l'avocat puisse ouvrir directement la page Légifrance/Judilibre
+ * concernée plutôt que de recopier l'URL. On ne linkifie QUE les URL déjà
+ * présentes dans le texte généré (donc déjà ancrées dans le contexte
+ * fourni au modèle) — jamais une adresse reconstruite ou devinée, ce qui
+ * reviendrait à afficher une certitude de lien que rien ne garantit.
  */
 
 import type { ReactNode } from "react";
 
 const MARQUEUR = "À VÉRIFIER";
-// Alterne entre "**gras**" et le marqueur en un seul passage, pour ne
-// jamais laisser un "**" avaler accidentellement le marqueur voisin.
-const SEGMENT_RE = /(\*\*[^*]+\*\*|À VÉRIFIER)/g;
+// Alterne entre "**gras**", le marqueur et une URL http(s) en un seul
+// passage, pour ne jamais laisser un "**" avaler accidentellement le
+// marqueur ou l'URL voisine.
+const SEGMENT_RE = /(\*\*[^*]+\*\*|À VÉRIFIER|https?:\/\/\S+)/g;
+// Ponctuation de fin de phrase qu'une URL peut trainer derrière elle
+// (ex. "...decision/abc123." en fin de ligne) — à laisser hors du lien.
+const PONCTUATION_FINALE_RE = /[.,;:)\]]+$/;
 
 function renderInline(segment: string, keyPrefix: string): ReactNode[] {
   const parts = segment.split(SEGMENT_RE).filter((p) => p !== "");
@@ -37,6 +49,24 @@ function renderInline(segment: string, keyPrefix: string): ReactNode[] {
     }
     if (part.startsWith("**") && part.endsWith("**") && part.length > 4) {
       return <strong key={key}>{part.slice(2, -2)}</strong>;
+    }
+    if (part.startsWith("http://") || part.startsWith("https://")) {
+      const finale = part.match(PONCTUATION_FINALE_RE)?.[0] ?? "";
+      const url = finale ? part.slice(0, -finale.length) : part;
+      return (
+        <span key={key}>
+          <a
+            href={url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-gold-500 underline decoration-gold-600/50 underline-offset-2 transition-colors hover:text-gold-400"
+            title="Ouvrir la page source dans un nouvel onglet"
+          >
+            consulter la source ↗
+          </a>
+          {finale}
+        </span>
+      );
     }
     return <span key={key}>{part}</span>;
   });

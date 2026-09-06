@@ -119,7 +119,21 @@ export default function GererJurisprudencePage() {
                     <span className="line-clamp-2">{item.resume || "—"}</span>
                   </td>
                   <td className="px-4 py-3 text-warmgray">{item.domaine || "—"}</td>
-                  <td className="px-4 py-3 text-warmgray">{item.source || "—"}</td>
+                  <td className="max-w-[14rem] truncate px-4 py-3 text-warmgray">
+                    {item.source ? (
+                      <a
+                        href={item.source}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title="Ouvrir la page source dans un nouvel onglet"
+                        className="text-gold-500 underline decoration-gold-600/50 underline-offset-2 transition-colors hover:text-gold-400"
+                      >
+                        consulter la source ↗
+                      </a>
+                    ) : (
+                      "—"
+                    )}
+                  </td>
                   {onglet === "attente" && (
                     <td className="whitespace-nowrap px-4 py-3">
                       <div className="flex gap-2">

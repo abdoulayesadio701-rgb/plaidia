@@ -227,8 +227,6 @@ détail complet de chaque point :
 - **`docker build` jamais lancé réellement** (Docker indisponible en
   développement) — la structure de copie du `Dockerfile` a été reproduite
   et testée manuellement, mais pas le build Docker lui-même.
-- **Liens GitHub/LinkedIn** encore en attente (marqueurs `TODO` dans
-  `LandingPage.tsx` et ce README).
 - **Pas de relecture orthographique exhaustive** du texte français sur
   l'ensemble de l'app (plusieurs dizaines de pages) — une recherche
   ciblée n'a trouvé aucun résidu d'anglais, mais une relecture ligne à
@@ -239,8 +237,8 @@ détail complet de chaque point :
 **Abdoulaye Sadio** — Projet portfolio, NLP / TAL (Traitement Automatique
 des Langues).
 
-- GitHub : [à compléter](#)
-- LinkedIn : [à compléter](#)
+- GitHub : [abdoulayesadio701-rgb](https://github.com/abdoulayesadio701-rgb)
+- LinkedIn : [abdoulaye-sadio](https://www.linkedin.com/in/abdoulaye-sadio)
 
 ---
 
@@ -281,5 +279,6 @@ commands and file names read the same either way).
 
 **Live demo**: `https://<to-fill-in>.vercel.app`
 
-**Author**: Abdoulaye Sadio — portfolio project, NLP. GitHub: *(to fill
-in)* · LinkedIn: *(to fill in)*.
+**Author**: Abdoulaye Sadio — portfolio project, NLP. GitHub:
+[abdoulayesadio701-rgb](https://github.com/abdoulayesadio701-rgb) ·
+LinkedIn: [abdoulaye-sadio](https://www.linkedin.com/in/abdoulaye-sadio).

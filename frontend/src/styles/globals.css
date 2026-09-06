@@ -337,4 +337,77 @@
       to { opacity: 1; transform: scale(1) translateY(0); }
     }
   }
+
+  /* ---------- Bandeau photographique -- Justitia (LandingPage) ----------
+     Seul endroit du design system où le symbole de la justice apparaît en
+     photo plutôt qu'au trait (voir GothicMotif.tsx pour l'équivalent
+     dessiné, réservé à l'imprimé) -- une rupture cinématique volontaire
+     dans le défilement de la page d'accueil, entre "Comment ça marche" et
+     le garde-fou anti-hallucination. */
+  .banner-photo {
+    @apply relative flex min-h-[380px] items-center overflow-hidden border-y border-gold-600/20 sm:min-h-[460px];
+  }
+  .banner-photo > img {
+    @apply absolute inset-0 h-full w-full object-cover;
+    object-position: 78% 35%;
+    filter: grayscale(1) contrast(1.25) brightness(0.8);
+  }
+  .banner-scrim {
+    @apply absolute inset-0;
+    background: linear-gradient(100deg, rgb(var(--color-void)) 0%, rgb(var(--color-void) / 0.92) 22%, rgb(var(--color-void) / 0.55) 42%, rgb(var(--color-void) / 0.12) 62%, transparent 78%);
+  }
+  .banner-wash {
+    @apply absolute inset-0;
+    background: linear-gradient(150deg, rgb(var(--color-amethyst-600) / 0.5), transparent 50%, rgb(var(--color-gold-600) / 0.4));
+    mix-blend-mode: soft-light;
+  }
+  .banner-edgefade {
+    @apply pointer-events-none absolute inset-0;
+    box-shadow: inset 0 -80px 80px -60px rgb(var(--color-void) / 0.9), inset 0 80px 80px -60px rgb(var(--color-void) / 0.5);
+  }
+
+  /* ---------- Carte portrait -- même photo, cadrage vertical
+     (DossiersPage, état vide "Aucun dossier") -- pendant plus discret du
+     bandeau ci-dessus : un cadre fixe plutôt qu'un plein-bleed, pour un
+     écran qu'on revoit (rarement, mais pas qu'une fois). */
+  .portrait-card {
+    @apply relative overflow-hidden rounded-lg border border-gold-600/30;
+    box-shadow: 0 30px 70px -20px rgb(var(--color-void) / 0.85), 0 0 50px -15px rgb(var(--color-amethyst-600) / 0.3);
+  }
+  .portrait-card > img {
+    @apply block h-full w-full object-cover;
+    object-position: 78% 20%;
+    filter: contrast(1.2) brightness(0.85);
+  }
+  .portrait-card .wash {
+    @apply absolute inset-0;
+    background: linear-gradient(165deg, rgb(var(--color-amethyst-600) / 0.45), transparent 55%, rgb(var(--color-gold-600) / 0.35));
+    mix-blend-mode: soft-light;
+  }
+  .portrait-card .caption {
+    @apply absolute inset-x-0 bottom-0 z-10 space-y-1 p-5;
+    background: linear-gradient(0deg, rgb(var(--color-void) / 0.92) 30%, transparent);
+  }
+
+  /* ---------- Signature de la sidebar -- même photo, médaillon rond
+     (Sidebar, pied de la navigation) -- écho discret et permanent du
+     bandeau de la landing page, dans l'outil de travail lui-même. Ne
+     remplace jamais le glyphe abstrait de Logo.tsx (voir sa note :
+     l'illustratif a déjà été essayé et écarté pour la marque elle-même) --
+     ceci est une signature à part, pas le logo. */
+  .sidebar-signature {
+    @apply flex items-center gap-2.5 border-t border-gold-600/15 px-3 py-3;
+  }
+  .sidebar-signature-photo {
+    @apply h-8 w-8 shrink-0 overflow-hidden rounded-pill border;
+    border-color: rgb(var(--color-gold-600) / 0.5);
+  }
+  .sidebar-signature-photo img {
+    @apply h-full w-full object-cover;
+    object-position: 25% 0%;
+    filter: grayscale(0.35) contrast(1.15) brightness(0.85) saturate(1.1);
+  }
+  .sidebar-signature-text {
+    @apply font-serif text-xs italic leading-tight text-warmgray;
+  }
 }

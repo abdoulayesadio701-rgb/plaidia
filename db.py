@@ -235,43 +235,6 @@ def ajouter_aux_faits(dossier_id, texte_supplementaire, source=""):
     conn.close()
 
 
-def rechercher_dans_dossiers(mot_cle):
-    """Recherche un mot-clé dans les faits, parties et analyses de tous
-    les dossiers. Retourne une liste de dicts {dossier, extraits} pour
-    chaque dossier où le mot-clé a été trouvé."""
-    conn = get_connection()
-    mot_cle_lower = mot_cle.lower()
-    resultats = []
-
-    dossiers = conn.execute("SELECT * FROM dossiers").fetchall()
-    for d in dossiers:
-        extraits = []
-
-        for champ, label in [("faits", "Faits"), ("parties", "Parties")]:
-            valeur = d[champ] or ""
-            if mot_cle_lower in valeur.lower():
-                idx = valeur.lower().index(mot_cle_lower)
-                debut = max(0, idx - 60)
-                fin = min(len(valeur), idx + len(mot_cle) + 60)
-                snippet = ("…" if debut > 0 else "") + valeur[debut:fin].strip() + ("…" if fin < len(valeur) else "")
-                extraits.append(f"[{label}] {snippet}")
-
-        analyses = conn.execute(
-            "SELECT date, arguments_json, points_attention_json FROM analyses WHERE dossier_id = ?",
-            (d["id"],),
-        ).fetchall()
-        for a in analyses:
-            texte_combo = (a["arguments_json"] or "") + " " + (a["points_attention_json"] or "")
-            if mot_cle_lower in texte_combo.lower():
-                extraits.append(f"[Analyse du {a['date']}] correspond à la recherche")
-
-        if extraits:
-            resultats.append({"dossier": dict(d), "extraits": extraits})
-
-    conn.close()
-    return resultats
-
-
 def rechercher_dans_dossiers(mot_cle: str) -> list:
     """Recherche un mot-clé dans les faits, parties, nom et domaine de tous
     les dossiers, ainsi que dans le contenu de leurs analyses enregistrées.

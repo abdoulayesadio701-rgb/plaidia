@@ -13,6 +13,7 @@ import { NavLink } from "react-router-dom";
 import { ESPACE_LABELS, NAVIGATION, type Espace } from "@/config/navigation";
 import { useAppStore } from "@/store/useAppStore";
 import Tooltip from "@/components/Tooltip";
+import justitiaSignature from "@/assets/justitia-banniere.jpg";
 
 const ESPACES: Espace[] = ["avocat", "greffier"];
 
@@ -125,6 +126,15 @@ export default function Sidebar() {
           </div>
         ))}
       </nav>
+
+      {!sidebarReplie && (
+        <div className="sidebar-signature">
+          <span className="sidebar-signature-photo" aria-hidden="true">
+            <img src={justitiaSignature} alt="" />
+          </span>
+          <p className="sidebar-signature-text">Peser, jamais trancher.</p>
+        </div>
+      )}
     </aside>
   );
 }

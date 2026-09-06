@@ -19,6 +19,7 @@ import ModifierDomaineModal from "@/components/ModifierDomaineModal";
 import ConfirmerSuppressionModal from "@/components/ConfirmerSuppressionModal";
 import RechercheDossierResultats from "@/components/RechercheDossierResultats";
 import { SkeletonBlock } from "@/components/Skeleton";
+import justitiaPortrait from "@/assets/justitia-banniere.jpg";
 
 function formaterDate(iso: string): string {
   try {
@@ -145,15 +146,28 @@ export default function DossiersPage() {
           {dossiersErreur && <ErrorState message={dossiersErreur} onRetry={() => void chargerDossiers()} />}
 
           {dossiersCharges && !dossiersErreur && dossiers.length === 0 && (
-            <EmptyState
-              titre="Aucun dossier pour l'instant"
-              description="Créez votre premier dossier pour commencer à travailler avec Plaid'IA."
-              action={
-                <Button variant="primary" onClick={() => setModalCreation(true)}>
-                  ＋ Nouveau dossier
-                </Button>
-              }
-            />
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,300px)_1fr]">
+              <div className="portrait-card hidden aspect-[3/4] lg:block" aria-hidden="true">
+                <img src={justitiaPortrait} alt="" />
+                <div className="wash" />
+                <div className="caption">
+                  <p className="kicker">Avant le premier dossier</p>
+                  <p className="font-serif text-lg italic leading-snug text-ivory">
+                    « Ne rien avancer sans pouvoir le vérifier. »
+                  </p>
+                </div>
+              </div>
+              <EmptyState
+                className="lg:h-full"
+                titre="Aucun dossier pour l'instant"
+                description="Créez votre premier dossier pour commencer à travailler avec Plaid'IA."
+                action={
+                  <Button variant="primary" onClick={() => setModalCreation(true)}>
+                    ＋ Nouveau dossier
+                  </Button>
+                }
+              />
+            </div>
           )}
 
           {dossiersCharges &&

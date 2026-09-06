@@ -70,4 +70,21 @@ describe("RichOutput", () => {
     expect(marqueurs).toHaveLength(2);
     marqueurs.forEach((m) => expect(m.tagName).toBe("MARK"));
   });
+
+  it("transforme une URL source en lien cliquable ouvrant un nouvel onglet", () => {
+    render(<RichOutput texte="Source : https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006419285" />);
+    const lien = screen.getByRole("link", { name: /consulter la source/i });
+    expect(lien.tagName).toBe("A");
+    expect(lien).toHaveAttribute("href", "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006419285");
+    expect(lien).toHaveAttribute("target", "_blank");
+    expect(lien).toHaveAttribute("rel", expect.stringContaining("noopener"));
+  });
+
+  it("n'inclut pas la ponctuation de fin de phrase dans l'URL du lien", () => {
+    render(<RichOutput texte="Voir https://www.courdecassation.fr/decision/abc123." />);
+    const lien = screen.getByRole("link", { name: /consulter la source/i });
+    expect(lien).toHaveAttribute("href", "https://www.courdecassation.fr/decision/abc123");
+    // Le point final reste affiché, juste hors du lien.
+    expect(lien.parentElement?.textContent?.endsWith(".")).toBe(true);
+  });
 });
