@@ -79,10 +79,10 @@ export default {
         pill: "999px",
       },
       boxShadow: {
-        card: "0 2px 12px -2px rgb(var(--color-void) / 0.55)",
+        card: "0 1px 3px -1px rgb(var(--color-shadow) / 0.1), 0 1px 2px -1px rgb(var(--color-shadow) / 0.06)",
         "card-hover":
-          "0 10px 32px -8px rgb(var(--color-amethyst-600) / 0.4), 0 2px 12px -2px rgb(var(--color-void) / 0.6)",
-        "glow-gold": "0 0 24px -6px rgb(var(--color-gold-400) / 0.55)",
+          "0 12px 28px -10px rgb(var(--color-amethyst-600) / 0.18), 0 4px 12px -4px rgb(var(--color-shadow) / 0.1)",
+        "glow-gold": "0 0 20px -6px rgb(var(--color-gold-400) / 0.4)",
         "ring-amethyst": "0 0 0 3px rgb(var(--color-amethyst-400) / 0.35)",
       },
       maxWidth: {

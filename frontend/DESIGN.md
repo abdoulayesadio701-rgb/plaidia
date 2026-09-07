@@ -6,9 +6,14 @@ ancien et la rigueur d'un bureau feutré, jamais l'univers "fantasy". Le
 sérieux du fond noir doit rester lisible, professionnel, utilisable des
 heures durant par un avocat en train de travailler un dossier.
 
-**Thème sombre uniquement** — c'est un choix délibéré, pas un thème par
-défaut auquel il manquerait sa variante claire. Tous les tokens ci-dessous
-n'ont qu'une seule définition.
+**Thème clair uniquement** — retheme SaaS violet (dominante violet/mauve,
+cartes blanches sur fond gris très clair, texte presque noir, touches
+bleu nuit). Tous les tokens ci-dessous n'ont qu'une seule définition. Les
+noms de tokens n'ont pas changé (`gold-*` reste la couleur principale,
+`amethyst-*` reste l'accent d'état) — seules leurs valeurs ont été
+retravaillées ; la prose ci-dessous ("or ancien", "fond noir violacé",
+cabinet d'avocat ancien) décrit l'identité précédente et reste à
+réécrire, mais les tableaux de valeurs qui suivent sont à jour.
 
 Ce fichier est la source de vérité. `tailwind.config.js` et
 `src/styles/globals.css` doivent rester synchronisés avec les valeurs
@@ -22,58 +27,58 @@ listées ici — si vous changez une couleur, changez-la aux trois endroits.
 
 | Token | Hex | RGB | Usage |
 |---|---|---|---|
-| `void` | `#0B0A0F` | 11 10 15 | Fond de page, le plus profond |
-| `surface` | `#14111C` | 20 17 28 | Cartes, panneaux, barre latérale |
-| `surface-2` | `#1C1826` | 28 24 38 | Éléments élevés : inputs, dropdowns, lignes de tableau survolées |
-| `surface-3` | `#241E33` | 36 30 51 | Popovers, modales — l'élévation la plus haute |
+| `void` | `#F7F7F9` | 247 247 249 | Fond de page, gris très clair |
+| `surface` | `#FFFFFF` | 255 255 255 | Cartes, panneaux, barre latérale |
+| `surface-2` | `#F1F1F4` | 241 241 244 | Éléments légèrement distincts : inputs, dropdowns, lignes de tableau survolées |
+| `surface-3` | `#E5E5EA` | 229 229 234 | Bordures |
 
-Toujours un dégradé de violet-noir, jamais de gris neutre : même la
-surface la plus claire garde une teinte améthyste en dessous.
+Beaucoup d'espaces blancs, cartes blanches nettes sur fond gris clair —
+plus de dégradé violet-noir sous les surfaces.
 
-### 1.2 Or ancien — couleur principale
-
-| Token | Hex | RGB | Usage |
-|---|---|---|---|
-| `gold-300` | `#F0DDA0` | 240 221 160 | Fond de badge doré très pâle, surlignage discret |
-| `gold-400` | `#E6C76A` | 230 199 106 | Reflets, hover des boutons primaires, icônes actives |
-| `gold-500` | `#C9A227` | 201 162 39 | **Couleur principale** — titres, icônes, séparateurs, bouton primaire au repos |
-| `gold-600` | `#B8860B` | 184 134 11 | Or profond — bordures fines, texte doré sur fond clair |
-| `gold-700` | `#8A6508` | 138 101 8 | État pressé/actif des boutons dorés |
-
-`gold-500` est LA couleur de marque. Un titre, une icône de section, un
-séparateur horizontal : toujours `gold-500` par défaut, jamais `gold-400`
-(réservé au hover/reflet) ni `gold-600` (réservé aux bordures fines et
-aux fonds).
-
-### 1.3 Améthyste — accent
+### 1.2 Violet — couleur principale
 
 | Token | Hex | RGB | Usage |
 |---|---|---|---|
-| `amethyst-300` | `#C4B5FD` | 196 181 253 | Fond de badge/pastille très pâle |
-| `amethyst-400` | `#8B5CF6` | 139 92 246 | **Focus ring**, états actifs, barre de progression, liens |
-| `amethyst-600` | `#6E3FA3` | 110 63 163 | Améthyste profond — ombres portées, dégradés, fonds de section actifs |
-| `amethyst-700` | `#55317F` | 85 49 127 | État pressé des éléments améthyste |
+| `gold-300` | `#DEC8E8` | 222 200 232 | Fond de badge violet très pâle, surlignage discret |
+| `gold-400` | `#A968BE` | 169 104 190 | Violet clair — reflets, hover des boutons primaires, icônes actives |
+| `gold-500` | `#8B4BA8` | 139 75 168 | **Couleur principale** — icônes, séparateurs, bouton primaire au repos |
+| `gold-600` | `#66377F` | 102 55 127 | Violet foncé — bordures fines |
+| `gold-700` | `#522C66` | 82 44 102 | État pressé/actif des boutons violets |
 
-Règle stricte : l'or est la couleur de marque et d'action primaire ;
-l'améthyste ne sert QUE pour l'état — sélection, focus clavier, onglet
-actif, badge "nouveau", progression. Ne jamais utiliser l'améthyste pour
-un titre ou un bouton primaire, ni l'or pour un focus ring.
+`gold-500` reste LA couleur de marque et d'action primaire, `gold-400`
+réservé au hover/reflet, `gold-600` aux bordures fines et aux fonds. Les
+titres (h1-h4) utilisent désormais `amethyst-600` (navy), pas `gold-500`
+— voir §1.3.
+
+### 1.3 Accent purple + navy — accent et titres
+
+| Token | Hex | RGB | Usage |
+|---|---|---|---|
+| `amethyst-300` | `#D4A8E0` | 212 168 224 | Fond de badge/pastille très pâle |
+| `amethyst-400` | `#9B59B6` | 155 89 182 | **Focus ring**, états actifs, barre de progression, liens |
+| `amethyst-600` | `#17233C` | 23 35 60 | Navy — titres (h1-h4), ombres portées, dégradés premium |
+| `amethyst-700` | `#111A2D` | 17 26 45 | État pressé des éléments navy |
+
+Règle : le violet (`gold-*`) est la couleur d'action primaire (boutons) ;
+`amethyst-400` (accent purple) sert pour l'état — sélection, focus
+clavier, onglet actif, progression ; `amethyst-600` (navy) sert pour les
+titres et les ombres/dégradés "premium", jamais pour un bouton primaire.
 
 ### 1.4 Texte
 
 | Token | Hex | RGB | Usage |
 |---|---|---|---|
-| `ivory` | `#EDE6D6` | 237 230 214 | Texte de corps, sur tout fond sombre |
-| `warmgray` | `#9A9285` | 154 146 133 | Texte secondaire, légendes, métadonnées |
-| `muted` | `#6B6558` | 107 101 88 | Placeholder, texte désactivé, texte tertiaire |
-| `ink` | `#0B0A0F` | 11 10 15 | Texte sur fond doré (boutons primaires) — jamais blanc pur |
+| `ivory` | `#202124` | 32 33 36 | Texte de corps, presque noir, sur tout fond clair |
+| `warmgray` | `#6B7280` | 107 114 128 | Texte secondaire, légendes, métadonnées |
+| `muted` | `#9CA3AF` | 156 163 175 | Placeholder, texte désactivé, texte tertiaire |
+| `ink` | `#FFFFFF` | 255 255 255 | Texte sur fond violet (boutons primaires) |
 
 ### 1.5 Risque (analyse de conclusions adverses)
 
 | Token | Hex | RGB | Niveau |
 |---|---|---|---|
 | `risk-high` | `#B3261E` | 179 38 30 | Élevé — rouge brique |
-| `risk-medium` | `#C9A227` | 201 162 39 | Moyen — réutilise `gold-500` |
+| `risk-medium` | `#B8860B` | 184 134 11 | Moyen — ambre |
 | `risk-low` | `#4C6B3F` | 76 107 63 | Faible — vert sauge |
 
 Ce sont des couleurs **sémantiques**, indépendantes de l'accent améthyste

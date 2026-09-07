@@ -1,10 +1,15 @@
 /**
  * globals.css — Variables CSS du design system Plaid'IA + classes composants.
  *
- * Thème sombre unique et permanent (voir DESIGN.md §0) : toutes les
- * variables n'ont qu'une seule définition, dans :root, jamais de bascule
- * media/[data-theme]. Les valeurs sont dupliquées ici et dans
- * tailwind.config.js — DESIGN.md fait foi en cas de divergence.
+ * Thème clair permanent (retheme SaaS violet, voir en-tête de commit) :
+ * toutes les variables n'ont qu'une seule définition, dans :root, jamais
+ * de bascule media/[data-theme]. Les noms de tokens (gold-*, amethyst-*,
+ * void, surface, ivory...) sont conservés tels quels pour ne toucher
+ * aucune classe Tailwind consommée par les pages -- seules les VALEURS
+ * changent ici. Les valeurs sont dupliquées ici et dans
+ * tailwind.config.js — DESIGN.md fait foi en cas de divergence, mais ses
+ * tableaux de couleurs sont désormais alignés sur ce fichier (sa prose
+ * "cabinet d'avocat ancien / fond noir" décrit l'identité précédente).
  */
 
 @import url("https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Cormorant+Garamond:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap");
@@ -14,39 +19,56 @@
 @tailwind utilities;
 
 :root {
-  /* Fond — noir violacé */
-  --color-void: 11 10 15; /* #0B0A0F */
-  --color-surface: 20 17 28; /* #14111C */
-  --color-surface-2: 28 24 38; /* #1C1826 */
-  --color-surface-3: 36 30 51; /* #241E33 */
+  /* Fond — gris très clair (SaaS moderne), cartes blanches */
+  --color-void: 247 247 249; /* #F7F7F9 */
+  --color-surface: 255 255 255; /* #FFFFFF */
+  --color-surface-2: 241 241 244; /* #F1F1F4 — inputs, zones légèrement distinctes */
+  --color-surface-3: 229 229 234; /* #E5E5EA — bordures */
 
-  /* Or ancien — couleur principale */
-  --color-gold-300: 240 221 160; /* #F0DDA0 */
-  --color-gold-400: 230 199 106; /* #E6C76A */
-  --color-gold-500: 201 162 39; /* #C9A227 */
-  --color-gold-600: 184 134 11; /* #B8860B */
-  --color-gold-700: 138 101 8; /* #8A6508 */
+  /* Violet — couleur principale (remplace l'or, mêmes noms de tokens) */
+  --color-gold-300: 222 200 232; /* #DEC8E8 — fond de badge très pâle */
+  --color-gold-400: 169 104 190; /* #A968BE — violet clair, hover */
+  --color-gold-500: 139 75 168; /* #8B4BA8 — violet primaire, défaut */
+  --color-gold-600: 102 55 127; /* #66377F — violet foncé, bordures/dividers */
+  --color-gold-700: 82 44 102; /* #522C66 — état pressé/actif */
 
-  /* Améthyste — accent d'état */
-  --color-amethyst-300: 196 181 253; /* #C4B5FD */
-  --color-amethyst-400: 139 92 246; /* #8B5CF6 */
-  --color-amethyst-600: 110 63 163; /* #6E3FA3 */
-  --color-amethyst-700: 85 49 127; /* #55317F */
+  /* Purple accent — accent d'état + touches bleu nuit premium (mêmes noms) */
+  --color-amethyst-300: 212 168 224; /* #D4A8E0 */
+  --color-amethyst-400: 155 89 182; /* #9B59B6 — accent purple */
+  --color-amethyst-600: 23 35 60; /* #17233C — navy, ombres/dégradés premium */
+  --color-amethyst-700: 17 26 45; /* navy plus foncé, état pressé */
+
+  /* Ombres portées — dédié, distinct du fond de page (void est maintenant clair) */
+  --color-shadow: 20 20 26;
 
   /* Texte */
-  --color-ivory: 237 230 214; /* #EDE6D6 */
-  --color-warmgray: 154 146 133; /* #9A9285 */
-  --color-muted: 107 101 88; /* #6B6558 */
-  --color-ink: 11 10 15; /* #0B0A0F — texte sur fond doré */
+  --color-ivory: 32 33 36; /* #202124 — texte principal, presque noir */
+  --color-warmgray: 107 114 128; /* #6B7280 — texte secondaire */
+  --color-muted: 156 163 175; /* #9CA3AF — placeholder, texte désactivé */
+  --color-ink: 255 255 255; /* texte sur fond violet (boutons primaires) */
 
-  /* Risque */
+  /* Risque — sémantiques, indépendantes de l'accent, inchangées */
   --color-risk-high: 179 38 30; /* #B3261E */
-  --color-risk-medium: 201 162 39; /* alias gold-500 */
+  --color-risk-medium: 184 134 11; /* #B8860B — ambre, lisible sur fond clair */
   --color-risk-low: 76 107 63; /* #4C6B3F */
 
-  /* Marqueur "À VÉRIFIER" — repris tel quel de gui.py (tag a_verifier) */
+  /* Marqueur "À VÉRIFIER" — repris tel quel de gui.py (tag a_verifier), inchangé */
   --color-verify-bg: 255 233 176; /* #FFE9B0 */
   --color-verify-text: 122 74 0; /* #7A4A00 */
+
+  /* Alias directs de la palette demandée (mêmes valeurs que ci-dessus,
+     pour référence/réutilisation future — les classes existantes
+     continuent de consommer les tokens gold, amethyst, void, surface). */
+  --primary: 139 75 168;
+  --primary-light: 169 104 190;
+  --primary-dark: 102 55 127;
+  --accent: 155 89 182;
+  --navy: 23 35 60;
+  --background: 247 247 249;
+  --surface: 255 255 255;
+  --border: 229 229 234;
+  --text-primary: 32 33 36;
+  --text-secondary: 107 114 128;
 
   /* Motif d'arrière-plan secondaire — arche gothique au trait (voir DESIGN.md §4, usage imprimé uniquement) */
   --motif-gothic-arch: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0MDAgNjAwIiBmaWxsPSJub25lIiBzdHJva2U9IiNDOUEyMjciIHN0cm9rZS13aWR0aD0iMS41Ij48cGF0aCBkPSJNNjAgNTYwIFY0MDAgQTI0MCAyNDAgMCAwIDEgMTgwIDE5MiBBMjQwIDI0MCAwIDAgMSAzMDAgNDAwIFY1NjAiLz48cGF0aCBkPSJNODQgNTYwIFY0MDQgQTIwMCAyMDAgMCAwIDEgMTgyIDIxNCBBMjAwIDIwMCAwIDAgMSAyNzYgNDA0IFY1NjAiIG9wYWNpdHk9IjAuNiIvPjxwYXRoIGQ9Ik0xMDYgNTYwIFY0MDggQTE3MCAxNzAgMCAwIDEgMTgwIDI0NSBBMTcwIDE3MCAwIDAgMSAyNTQgNDA4IFY1NjAiIG9wYWNpdHk9IjAuNCIvPjxwYXRoIGQ9Ik0xODAgNTYwIFYyNDUiIG9wYWNpdHk9IjAuNSIvPjxjaXJjbGUgY3g9IjE4MCIgY3k9IjE2NSIgcj0iMjQiIG9wYWNpdHk9IjAuOCIvPjxjaXJjbGUgY3g9IjE4MCIgY3k9IjE2NSIgcj0iMTMiLz48Y2lyY2xlIGN4PSIxODAiIGN5PSIxNTAiIHI9IjciLz48Y2lyY2xlIGN4PSIxODAiIGN5PSIxODAiIHI9IjciLz48Y2lyY2xlIGN4PSIxNjUiIGN5PSIxNjUiIHI9IjciLz48Y2lyY2xlIGN4PSIxOTUiIGN5PSIxNjUiIHI9IjciLz48Y2lyY2xlIGN4PSIxODAiIGN5PSIxNjUiIHI9IjMiIGZpbGw9IiM4QjVDRjYiIHN0cm9rZT0ibm9uZSIvPjwvc3ZnPg==");
@@ -57,7 +79,7 @@
 
 @layer base {
   html {
-    color-scheme: dark;
+    color-scheme: light;
   }
 
   body {
@@ -68,7 +90,10 @@
 
   h1, h2, h3, h4 {
     font-family: "Cormorant Garamond", serif;
-    color: rgb(var(--color-gold-500));
+    /* Navy plutôt que le violet des boutons/accents -- le violet reste
+       réservé à l'action et à l'état (voir DESIGN.md §1.3), les titres
+       gardent une teinte sombre "premium" distincte. */
+    color: rgb(var(--color-amethyst-600));
     text-wrap: balance;
   }
 
@@ -183,8 +208,8 @@
   .window {
     @apply overflow-hidden rounded-lg border border-gold-600/25 bg-surface;
     box-shadow:
-      0 40px 80px -20px rgb(var(--color-void) / 0.8),
-      0 0 60px -10px rgb(var(--color-amethyst-600) / 0.25);
+      0 20px 50px -20px rgb(var(--color-shadow) / 0.28),
+      0 0 40px -12px rgb(var(--color-amethyst-600) / 0.18);
   }
 
   .window-bar {
@@ -372,7 +397,7 @@
      écran qu'on revoit (rarement, mais pas qu'une fois). */
   .portrait-card {
     @apply relative overflow-hidden rounded-lg border border-gold-600/30;
-    box-shadow: 0 30px 70px -20px rgb(var(--color-void) / 0.85), 0 0 50px -15px rgb(var(--color-amethyst-600) / 0.3);
+    box-shadow: 0 20px 50px -18px rgb(var(--color-shadow) / 0.3), 0 0 40px -14px rgb(var(--color-amethyst-600) / 0.2);
   }
   .portrait-card > img {
     @apply block h-full w-full object-cover;
