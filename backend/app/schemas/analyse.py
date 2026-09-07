@@ -113,6 +113,16 @@ class StyleOut(BaseModel):
     synthese_strategique: str = ""
 
 
+class TraductionIn(BaseModel):
+    texte: str = Field(..., min_length=1, max_length=MAX_TEXTE_CARACTERES, description="Texte à traduire, en français ou en anglais")
+
+
+class TraductionOut(BaseModel):
+    langue_detectee: str = ""
+    langue_cible: str = ""
+    texte_traduit: str = ""
+
+
 class ExportAnalyseIn(BaseModel):
     dossier_id: int
     arguments: list[dict]

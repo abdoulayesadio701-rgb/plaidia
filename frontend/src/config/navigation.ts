@@ -69,6 +69,7 @@ export const NAVIGATION: Record<Espace, NavSection[]> = {
         { path: "/carnet/note", label: "Prendre une note", requiresDossier: true },
         { path: "/carnet/notes", label: "Consulter les notes", requiresDossier: true },
         { path: "/carnet/note-client", label: "Rédiger une note client", requiresDossier: true },
+        { path: "/carnet/traduire", label: "Traduire un texte (FR ↔ EN)", requiresDossier: false },
       ],
     },
   ],

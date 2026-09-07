@@ -697,6 +697,52 @@ def reviser_texte(texte_original: str, instruction_revision: str) -> str:
     return response.content[0].text.strip()
 
 
+TRADUCTION_SYSTEM_PROMPT = """Tu es un traducteur juridique professionnel français ↔ anglais, spécialisé dans les textes de droit et de procédure.
+
+Détecte automatiquement si le texte fourni est en français ou en anglais, puis traduis-le intégralement vers l'AUTRE langue.
+
+Réponds UNIQUEMENT avec un objet JSON valide, sans texte avant ou après, sans balises markdown, selon ce schéma exact :
+
+{
+  "langue_detectee": "fr" | "en",
+  "langue_cible": "fr" | "en",
+  "texte_traduit": "la traduction intégrale, prête à l'emploi"
+}
+
+Règles impératives :
+- Traduis le sens, pas mot à mot — un texte juridique traduit doit se lire comme rédigé nativement dans la langue cible, jamais comme une traduction mécanique.
+- Préserve le ton, le registre (soutenu et professionnel) et le style du texte original — un texte formel reste formel, un texte simple reste simple.
+- Préserve la terminologie juridique précise : utilise l'équivalent reconnu dans la langue cible (ex. "mise en demeure" → "formal notice", "faute grave" → "serious misconduct"), jamais une traduction littérale qui trahirait le sens juridique. Si un terme français n'a pas d'équivalent exact reconnu en anglais (ou inversement), garde le terme original entre parenthèses après sa traduction approximative.
+- Conserve la structure du texte (titres, listes, paragraphes, mise en forme **gras**) telle quelle.
+- Le marqueur "À VÉRIFIER" lui-même (uniquement ces deux mots) reste identique dans les deux langues, jamais traduit ni supprimé — mais tout le reste de la phrase qui le suit (le contenu signalé comme incertain) DOIT être traduit normalement, comme le reste du texte. N'utilise jamais "À VÉRIFIER" comme prétexte pour laisser une portion du texte non traduite.
+- N'ajoute, ne résume et n'omets aucune information — une traduction fidèle, rien de plus.
+- Si le texte cible est le français, respecte la typographie française : guillemets « … », apostrophe typographique ', espace avant ; : ? !, tiret d'incise court – (jamais le tiret long —)."""
+
+
+def traduire_texte(texte: str) -> dict:
+    """Détecte automatiquement la langue (français ou anglais) et traduit
+    vers l'autre langue, en préservant le ton et la terminologie juridique
+    — utilisé pour partager un document généré par Plaid'IA avec une partie
+    ou un confrère anglophone, sans passer par un moteur de traduction
+    générique moins fiable sur le vocabulaire juridique précis."""
+    client = _client()
+    response = client.messages.create(
+        model=MODEL_ACTIF,
+        max_tokens=4000,
+        system=TRADUCTION_SYSTEM_PROMPT,
+        messages=[{"role": "user", "content": f"Texte à traduire :\n{texte}"}],
+    )
+    raw = response.content[0].text.strip().replace("```json", "").replace("```", "").strip()
+    try:
+        parsed = json.loads(raw)
+    except json.JSONDecodeError as e:
+        raise ValueError(f"Réponse du modèle non-JSON : {e}\n\nRéponse brute :\n{raw}")
+    parsed.setdefault("langue_detectee", "")
+    parsed.setdefault("langue_cible", "")
+    parsed.setdefault("texte_traduit", "")
+    return parsed
+
+
 VERIFICATION_PROCEDURALE_SYSTEM_PROMPT = """Tu es un assistant qui aide un professionnel du droit francophone (avocat ou greffier) à vérifier qu'une procédure ne présente pas d'anomalie apparente, à partir du contenu d'une affaire.
 
 Réponds UNIQUEMENT avec un objet JSON valide, sans texte avant ou après, sans balises markdown, selon ce schéma exact :

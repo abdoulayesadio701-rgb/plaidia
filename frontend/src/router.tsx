@@ -33,6 +33,7 @@ import GererCorpusPage from "@/pages/grimoire/GererCorpusPage";
 import PrendreNotePage from "@/pages/carnet/PrendreNotePage";
 import ConsulterNotesPage from "@/pages/carnet/ConsulterNotesPage";
 import NoteClientPage from "@/pages/carnet/NoteClientPage";
+import TraduirePage from "@/pages/carnet/TraduirePage";
 import ChronologiePage from "@/pages/greffier/ChronologiePage";
 import ExtractionPage from "@/pages/greffier/ExtractionPage";
 import ClassementPage from "@/pages/greffier/ClassementPage";
@@ -65,6 +66,7 @@ const PAGES_IMPLEMENTEES: Record<string, ReactElement> = {
   "/carnet/note": <PrendreNotePage />,
   "/carnet/notes": <ConsulterNotesPage />,
   "/carnet/note-client": <NoteClientPage />,
+  "/carnet/traduire": <TraduirePage />,
   "/greffier/chronologie": <ChronologiePage />,
   "/greffier/extraction": <ExtractionPage />,
   "/greffier/classement": <ClassementPage />,

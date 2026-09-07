@@ -31,6 +31,8 @@ from app.schemas.analyse import (
     SimulateurOut,
     StyleIn,
     StyleOut,
+    TraductionIn,
+    TraductionOut,
 )
 from fastapi import APIRouter, Query
 from fastapi.responses import FileResponse
@@ -126,6 +128,12 @@ def rapport_complet(payload: RapportCompletIn):
 def analyser_style(payload: StyleIn):
     demo.exiger_cle_api()
     return legacy_analyse.analyser_style_adverse(payload.texte)
+
+
+@router.post("/traduire", response_model=TraductionOut)
+def traduire(payload: TraductionIn):
+    demo.exiger_cle_api()
+    return legacy_analyse.traduire_texte(payload.texte)
 
 
 @router.post("/conclusions/export")

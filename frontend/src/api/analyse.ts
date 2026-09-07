@@ -3,7 +3,7 @@
  */
 
 import { apiRequest, apiRequestBlob } from "./http";
-import type { ConclusionsResultat, PlanResultat, RapportCompletResultat, ResumeResultat, SimulateurResultat, StyleResultat } from "./types";
+import type { ConclusionsResultat, PlanResultat, RapportCompletResultat, ResumeResultat, SimulateurResultat, StyleResultat, TraductionResultat } from "./types";
 
 export function analyserConclusions(texte: string, dossierId?: number): Promise<ConclusionsResultat> {
   return apiRequest<ConclusionsResultat>("/api/analyse/conclusions", {
@@ -36,6 +36,10 @@ export function rapportComplet(dossierId: number, tempsMinutes?: number): Promis
 
 export function analyserStyle(texte: string): Promise<StyleResultat> {
   return apiRequest<StyleResultat>("/api/analyse/style", { method: "POST", body: { texte } });
+}
+
+export function traduireTexte(texte: string): Promise<TraductionResultat> {
+  return apiRequest<TraductionResultat>("/api/analyse/traduire", { method: "POST", body: { texte } });
 }
 
 export function exporterConclusions(

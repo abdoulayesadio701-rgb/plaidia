@@ -129,6 +129,12 @@ export interface StyleResultat {
   synthese_strategique: string;
 }
 
+export interface TraductionResultat {
+  langue_detectee: string;
+  langue_cible: string;
+  texte_traduit: string;
+}
+
 // ---------------------------------------------------------------------
 // Jurisprudence (backend/app/schemas/jurisprudence.py)
 // ---------------------------------------------------------------------
