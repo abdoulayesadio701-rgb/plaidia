@@ -13,6 +13,7 @@ import EmptyState from "@/components/EmptyState";
 import ErrorState from "@/components/ErrorState";
 import RichOutput from "@/components/RichOutput";
 import { SkeletonList } from "@/components/Skeleton";
+import ChatContextuelPanel from "@/components/chat/ChatContextuelPanel";
 
 type CleSection = "langage_de_couverture" | "affirmations_absolues" | "voix_passive_suspecte" | "ruptures_registre";
 
@@ -25,7 +26,7 @@ const SECTIONS: { key: CleSection; label: string; icone: string }[] = [
 
 export default function AnalyseStylePage() {
   const [texte, setTexte] = useState("");
-  const { data, loading, error, executer } = useLazyAction((t: string) => analyseApi.analyserStyle(t));
+  const { data, loading, error, executer, definirDonnees } = useLazyAction((t: string) => analyseApi.analyserStyle(t));
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
@@ -54,7 +55,17 @@ export default function AnalyseStylePage() {
 
       {!loading && error && <ErrorState message={error} onRetry={() => void executer(texte)} />}
 
-      {!loading && !error && data && <ResultatStyle data={data} />}
+      {!loading && !error && data && (
+        <div className="space-y-5">
+          <ResultatStyle data={data} />
+          <ChatContextuelPanel
+            feature="style"
+            resultatActuel={data}
+            onMiseAJour={definirDonnees}
+            placeholder="Ex. « Pourquoi cette phrase est-elle une affirmation absolue risquée ? »…"
+          />
+        </div>
+      )}
 
       {!loading && !error && !data && (
         <EmptyState

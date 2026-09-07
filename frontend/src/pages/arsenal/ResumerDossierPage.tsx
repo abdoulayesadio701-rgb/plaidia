@@ -13,10 +13,11 @@ import EmptyState from "@/components/EmptyState";
 import ErrorState from "@/components/ErrorState";
 import RichOutput from "@/components/RichOutput";
 import { SkeletonList } from "@/components/Skeleton";
+import ChatContextuelPanel from "@/components/chat/ChatContextuelPanel";
 
 export default function ResumerDossierPage() {
   const dossierActif = useDossierActif();
-  const { data, loading, error, executer } = useLazyAction(() => analyseApi.resumerDossier(dossierActif!.id));
+  const { data, loading, error, executer, definirDonnees } = useLazyAction(() => analyseApi.resumerDossier(dossierActif!.id));
 
   if (!dossierActif) {
     return <EmptyState titre="Aucun dossier sélectionné" description="Sélectionnez ou créez un dossier pour le résumer." />;
@@ -87,6 +88,14 @@ export default function ResumerDossierPage() {
               </ul>
             </div>
           )}
+
+          <ChatContextuelPanel
+            feature="resume"
+            resultatActuel={data}
+            onMiseAJour={definirDonnees}
+            dossierId={dossierActif.id}
+            placeholder="Ex. « Insiste davantage sur le risque de prescription », « fais plus court »…"
+          />
         </div>
       )}
     </div>

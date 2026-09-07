@@ -14,13 +14,14 @@ import EmptyState from "@/components/EmptyState";
 import ErrorState from "@/components/ErrorState";
 import RichOutput from "@/components/RichOutput";
 import { SkeletonList } from "@/components/Skeleton";
+import ChatContextuelPanel from "@/components/chat/ChatContextuelPanel";
 
 export default function ConsulterJurisprudencePage() {
   const juridictionActive = useAppStore((s) => s.juridictionActive);
   const [question, setQuestion] = useState("");
   const [but, setBut] = useState("");
 
-  const { data, loading, error, executer } = useLazyAction((q: string, b: string) =>
+  const { data, loading, error, executer, definirDonnees } = useLazyAction((q: string, b: string) =>
     jurisprudenceApi.consulterJurisprudence(q, b, juridictionActive)
   );
 
@@ -93,6 +94,13 @@ export default function ConsulterJurisprudencePage() {
           <div className="card p-6">
             <RichOutput texte={data.reponse} />
           </div>
+
+          <ChatContextuelPanel
+            feature="jurisprudence_consultation"
+            resultatActuel={data}
+            onMiseAJour={definirDonnees}
+            placeholder="Ex. « Explique cette décision plus en détail », « compare-la avec un arrêt plus récent »…"
+          />
         </div>
       )}
 

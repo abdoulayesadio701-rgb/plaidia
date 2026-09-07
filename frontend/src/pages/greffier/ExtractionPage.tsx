@@ -20,6 +20,7 @@ import Button from "@/components/Button";
 import EmptyState from "@/components/EmptyState";
 import ErrorState from "@/components/ErrorState";
 import { SkeletonList } from "@/components/Skeleton";
+import ChatContextuelPanel from "@/components/chat/ChatContextuelPanel";
 
 const EXTENSIONS_ACCEPTEES = ".pdf,.docx,.xlsx,.xls,.txt,.png,.jpg,.jpeg,.webp";
 
@@ -38,7 +39,7 @@ export default function ExtractionPage() {
   const [enImport, setEnImport] = useState(false);
   const inputFichierRef = useRef<HTMLInputElement>(null);
 
-  const { data, loading, error, executer } = useLazyAction((t: string) => greffierApi.extraction(t));
+  const { data, loading, error, executer, definirDonnees } = useLazyAction((t: string) => greffierApi.extraction(t));
 
   const importerFichier = async (fichier: File) => {
     if (!dossierActif) return;
@@ -110,29 +111,39 @@ export default function ExtractionPage() {
       {!loading && error && <ErrorState message={error} onRetry={lancer} />}
 
       {!loading && !error && data && (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          {BLOCS.map(({ key, label, icone }) => {
-            const items = data[key];
-            return (
-              <div key={key} className="card space-y-2.5 p-5">
-                <p className="font-serif text-h4 font-semibold text-ivory">
-                  {icone} {label}
-                </p>
-                {items.length === 0 ? (
-                  <p className="text-sm text-muted">Rien détecté.</p>
-                ) : (
-                  <ul className="space-y-1.5 text-sm text-ivory">
-                    {items.map((item, i) => (
-                      <li key={i} className="flex gap-2">
-                        <span className="text-gold-500">•</span>
-                        {item}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-            );
-          })}
+        <div className="space-y-5">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            {BLOCS.map(({ key, label, icone }) => {
+              const items = data[key];
+              return (
+                <div key={key} className="card space-y-2.5 p-5">
+                  <p className="font-serif text-h4 font-semibold text-ivory">
+                    {icone} {label}
+                  </p>
+                  {items.length === 0 ? (
+                    <p className="text-sm text-muted">Rien détecté.</p>
+                  ) : (
+                    <ul className="space-y-1.5 text-sm text-ivory">
+                      {items.map((item, i) => (
+                        <li key={i} className="flex gap-2">
+                          <span className="text-gold-500">•</span>
+                          {item}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          <ChatContextuelPanel
+            feature="extraction"
+            resultatActuel={data}
+            onMiseAJour={definirDonnees}
+            dossierId={dossierActif?.id}
+            placeholder="Ex. « Cherche aussi les délais de prescription », « ajoute cette date : … »…"
+          />
         </div>
       )}
 

@@ -325,7 +325,12 @@ export type FeatureChatContextuel =
   | "chronologie"
   | "coherence"
   | "pv_audience"
-  | "rapport_complet";
+  | "rapport_complet"
+  | "resume"
+  | "style"
+  | "verification_procedurale"
+  | "extraction"
+  | "jurisprudence_consultation";
 
 export interface ChatContextuelResultat {
   intent: string;

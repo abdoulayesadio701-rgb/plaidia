@@ -19,6 +19,7 @@ import Button from "@/components/Button";
 import EmptyState from "@/components/EmptyState";
 import ErrorState from "@/components/ErrorState";
 import { SkeletonList } from "@/components/Skeleton";
+import ChatContextuelPanel from "@/components/chat/ChatContextuelPanel";
 
 const CLASSE_STATUT: Record<string, string> = {
   "À venir": "badge-risk-low",
@@ -29,7 +30,7 @@ const CLASSE_STATUT_DEFAUT = "badge border-muted/30 bg-surface-2 text-warmgray";
 
 export default function VerificationProceduralePage() {
   const dossierActif = useDossierActif();
-  const { data, loading, error, executer } = useLazyAction(() => greffierApi.verificationProcedurale(dossierActif!.id));
+  const { data, loading, error, executer, definirDonnees } = useLazyAction(() => greffierApi.verificationProcedurale(dossierActif!.id));
 
   if (!dossierActif) {
     return <EmptyState titre="Aucun dossier sélectionné" description="Sélectionnez ou créez un dossier pour vérifier sa procédure." />;
@@ -100,6 +101,14 @@ export default function VerificationProceduralePage() {
               </ul>
             </div>
           )}
+
+          <ChatContextuelPanel
+            feature="verification_procedurale"
+            resultatActuel={data}
+            onMiseAJour={definirDonnees}
+            dossierId={dossierActif.id}
+            placeholder="Ex. « Pourquoi cette échéance est-elle possiblement dépassée ? »…"
+          />
         </div>
       )}
 
