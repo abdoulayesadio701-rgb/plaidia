@@ -26,6 +26,7 @@ from app.bootstrap import ROOT_DIR  # noqa: E402  (après load_dotenv, avant les
 
 import analyse as legacy_analyse  # noqa: E402
 import db  # noqa: E402
+import extract as legacy_extract  # noqa: E402
 from fastapi import FastAPI, Request  # noqa: E402
 from fastapi.middleware.cors import CORSMiddleware  # noqa: E402
 from fastapi.responses import JSONResponse  # noqa: E402
@@ -157,6 +158,20 @@ async def value_error_handler(request, exc: ValueError):
 @app.exception_handler(FileNotFoundError)
 async def file_not_found_handler(request, exc: FileNotFoundError):
     return JSONResponse(status_code=404, content={"detail": str(exc)})
+
+
+@app.exception_handler(legacy_extract.DocumentNumeriseError)
+async def document_numerise_handler(request, exc: legacy_extract.DocumentNumeriseError):
+    # PDF sans couche de texte exploitable (scan) -- voir extract.py §8.
+    # 422 : le fichier est valide, c'est son contenu qui n'est pas exploitable.
+    return JSONResponse(status_code=422, content={"detail": str(exc)})
+
+
+@app.exception_handler(legacy_extract.DocumentNumeriseError)
+async def document_numerise_handler(request, exc: legacy_extract.DocumentNumeriseError):
+    # PDF sans couche de texte exploitable (scan) -- voir extract.py §8.
+    # 422 : le fichier est valide, c'est son contenu qui n'est pas exploitable.
+    return JSONResponse(status_code=422, content={"detail": str(exc)})
 
 
 @app.exception_handler(ImportError)

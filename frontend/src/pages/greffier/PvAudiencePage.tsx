@@ -6,8 +6,8 @@
  * /api/greffier/pv-audience/export ajouté pour cette page).
  */
 
-import { useState } from "react";
-import { greffier as greffierApi, downloadBlob } from "@/api";
+import { useRef, useState } from "react";
+import { dossiers as dossiersApi, greffier as greffierApi, downloadBlob } from "@/api";
 import { useAppStore } from "@/store/useAppStore";
 import { useLazyAction } from "@/hooks/useLazyAction";
 import Button from "@/components/Button";
@@ -16,17 +16,35 @@ import ErrorState from "@/components/ErrorState";
 import { SkeletonBlock } from "@/components/Skeleton";
 import ChatContextuelPanel from "@/components/chat/ChatContextuelPanel";
 
+const EXTENSIONS_ACCEPTEES = ".pdf,.docx,.xlsx,.xls,.txt,.png,.jpg,.jpeg,.webp";
+
 export default function PvAudiencePage() {
   const pousserToast = useAppStore((s) => s.pousserToast);
   const [notes, setNotes] = useState("");
   const [pvTexte, setPvTexte] = useState("");
   const [exportEnCours, setExportEnCours] = useState(false);
+  const [enImport, setEnImport] = useState(false);
+  const inputFichierRef = useRef<HTMLInputElement>(null);
 
   const { loading, error, executer } = useLazyAction((n: string) => greffierApi.pvAudience(n));
 
   const generer = async () => {
     const resultat = await executer(notes);
     if (resultat) setPvTexte(resultat.texte);
+  };
+
+  const importerFichier = async (fichier: File) => {
+    setEnImport(true);
+    try {
+      const resultat = await dossiersApi.extraireFichier(fichier);
+      setNotes((precedent) => (precedent ? `${precedent}\n\n${resultat.texte_extrait}` : resultat.texte_extrait));
+      pousserToast("success", `« ${resultat.nom_fichier} » importé (${resultat.caracteres_extraits.toLocaleString("fr-FR")} caractères).`);
+    } catch (e) {
+      pousserToast("error", e instanceof Error ? e.message : "Échec de l'import du fichier.");
+    } finally {
+      setEnImport(false);
+      if (inputFichierRef.current) inputFichierRef.current.value = "";
+    }
   };
 
   const copier = async () => {
@@ -65,10 +83,25 @@ export default function PvAudiencePage() {
             placeholder="Notez librement ce qui se dit pendant l'audience – l'agent les met en forme en PV structuré."
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
-            disabled={loading}
+            disabled={loading || enImport}
           />
-          <div className="flex justify-end">
-            <Button variant="primary" loading={loading} disabled={!notes.trim()} onClick={() => void generer()}>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex flex-wrap items-center gap-3">
+              <input
+                ref={inputFichierRef}
+                type="file"
+                accept={EXTENSIONS_ACCEPTEES}
+                className="hidden"
+                onChange={(e) => {
+                  const fichier = e.target.files?.[0];
+                  if (fichier) void importerFichier(fichier);
+                }}
+              />
+              <Button variant="secondary" loading={enImport} disabled={loading} onClick={() => inputFichierRef.current?.click()}>
+                📎 Importer un fichier
+              </Button>
+            </div>
+            <Button variant="primary" loading={loading} disabled={!notes.trim() || enImport} onClick={() => void generer()}>
               {pvTexte ? "↻ Régénérer le PV" : "Générer le PV"}
             </Button>
           </div>

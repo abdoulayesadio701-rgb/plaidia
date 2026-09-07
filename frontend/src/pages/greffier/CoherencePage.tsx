@@ -6,8 +6,9 @@
  */
 
 import { useState } from "react";
-import { greffier as greffierApi } from "@/api";
+import { dossiers as dossiersApi, greffier as greffierApi } from "@/api";
 import type { Contradiction } from "@/api";
+import { useAppStore } from "@/store/useAppStore";
 import { useLazyAction } from "@/hooks/useLazyAction";
 import Button from "@/components/Button";
 import EmptyState from "@/components/EmptyState";
@@ -15,6 +16,8 @@ import ErrorState from "@/components/ErrorState";
 import RichOutput from "@/components/RichOutput";
 import { SkeletonList } from "@/components/Skeleton";
 import ChatContextuelPanel from "@/components/chat/ChatContextuelPanel";
+
+const EXTENSIONS_ACCEPTEES = ".pdf,.docx,.xlsx,.xls,.txt,.png,.jpg,.jpeg,.webp";
 
 interface DocumentBrouillon {
   id: string;
@@ -34,7 +37,9 @@ function nouveauDocument(numero: number): DocumentBrouillon {
 }
 
 export default function CoherencePage() {
+  const pousserToast = useAppStore((s) => s.pousserToast);
   const [documents, setDocuments] = useState<DocumentBrouillon[]>([nouveauDocument(1), nouveauDocument(2)]);
+  const [idEnImport, setIdEnImport] = useState<string | null>(null);
 
   const { data, loading, error, executer, definirDonnees } = useLazyAction((docs: { nom_document: string; texte: string }[]) =>
     greffierApi.controleCoherence(docs)
@@ -42,6 +47,19 @@ export default function CoherencePage() {
 
   const majDocument = (id: string, patch: Partial<DocumentBrouillon>) =>
     setDocuments((liste) => liste.map((d) => (d.id === id ? { ...d, ...patch } : d)));
+
+  const importerFichier = async (id: string, fichier: File) => {
+    setIdEnImport(id);
+    try {
+      const resultat = await dossiersApi.extraireFichier(fichier);
+      majDocument(id, { texte: resultat.texte_extrait });
+      pousserToast("success", `« ${resultat.nom_fichier} » importé (${resultat.caracteres_extraits.toLocaleString("fr-FR")} caractères).`);
+    } catch (e) {
+      pousserToast("error", e instanceof Error ? e.message : "Échec de l'import du fichier.");
+    } finally {
+      setIdEnImport(null);
+    }
+  };
 
   const ajouterDocument = () => setDocuments((liste) => [...liste, nouveauDocument(liste.length + 1)]);
 
@@ -87,8 +105,21 @@ export default function CoherencePage() {
               placeholder="Collez ici le texte de ce document…"
               value={doc.texte}
               onChange={(e) => majDocument(doc.id, { texte: e.target.value })}
-              disabled={loading}
+              disabled={loading || idEnImport === doc.id}
             />
+            <label className={`btn-secondary w-fit cursor-pointer text-xs ${loading || idEnImport ? "pointer-events-none opacity-60" : ""}`}>
+              {idEnImport === doc.id ? "Import en cours…" : "📎 Importer un fichier"}
+              <input
+                type="file"
+                accept={EXTENSIONS_ACCEPTEES}
+                className="hidden"
+                onChange={(e) => {
+                  const fichier = e.target.files?.[0];
+                  if (fichier) void importerFichier(doc.id, fichier);
+                  e.target.value = "";
+                }}
+              />
+            </label>
           </div>
         ))}
 

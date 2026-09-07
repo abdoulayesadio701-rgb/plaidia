@@ -126,6 +126,41 @@ async def importer_document(dossier_id: int, fichier: UploadFile = File(...)):
     )
 
 
+@router.post("/extraire", response_model=DocumentImporteOut, status_code=201)
+async def extraire_fichier_sans_dossier(fichier: UploadFile = File(...)):
+    """Même extraction que POST /{dossier_id}/documents, mais SANS
+    rattachement à un dossier -- pour les pages volontairement
+    indépendantes de tout dossier (PV d'audience, contrôle de cohérence :
+    voir leurs en-têtes respectifs). N'écrit rien en base ; le texte extrait
+    est retourné tel quel, à l'appelant de décider quoi en faire."""
+    suffix = Path(fichier.filename or "").suffix.lower()
+    if suffix not in EXTENSIONS_AUTORISEES:
+        raise HTTPException(
+            status_code=415,
+            detail=f"Format non supporté : {suffix or '(aucun)'}. Formats acceptés : {legacy_extract.FORMATS_SUPPORTES}",
+        )
+
+    tmp_path = None
+    try:
+        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+            tmp.write(await fichier.read())
+            tmp_path = tmp.name
+
+        texte_extrait = legacy_extract.extract_text(tmp_path)
+    finally:
+        if tmp_path:
+            try:
+                os.remove(tmp_path)
+            except OSError:
+                pass
+
+    return DocumentImporteOut(
+        nom_fichier=fichier.filename or "document",
+        texte_extrait=texte_extrait,
+        caracteres_extraits=len(texte_extrait),
+    )
+
+
 @router.get("/{dossier_id}/export/faits-bruts")
 def exporter_faits_bruts(dossier_id: int):
     dossier = get_dossier_or_404(dossier_id)

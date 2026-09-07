@@ -44,6 +44,15 @@ export function importerDocument(dossierId: number, fichier: File): Promise<Docu
   return apiUpload<DocumentImporte>(`/api/dossiers/${dossierId}/documents`, formData);
 }
 
+/** Même extraction que importerDocument, mais sans rattacher le texte à un
+ * dossier -- pour les pages volontairement indépendantes de tout dossier
+ * (PV d'audience, contrôle de cohérence). N'écrit rien en base. */
+export function extraireFichier(fichier: File): Promise<DocumentImporte> {
+  const formData = new FormData();
+  formData.append("fichier", fichier);
+  return apiUpload<DocumentImporte>("/api/dossiers/extraire", formData);
+}
+
 export async function exporterFaitsBruts(dossierId: number): Promise<{ blob: Blob; filename?: string }> {
   return apiRequestBlob(`/api/dossiers/${dossierId}/export/faits-bruts`);
 }

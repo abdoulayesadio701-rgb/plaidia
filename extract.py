@@ -8,6 +8,21 @@ from pathlib import Path
 
 FORMATS_SUPPORTES = ".pdf, .docx, .xlsx, .xls, .txt, .png, .jpg, .jpeg, .webp"
 
+# Seuil de détection "PDF probablement numérisé" (§8) : un PDF natif contient
+# largement plus de caractères de texte réel par page ; en dessous, c'est le
+# signe d'un scan sans couche de texte exploitable (pdfplumber ne renvoie
+# alors rien, ou presque, même si le document a manifestement du contenu).
+_SEUIL_CARACTERES_PAR_PAGE = 20
+
+
+class DocumentNumeriseError(Exception):
+    """Levée quand un PDF ne contient pas assez de texte exploitable pour
+    son nombre de pages -- signe qu'il s'agit d'un scan sans OCR préalable.
+    Pas d'OCR ajouté ici (dépendance lourde non justifiée tant que le
+    besoin réel ne s'est pas confirmé) -- seulement le point d'extension
+    propre : un futur module OCR n'aurait qu'à être appelé ici, à la place
+    de cette levée d'exception, sans toucher au reste de la chaîne."""
+
 
 def extract_text(file_path: str) -> str:
     """Extrait le texte d'un fichier, quel que soit son format parmi ceux supportés."""
@@ -40,11 +55,17 @@ def _extract_pdf(path: Path) -> str:
         )
     text_parts = []
     with pdfplumber.open(path) as pdf:
+        nb_pages = len(pdf.pages)
         for page in pdf.pages:
             page_text = page.extract_text()
             if page_text:
                 text_parts.append(page_text)
-    return _clean_text("\n".join(text_parts))
+    texte = _clean_text("\n".join(text_parts))
+    if nb_pages > 0 and len(texte) < _SEUIL_CARACTERES_PAR_PAGE * nb_pages:
+        raise DocumentNumeriseError(
+            "Ce document semble être numérisé. Une étape OCR est nécessaire pour exploiter son contenu."
+        )
+    return texte
 
 
 def _extract_docx(path: Path) -> str:

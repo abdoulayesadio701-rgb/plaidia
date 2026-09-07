@@ -51,6 +51,66 @@ class TestExtractText:
             Path(temp_path).unlink()
 
 
+class TestExtractPdf:
+    """Tests pour l'extraction PDF et la détection de document numérisé (§8)."""
+
+    def _generer_pdf(self, chemin, texte_par_page):
+        """Génère un vrai PDF via reportlab (déjà une dépendance du projet,
+        utilisée par export.py) -- un `texte_par_page` vide produit une
+        page blanche, sans couche de texte, comme un scan sans OCR."""
+        from reportlab.lib.pagesizes import A4
+        from reportlab.pdfgen import canvas
+
+        c = canvas.Canvas(str(chemin), pagesize=A4)
+        for texte in texte_par_page:
+            if texte:
+                y = 750
+                for ligne in texte.split("\n"):
+                    c.drawString(100, y, ligne)
+                    y -= 20
+            c.showPage()
+        c.save()
+
+    def test_extract_pdf_normal(self, tmp_path):
+        import sys
+        sys.path.insert(0, str(Path(__file__).parent.parent))
+        from extract import extract_text
+
+        chemin = tmp_path / "normal.pdf"
+        self._generer_pdf(chemin, ["Ceci est un vrai document juridique avec du texte exploitable.\nIl contient largement plus de vingt caracteres par page."])
+
+        texte = extract_text(str(chemin))
+        assert "document juridique" in texte
+
+    def test_extract_pdf_scanne_leve_document_numerise_error(self, tmp_path):
+        """Un PDF sans texte exploitable (page blanche, comme un scan sans
+        OCR) doit lever DocumentNumeriseError, pas renvoyer une chaîne vide
+        silencieusement -- voir ARCHITECTURE_CHAT_CONTEXTUEL.md §2.6/§8."""
+        import sys
+        sys.path.insert(0, str(Path(__file__).parent.parent))
+        from extract import DocumentNumeriseError, extract_text
+
+        chemin = tmp_path / "scan.pdf"
+        self._generer_pdf(chemin, [""])
+
+        with pytest.raises(DocumentNumeriseError, match="numérisé"):
+            extract_text(str(chemin))
+
+    def test_extract_pdf_plusieurs_pages_avec_peu_de_texte_leve_aussi(self, tmp_path):
+        """Le seuil est proportionnel au nombre de pages : quelques mots
+        perdus dans un document de 5 pages doivent aussi être détectés,
+        pas seulement une page totalement vide."""
+        import sys
+        sys.path.insert(0, str(Path(__file__).parent.parent))
+        from extract import DocumentNumeriseError, extract_text
+
+        chemin = tmp_path / "scan_5_pages.pdf"
+        self._generer_pdf(chemin, ["Titre"] + [""] * 4)
+
+        with pytest.raises(DocumentNumeriseError):
+            extract_text(str(chemin))
+
+
 class TestCleanText:
     """Tests pour le nettoyage de texte."""
     
