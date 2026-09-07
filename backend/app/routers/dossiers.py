@@ -30,6 +30,58 @@ router = APIRouter(prefix="/api/dossiers", tags=["dossiers"])
 
 EXTENSIONS_AUTORISEES = {".pdf", ".docx", ".xlsx", ".xls", ".txt", ".png", ".jpg", ".jpeg", ".webp"}
 
+# §13 (ARCHITECTURE_CHAT_CONTEXTUEL.md) : limite de taille explicite --
+# UploadFile n'en impose aucune par défaut, un fichier sans limite lu
+# entièrement en mémoire via .read() est une vraie surface d'abus.
+_MAX_TAILLE_FICHIER = 20 * 1024 * 1024  # 20 Mo
+
+
+async def _extraire_texte_upload(fichier: UploadFile) -> str:
+    """Logique commune à POST /{dossier_id}/documents et POST /extraire :
+    validation du format et de la taille, écriture dans un fichier
+    temporaire, extraction, nettoyage -- puis traduction des erreurs
+    d'extraction (fichier vide, corrompu) en réponses HTTP propres plutôt
+    que la 500 générique que renverrait sinon le handler de secours de
+    main.py. DocumentNumeriseError n'est PAS interceptée ici : elle doit
+    remonter telle quelle jusqu'au handler dédié de main.py."""
+    suffix = Path(fichier.filename or "").suffix.lower()
+    if suffix not in EXTENSIONS_AUTORISEES:
+        raise HTTPException(
+            status_code=415,
+            detail=f"Format non supporté : {suffix or '(aucun)'}. Formats acceptés : {legacy_extract.FORMATS_SUPPORTES}",
+        )
+
+    contenu = await fichier.read(_MAX_TAILLE_FICHIER + 1)
+    if len(contenu) > _MAX_TAILLE_FICHIER:
+        raise HTTPException(
+            status_code=413,
+            detail=f"Fichier trop volumineux (limite : {_MAX_TAILLE_FICHIER // (1024 * 1024)} Mo).",
+        )
+    if not contenu:
+        raise HTTPException(status_code=422, detail="Le fichier est vide.")
+
+    tmp_path = None
+    try:
+        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+            tmp.write(contenu)
+            tmp_path = tmp.name
+
+        try:
+            return legacy_extract.extract_text(tmp_path)
+        except legacy_extract.DocumentNumeriseError:
+            raise
+        except Exception as e:
+            raise HTTPException(
+                status_code=422,
+                detail=f"Impossible de lire ce fichier : il semble corrompu ou dans un format inattendu ({e}).",
+            )
+    finally:
+        if tmp_path:
+            try:
+                os.remove(tmp_path)
+            except OSError:
+                pass
+
 
 @router.post("/", response_model=DossierOut, status_code=201)
 def creer_dossier(payload: DossierCreate):
@@ -96,26 +148,7 @@ async def importer_document(dossier_id: int, fichier: UploadFile = File(...)):
     exactement comme le flux « Préparer ce dossier » de gui.py."""
     get_dossier_or_404(dossier_id)
 
-    suffix = Path(fichier.filename or "").suffix.lower()
-    if suffix not in EXTENSIONS_AUTORISEES:
-        raise HTTPException(
-            status_code=415,
-            detail=f"Format non supporté : {suffix or '(aucun)'}. Formats acceptés : {legacy_extract.FORMATS_SUPPORTES}",
-        )
-
-    tmp_path = None
-    try:
-        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
-            tmp.write(await fichier.read())
-            tmp_path = tmp.name
-
-        texte_extrait = legacy_extract.extract_text(tmp_path)
-    finally:
-        if tmp_path:
-            try:
-                os.remove(tmp_path)
-            except OSError:
-                pass
+    texte_extrait = await _extraire_texte_upload(fichier)
 
     db.ajouter_aux_faits(dossier_id, texte_extrait, source=fichier.filename or "document importé")
 
@@ -133,26 +166,7 @@ async def extraire_fichier_sans_dossier(fichier: UploadFile = File(...)):
     indépendantes de tout dossier (PV d'audience, contrôle de cohérence :
     voir leurs en-têtes respectifs). N'écrit rien en base ; le texte extrait
     est retourné tel quel, à l'appelant de décider quoi en faire."""
-    suffix = Path(fichier.filename or "").suffix.lower()
-    if suffix not in EXTENSIONS_AUTORISEES:
-        raise HTTPException(
-            status_code=415,
-            detail=f"Format non supporté : {suffix or '(aucun)'}. Formats acceptés : {legacy_extract.FORMATS_SUPPORTES}",
-        )
-
-    tmp_path = None
-    try:
-        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
-            tmp.write(await fichier.read())
-            tmp_path = tmp.name
-
-        texte_extrait = legacy_extract.extract_text(tmp_path)
-    finally:
-        if tmp_path:
-            try:
-                os.remove(tmp_path)
-            except OSError:
-                pass
+    texte_extrait = await _extraire_texte_upload(fichier)
 
     return DocumentImporteOut(
         nom_fichier=fichier.filename or "document",

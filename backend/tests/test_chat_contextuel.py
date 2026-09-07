@@ -112,6 +112,47 @@ def test_explication_ne_modifie_rien(client: TestClient, monkeypatch):
     assert "risqué" in data["reponse_agent"]
 
 
+def test_historique_transmis_a_la_classification(client: TestClient, monkeypatch):
+    """Vérifie que l'historique envoyé par le front atteint bien
+    analyse.traiter_message_edition -- condition nécessaire pour qu'une
+    demande de suivi ("encore plus formel") puisse être résolue par
+    rapport à l'échange précédent (voir §6 de la demande initiale)."""
+    appels = []
+
+    def _capture(**kwargs):
+        appels.append(kwargs)
+        return {
+            "intent": "modify",
+            "scope": "texte",
+            "operation": "rewrite",
+            "parameters": {},
+            "contenu_modifie": "Version encore plus formelle.",
+            "reponse_agent": "Fait.",
+        }
+
+    monkeypatch.setattr(legacy_analyse, "traiter_message_edition", _capture)
+
+    historique_envoye = [
+        {"role": "user", "content": "Rends le ton plus professionnel."},
+        {"role": "assistant", "content": "Version modifiée."},
+    ]
+    r = client.post(
+        "/api/chat/contextuel",
+        json={
+            "feature": "note_client",
+            "resultat_actuel": {"texte": "Version modifiée."},
+            "message": "Encore un peu plus formel.",
+            "historique": historique_envoye,
+        },
+        headers=_HEADERS_CLE_TEST,
+    )
+    assert r.status_code == 200
+    assert len(appels) == 1
+    historique_recu = appels[0]["historique"]
+    assert historique_recu == historique_envoye
+    assert appels[0]["message"] == "Encore un peu plus formel."
+
+
 def test_dossier_inconnu_renvoie_404(client: TestClient):
     r = client.post(
         "/api/chat/contextuel",

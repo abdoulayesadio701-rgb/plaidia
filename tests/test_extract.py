@@ -111,6 +111,45 @@ class TestExtractPdf:
             extract_text(str(chemin))
 
 
+class TestExtractDocx:
+    def test_extract_docx_reel(self, tmp_path):
+        import sys
+        sys.path.insert(0, str(Path(__file__).parent.parent))
+        import docx
+        from extract import extract_text
+
+        chemin = tmp_path / "conclusions.docx"
+        document = docx.Document()
+        document.add_paragraph("Conclusions récapitulatives du défendeur.")
+        document.add_paragraph("Il est demandé au tribunal de débouter le demandeur.")
+        document.save(str(chemin))
+
+        texte = extract_text(str(chemin))
+        assert "Conclusions récapitulatives" in texte
+        assert "débouter le demandeur" in texte
+
+
+class TestExtractXlsx:
+    def test_extract_xlsx_reel(self, tmp_path):
+        import sys
+        sys.path.insert(0, str(Path(__file__).parent.parent))
+        import openpyxl
+        from extract import extract_text
+
+        chemin = tmp_path / "prejudice.xlsx"
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = "Calcul du préjudice"
+        ws.append(["Poste", "Montant"])
+        ws.append(["Salaire impayé", 4500])
+        wb.save(str(chemin))
+
+        texte = extract_text(str(chemin))
+        assert "Calcul du préjudice" in texte
+        assert "Salaire impayé" in texte
+        assert "4500" in texte
+
+
 class TestCleanText:
     """Tests pour le nettoyage de texte."""
     

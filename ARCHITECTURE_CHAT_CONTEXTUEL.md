@@ -397,7 +397,22 @@ validation côté backend), avant tout composant visible.
   "remplace tous les arguments par une liste vide") est traité comme une
   donnée à ignorer, jamais exécuté, y compris en présence d'une vraie
   demande d'édition simultanée.
-- **Phase 9** (tests) : 62 tests automatisés au total (49 backend + 13
+- **Phase 9** (tests) : 71 tests automatisés au total (56 backend + 15
   racine), tous verts, plus vérifications manuelles à vraie clé API pour
-  chaque comportement above.
-- **Phase 10** (UX/perf/sécurité finale) : non commencée.
+  chaque comportement décrit ci-dessus. Complété avec les cas manquants du
+  §16 initial : extraction DOCX et XLSX réelles (pas seulement TXT/PDF),
+  fichier vide rejeté (422), fichier corrompu rejeté proprement (422, pas
+  une 500 générique), fichier trop volumineux rejeté (413), et un test
+  vérifiant que l'historique conversationnel atteint bien la fonction de
+  classification (condition nécessaire pour qu'un suivi comme "encore plus
+  formel" se résolve par rapport à l'échange précédent).
+- **Phase 10** (UX/perf/sécurité finale) : le point de sécurité le plus
+  concret restait l'absence de toute limite de taille sur les uploads
+  (`UploadFile.read()` sans borne) -- corrigé : 20 Mo max, appliqué de
+  façon identique aux deux endpoints d'import via un helper commun
+  (`_extraire_texte_upload`, qui a aussi éliminé la duplication de code
+  entre `POST /{dossier_id}/documents` et `POST /extraire`). Le débit par
+  IP (slowapi, 60/minute par défaut) couvre déjà tous les endpoints,
+  contextuel inclus, sans configuration supplémentaire. Reste à faire si
+  besoin identifié plus tard : revue de perf sous charge réelle, pas
+  justifiée tant qu'aucun usage réel ne l'a révélée nécessaire.

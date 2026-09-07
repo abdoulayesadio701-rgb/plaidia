@@ -73,3 +73,43 @@ def test_extraction_txt_simple(client: TestClient):
     )
     assert r.status_code == 201
     assert "Texte brut" in r.json()["texte_extrait"]
+
+
+def test_extraction_fichier_vide_rejetee(client: TestClient):
+    r = client.post("/api/dossiers/extraire", files={"fichier": ("vide.txt", b"", "text/plain")})
+    assert r.status_code == 422
+    assert "vide" in r.json()["detail"].lower()
+
+
+def test_extraction_pdf_corrompu_rejete_proprement(client: TestClient):
+    """Une extension valide mais un contenu illisible (pas un vrai PDF) ne
+    doit jamais remonter comme une 500 générique -- toujours une erreur
+    explicite (voir ARCHITECTURE_CHAT_CONTEXTUEL.md §13)."""
+    r = client.post("/api/dossiers/extraire", files={"fichier": ("faux.pdf", b"ceci n'est pas un PDF valide", "application/pdf")})
+    assert r.status_code == 422
+    assert "corrompu" in r.json()["detail"].lower() or "inattendu" in r.json()["detail"].lower()
+
+
+def test_extraction_docx_corrompu_rejete_proprement(client: TestClient):
+    r = client.post("/api/dossiers/extraire", files={"fichier": ("faux.docx", b"pas un vrai docx", "application/vnd.openxmlformats")})
+    assert r.status_code == 422
+
+
+def test_extraction_fichier_trop_volumineux_rejete(client: TestClient):
+    contenu_trop_gros = b"a" * (20 * 1024 * 1024 + 1)  # 1 octet au-dessus de la limite
+    r = client.post("/api/dossiers/extraire", files={"fichier": ("enorme.txt", contenu_trop_gros, "text/plain")})
+    assert r.status_code == 413
+    assert "volumineux" in r.json()["detail"].lower()
+
+
+def test_extraction_fichier_juste_sous_la_limite_accepte(client: TestClient):
+    contenu = b"a" * (1024 * 1024)  # 1 Mo, largement sous la limite
+    r = client.post("/api/dossiers/extraire", files={"fichier": ("acceptable.txt", contenu, "text/plain")})
+    assert r.status_code == 201
+
+
+def test_import_avec_dossier_fichier_vide_rejete(client: TestClient, dossier_demo_id: int):
+    """Même garde-fou sur l'endpoint historique (POST /{id}/documents),
+    pas seulement sur le nouveau POST /extraire."""
+    r = client.post(f"/api/dossiers/{dossier_demo_id}/documents", files={"fichier": ("vide.txt", b"", "text/plain")})
+    assert r.status_code == 422
