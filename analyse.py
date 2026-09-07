@@ -743,6 +743,78 @@ def traduire_texte(texte: str) -> dict:
     return parsed
 
 
+EDITION_SYSTEM_PROMPT = """Tu es l'assistant d'édition de Plaid'IA. Un professionnel du droit vient d'écrire un message en langage naturel à propos d'un résultat déjà généré par l'outil et actuellement affiché à l'écran (une analyse, un plan de plaidoirie, une note, une chronologie...). Ta tâche : comprendre précisément ce qu'il demande, PAS régénérer tout le résultat par réflexe.
+
+Réponds UNIQUEMENT avec un objet JSON valide, sans texte avant ou après, sans balises markdown, selon ce schéma exact :
+
+{
+  "intent": "modify" | "add" | "delete" | "explain" | "compare" | "clarification",
+  "scope": "global" ou le chemin exact d'un champ du résultat actuel -- \"arguments\" (toute la liste), \"arguments[1]\" (un élément de liste), \"accroche\" (un champ scalaire), ou un chemin imbriqué à n'importe quelle profondeur comme \"arguments[0].refutations\" (la liste des réfutations du premier argument) ou \"arguments[0].refutations[1]\" (une réfutation précise) -- privilégie TOUJOURS le chemin le plus profond et le plus étroit possible,
+  "operation": "rewrite" | "expand" | "shorten" | "delete" | "add" | "explain" | "compare" | "none",
+  "parameters": {"tone": "...", "length": "...", "audience": "...", "autre": "..."},
+  "contenu_modifie": la nouvelle valeur du champ ciblé par "scope", dans EXACTEMENT la même forme (mêmes clés) que l'élément original du résultat actuel -- null si intent est "explain", "compare" ou "clarification",
+  "reponse_agent": "phrase(s) à afficher dans le fil de discussion -- confirmation courte pour modify/add/delete, explication ou comparaison complète pour explain/compare, question de clarification pour clarification"
+}
+
+Règles impératives :
+- "cette plaidoirie", "ce résultat", "cet argument", "la conclusion"... sans plus de précision désignent le résultat actuel fourni ci-dessous -- ne redemande jamais ce qui est déjà visible à l'écran.
+- Modifie UNIQUEMENT ce qui est demandé. "contenu_modifie" ne doit contenir QUE l'élément ciblé par "scope", jamais le résultat entier, sauf si scope="global" (rare -- seulement pour une demande explicite de tout refaire, ex. "refais tout dans un style plus offensif").
+- Distingue une modification locale (un argument, un point du plan, une objection, un événement...) d'une modification globale : privilégie toujours le scope le plus étroit possible qui satisfait la demande.
+- Un ajout ("ajoute la jurisprudence pertinente à cet argument", "ajoute cet événement") : scope = le chemin de la liste concernée SANS index final (ex. "arguments[0].refutations" pour ajouter une réfutation au premier argument, ou "arguments" pour ajouter un nouvel argument entier), operation = "add", contenu_modifie = le NOUVEL élément seul, dans la même forme que les éléments existants de cette liste.
+- Une suppression ("supprime cette partie", "retire le deuxième point", "retire cette piste de réfutation") : scope = le chemin précis de l'élément visé AVEC son index (ex. "arguments[0].refutations[1]"), operation = "delete", contenu_modifie = null.
+- Une demande d'explication ou de justification ("pourquoi cet argument est risqué", "je ne suis pas convaincu") : intent="explain", scope=l'élément concerné, operation="explain", contenu_modifie=null, et développe une vraie réponse argumentée dans "reponse_agent" (identifie la faiblesse, propose éventuellement une alternative) -- ne modifie rien.
+- Une comparaison entre plusieurs éléments : intent="compare", scope="global" ou les deux éléments les plus pertinents, contenu_modifie=null, la comparaison elle-même dans "reponse_agent".
+- Si la demande est trop ambiguë pour déterminer avec confiance le scope ou l'opération (référence peu claire, plusieurs interprétations aussi plausibles) : intent="clarification", scope="global", operation="none", contenu_modifie=null, et pose UNE question précise dans "reponse_agent" plutôt que de deviner et de risquer de modifier le mauvais élément.
+- N'invente jamais un champ ou un index qui n'existe pas dans le résultat actuel fourni.
+- Rédige "reponse_agent" en français soutenu et professionnel, jamais familier.
+- Si le texte réécrit contient une référence (article, jurisprudence) qui n'est pas dans le résultat original ni dans le contexte du dossier fourni, préfixe-la "À VÉRIFIER : ", exactement comme le reste de l'outil."""
+
+
+def traiter_message_edition(
+    feature: str,
+    message: str,
+    resultat_actuel: dict,
+    contexte_dossier: str = "",
+    historique: list[dict] | None = None,
+) -> dict:
+    """Classifie un message en langage naturel portant sur un résultat déjà
+    affiché (feature="conclusions"/"plan"/"simulateur"/"note_client"/...)
+    et produit, en un seul appel, l'action structurée correspondante
+    ({intent, scope, operation, contenu_modifie, reponse_agent}).
+
+    Ne modifie rien elle-même : c'est app.chat_actions qui valide et
+    applique le résultat de cette fonction. Voir
+    ARCHITECTURE_CHAT_CONTEXTUEL.md §2.3 pour la distinction
+    GLOBAL_UPDATE / LOCAL_UPDATE que ce découpage {scope, operation} permet."""
+    contexte = f"Fonctionnalité concernée : {feature}\n\nRésultat actuel affiché à l'écran :\n{json.dumps(resultat_actuel, ensure_ascii=False, indent=2)}"
+    if contexte_dossier:
+        contexte += f"\n\nContexte du dossier :\n{contexte_dossier}"
+
+    messages = list(historique or [])
+    messages.append({"role": "user", "content": f"{contexte}\n\nDemande de l'utilisateur :\n{message}"})
+
+    client = _client()
+    response = client.messages.create(
+        model=MODEL_ACTIF,
+        max_tokens=3000,
+        system=EDITION_SYSTEM_PROMPT,
+        messages=messages,
+    )
+    raw = response.content[0].text.strip().replace("```json", "").replace("```", "").strip()
+    try:
+        parsed = json.loads(raw)
+    except json.JSONDecodeError as e:
+        raise ValueError(f"Réponse du modèle non-JSON : {e}\n\nRéponse brute :\n{raw}")
+
+    parsed.setdefault("intent", "clarification")
+    parsed.setdefault("scope", "global")
+    parsed.setdefault("operation", "none")
+    parsed.setdefault("parameters", {})
+    parsed.setdefault("contenu_modifie", None)
+    parsed.setdefault("reponse_agent", "")
+    return parsed
+
+
 VERIFICATION_PROCEDURALE_SYSTEM_PROMPT = """Tu es un assistant qui aide un professionnel du droit francophone (avocat ou greffier) à vérifier qu'une procédure ne présente pas d'anomalie apparente, à partir du contenu d'une affaire.
 
 Réponds UNIQUEMENT avec un objet JSON valide, sans texte avant ou après, sans balises markdown, selon ce schéma exact :

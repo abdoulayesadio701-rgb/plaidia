@@ -13,13 +13,14 @@ import EmptyState from "@/components/EmptyState";
 import ErrorState from "@/components/ErrorState";
 import RichOutput from "@/components/RichOutput";
 import { SkeletonList } from "@/components/Skeleton";
+import ChatContextuelPanel from "@/components/chat/ChatContextuelPanel";
 
 export default function NoteClientPage() {
   const dossierActif = useDossierActif();
   const pousserToast = useAppStore((s) => s.pousserToast);
   const [exportEnCours, setExportEnCours] = useState(false);
 
-  const { data, loading, error, executer } = useLazyAction(() => notesApi.redigerNoteClient(dossierActif!.id));
+  const { data, loading, error, executer, definirDonnees } = useLazyAction(() => notesApi.redigerNoteClient(dossierActif!.id));
 
   const copier = async () => {
     if (!data) return;
@@ -78,6 +79,14 @@ export default function NoteClientPage() {
           <div className="card p-6">
             <RichOutput texte={data.texte} />
           </div>
+
+          <ChatContextuelPanel
+            feature="note_client"
+            resultatActuel={data}
+            onMiseAJour={definirDonnees}
+            dossierId={dossierActif.id}
+            placeholder="Ex. « Rends le ton plus rassurant », « fais plus court », « moins technique »…"
+          />
         </div>
       )}
 

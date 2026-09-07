@@ -32,9 +32,11 @@ def _log_chat(message: str) -> None:
 import analyse as legacy_analyse
 import db
 import recherche_juridique as legacy_rj
-from app import demo, demo_data
+from app import chat_actions, demo, demo_data
 from app.deps import construire_contexte_dossier, get_dossier_or_404
 from app.schemas.chat import (
+    ChatContextuelIn,
+    ChatContextuelOut,
     ChatStreamIn,
     ConversationCreate,
     ConversationDetailOut,
@@ -153,6 +155,63 @@ def chat_stream(payload: ChatStreamIn):
             "Cache-Control": "no-cache",
             "X-Accel-Buffering": "no",
         },
+    )
+
+
+# --- Chat contextuel (édition d'un résultat déjà affiché) -----------------
+# Voir ARCHITECTURE_CHAT_CONTEXTUEL.md. Contrairement à /stream ci-dessus,
+# pas de SSE ici : la réponse doit être validée en entier (app.chat_actions)
+# avant de pouvoir en renvoyer quoi que ce soit d'exploitable -- un flux
+# caractère par caractère n'apporterait rien pour un JSON qui doit rester
+# valide, et complique la validation côté serveur pour rien.
+
+@router.post("/contextuel", response_model=ChatContextuelOut)
+def chat_contextuel(payload: ChatContextuelIn):
+    demo.exiger_cle_api()
+
+    contexte_dossier = ""
+    if payload.dossier_id is not None:
+        dossier = get_dossier_or_404(payload.dossier_id)
+        contexte_dossier = construire_contexte_dossier(dossier)
+
+    historique = [{"role": m.role, "content": m.content} for m in payload.historique]
+
+    action = legacy_analyse.traiter_message_edition(
+        feature=payload.feature,
+        message=payload.message,
+        resultat_actuel=payload.resultat_actuel,
+        contexte_dossier=contexte_dossier,
+        historique=historique,
+    )
+
+    resultat_modifie = None
+    if action["intent"] in ("modify", "add", "delete"):
+        try:
+            chat_actions.valider_action(payload.feature, action["scope"], action["operation"], payload.resultat_actuel)
+            resultat_modifie = chat_actions.appliquer_patch(
+                payload.resultat_actuel, action["scope"], action["operation"], action["contenu_modifie"]
+            )
+        except chat_actions.ActionInvalide as e:
+            # Le modèle a proposé une action qui ne correspond pas au
+            # résultat réel -- jamais appliquée, jamais renvoyée comme si
+            # elle l'avait été. On informe l'utilisateur au lieu de planter.
+            _log_chat(f"action refusée par chat_actions : {e}")
+            return ChatContextuelOut(
+                intent="clarification",
+                scope="global",
+                operation="none",
+                parameters={},
+                resultat_modifie=None,
+                reponse_agent=f"Je n'ai pas pu appliquer cette modification ({e}). Pouvez-vous préciser votre demande ?",
+            )
+
+    return ChatContextuelOut(
+        intent=action["intent"],
+        scope=action["scope"],
+        operation=action["operation"],
+        parameters=action.get("parameters") or {},
+        resultat_modifie=resultat_modifie,
+        reponse_agent=action["reponse_agent"],
     )
 
 

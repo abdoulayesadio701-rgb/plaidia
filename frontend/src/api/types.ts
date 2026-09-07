@@ -313,6 +313,29 @@ export interface ConversationDetail extends ConversationResume {
   historique: MessageChat[];
 }
 
+// --- Chat contextuel (édition d'un résultat déjà affiché) -------------
+// Voir ARCHITECTURE_CHAT_CONTEXTUEL.md — un seul mécanisme réutilisé par
+// toutes les pages de génération, pas un chat par fonctionnalité.
+
+export type FeatureChatContextuel =
+  | "conclusions"
+  | "plan"
+  | "simulateur"
+  | "note_client"
+  | "chronologie"
+  | "coherence"
+  | "pv_audience"
+  | "rapport_complet";
+
+export interface ChatContextuelResultat {
+  intent: string;
+  scope: string;
+  operation: string;
+  parameters: Record<string, unknown>;
+  resultat_modifie: unknown;
+  reponse_agent: string;
+}
+
 /** Événements du flux SSE POST /api/chat/stream — voir backend/README.md */
 export type ChatStreamEvent =
   | { event: "recherche_debut"; data: Record<string, never> }

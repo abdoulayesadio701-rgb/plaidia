@@ -159,6 +159,17 @@ def test_chat_stream_reste_en_mode_demo_et_contient_le_marqueur(client: TestClie
     assert "À VÉRIFIER" in texte_reconstitue
 
 
+def test_chat_contextuel_bloque_en_mode_demo(client: TestClient):
+    """/api/chat/contextuel n'a pas de réponse préenregistrée -- même
+    garde-fou que /api/analyse/style (voir test_action_non_cannee_est_bloquee_en_mode_demo)."""
+    r = client.post(
+        "/api/chat/contextuel",
+        json={"feature": "conclusions", "resultat_actuel": {"arguments": []}, "message": "développe le premier argument"},
+    )
+    assert r.status_code == 503
+    assert "mode démo" in r.json()["detail"].lower()
+
+
 def test_cle_personnelle_desactive_le_mode_demo_effectif(client: TestClient):
     """Vérifie le mécanisme de contournement du mode démo directement
     (sans passer par un vrai appel réseau à Anthropic, qu'une clé bidon

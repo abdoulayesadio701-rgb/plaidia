@@ -14,13 +14,14 @@ import ErrorState from "@/components/ErrorState";
 import RichOutput from "@/components/RichOutput";
 import LabeledField from "@/components/LabeledField";
 import { SkeletonList } from "@/components/Skeleton";
+import ChatContextuelPanel from "@/components/chat/ChatContextuelPanel";
 
 export default function SimulateurObjectionsPage() {
   const dossierActif = useDossierActif();
   const [modeEntrainement, setModeEntrainement] = useState(false);
   const [revelees, setRevelees] = useState<Set<number>>(new Set());
 
-  const { data, loading, error, executer } = useLazyAction(() => analyseApi.simulerObjections(dossierActif!.id));
+  const { data, loading, error, executer, definirDonnees } = useLazyAction(() => analyseApi.simulerObjections(dossierActif!.id));
 
   const basculerEntrainement = () => {
     setModeEntrainement((v) => !v);
@@ -122,6 +123,14 @@ export default function SimulateurObjectionsPage() {
               <RichOutput texte={data.point_le_plus_faible} prose={false} className="text-sm" />
             </div>
           )}
+
+          <ChatContextuelPanel
+            feature="simulateur"
+            resultatActuel={data}
+            onMiseAJour={definirDonnees}
+            dossierId={dossierActif.id}
+            placeholder="Ex. « Développe la piste de réponse sur l'objection n°2 »…"
+          />
         </div>
       )}
     </div>

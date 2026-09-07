@@ -14,10 +14,11 @@ import Button from "@/components/Button";
 import EmptyState from "@/components/EmptyState";
 import ErrorState from "@/components/ErrorState";
 import { SkeletonList } from "@/components/Skeleton";
+import ChatContextuelPanel from "@/components/chat/ChatContextuelPanel";
 
 export default function ChronologiePage() {
   const dossierActif = useDossierActif();
-  const { data, loading, error, executer } = useLazyAction(() => greffierApi.chronologie(dossierActif!.id));
+  const { data, loading, error, executer, definirDonnees } = useLazyAction(() => greffierApi.chronologie(dossierActif!.id));
 
   if (!dossierActif) {
     return <EmptyState titre="Aucun dossier sélectionné" description="Sélectionnez ou créez un dossier pour construire sa chronologie." />;
@@ -78,6 +79,14 @@ export default function ChronologiePage() {
               </ul>
             </div>
           )}
+
+          <ChatContextuelPanel
+            feature="chronologie"
+            resultatActuel={data}
+            onMiseAJour={definirDonnees}
+            dossierId={dossierActif.id}
+            placeholder="Ex. « Ajoute cet événement : … », « pourquoi cet élément est-il manquant ? »…"
+          />
         </div>
       )}
 

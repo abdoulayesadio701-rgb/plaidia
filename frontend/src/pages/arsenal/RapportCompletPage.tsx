@@ -19,6 +19,7 @@ import LabeledField from "@/components/LabeledField";
 import ArgumentCard from "@/components/ArgumentCard";
 import PlanTimeline from "@/components/PlanTimeline";
 import { SkeletonList } from "@/components/Skeleton";
+import ChatContextuelPanel from "@/components/chat/ChatContextuelPanel";
 
 const ONGLETS = [
   { id: "analyse", label: "Analyse" },
@@ -34,7 +35,7 @@ export default function RapportCompletPage() {
   const [ongletActif, setOngletActif] = useState("analyse");
   const [exportEnCours, setExportEnCours] = useState(false);
 
-  const { data, loading, error, executer } = useLazyAction((d?: number) => analyseApi.rapportComplet(dossierActif!.id, d));
+  const { data, loading, error, executer, definirDonnees } = useLazyAction((d?: number) => analyseApi.rapportComplet(dossierActif!.id, d));
 
   const lancer = () => void executer(inclurePlan ? duree : undefined);
 
@@ -118,6 +119,12 @@ export default function RapportCompletPage() {
                     </ul>
                   </div>
                 )}
+                <ChatContextuelPanel
+                  feature="conclusions"
+                  resultatActuel={data.analyse}
+                  onMiseAJour={(nouveau) => definirDonnees({ ...data, analyse: nouveau })}
+                  dossierId={dossierActif.id}
+                />
               </div>
             ) : (
               <EmptyState
@@ -128,7 +135,15 @@ export default function RapportCompletPage() {
 
           {ongletActif === "plan" &&
             (data.plan ? (
-              <PlanTimeline plan={data.plan} />
+              <div className="space-y-5">
+                <PlanTimeline plan={data.plan} />
+                <ChatContextuelPanel
+                  feature="plan"
+                  resultatActuel={data.plan}
+                  onMiseAJour={(nouveau) => definirDonnees({ ...data, plan: nouveau })}
+                  dossierId={dossierActif.id}
+                />
+              </div>
             ) : (
               <EmptyState
                 titre="Aucun plan généré"
@@ -159,6 +174,12 @@ export default function RapportCompletPage() {
                   <RichOutput texte={data.simulateur.point_le_plus_faible} prose={false} className="text-sm" />
                 </div>
               )}
+              <ChatContextuelPanel
+                feature="simulateur"
+                resultatActuel={data.simulateur}
+                onMiseAJour={(nouveau) => definirDonnees({ ...data, simulateur: nouveau })}
+                dossierId={dossierActif.id}
+              />
             </div>
           )}
         </div>

@@ -20,6 +20,10 @@ interface UseLazyActionState<T, Args extends unknown[]> {
   error: string | null;
   executer: (...args: Args) => Promise<T | undefined>;
   reinitialiser: () => void;
+  /** Remplace `data` sans repasser par `fn` — utilisé par ChatContextuelPanel
+   * pour appliquer un résultat déjà corrigé côté serveur (voir
+   * ARCHITECTURE_CHAT_CONTEXTUEL.md §2.5) sans relancer toute la génération. */
+  definirDonnees: (donnees: T) => void;
 }
 
 export function useLazyAction<T, Args extends unknown[] = []>(fn: (...args: Args) => Promise<T>): UseLazyActionState<T, Args> {
@@ -51,5 +55,5 @@ export function useLazyAction<T, Args extends unknown[] = []>(fn: (...args: Args
     setError(null);
   }, []);
 
-  return { data, loading, error, executer, reinitialiser };
+  return { data, loading, error, executer, reinitialiser, definirDonnees: setData };
 }

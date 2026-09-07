@@ -58,3 +58,27 @@ class ConversationDetailOut(BaseModel):
     date_creation: str
     date_modification: str
     historique: list[MessageChat]
+
+
+# --- Chat contextuel (édition d'un résultat déjà affiché) ------------------
+# Voir ARCHITECTURE_CHAT_CONTEXTUEL.md — un seul mécanisme réutilisé par
+# toutes les pages de génération (Arsenal/Greffier/Carnet), pas un chat par
+# fonctionnalité.
+
+class ChatContextuelIn(BaseModel):
+    feature: str = Field(
+        ..., description="Identifiant de la fonctionnalité en cours : conclusions, plan, simulateur, note_client, chronologie, coherence, pv_audience, rapport_complet..."
+    )
+    dossier_id: Optional[int] = Field(None, description="Si fourni, le contexte du dossier est ajouté (mêmes règles que /api/chat/stream)")
+    resultat_actuel: dict = Field(..., description="Le résultat actuellement affiché à l'écran, tel quel")
+    message: str = Field(..., min_length=1, max_length=MAX_TEXTE_CARACTERES)
+    historique: list[MessageChat] = Field([], description="Échanges précédents de CE fil contextuel (pas celui du Chat juridique général)")
+
+
+class ChatContextuelOut(BaseModel):
+    intent: str
+    scope: str
+    operation: str
+    parameters: dict = {}
+    resultat_modifie: Optional[dict] = Field(None, description="Le résultat complet, déjà patché — à substituer tel quel à l'ancien côté front")
+    reponse_agent: str

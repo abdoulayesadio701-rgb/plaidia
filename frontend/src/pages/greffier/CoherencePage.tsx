@@ -14,6 +14,7 @@ import EmptyState from "@/components/EmptyState";
 import ErrorState from "@/components/ErrorState";
 import RichOutput from "@/components/RichOutput";
 import { SkeletonList } from "@/components/Skeleton";
+import ChatContextuelPanel from "@/components/chat/ChatContextuelPanel";
 
 interface DocumentBrouillon {
   id: string;
@@ -35,7 +36,7 @@ function nouveauDocument(numero: number): DocumentBrouillon {
 export default function CoherencePage() {
   const [documents, setDocuments] = useState<DocumentBrouillon[]>([nouveauDocument(1), nouveauDocument(2)]);
 
-  const { data, loading, error, executer } = useLazyAction((docs: { nom_document: string; texte: string }[]) =>
+  const { data, loading, error, executer, definirDonnees } = useLazyAction((docs: { nom_document: string; texte: string }[]) =>
     greffierApi.controleCoherence(docs)
   );
 
@@ -160,6 +161,13 @@ export default function CoherencePage() {
               <RichOutput texte={data.limites_analyse} prose={false} className="text-sm" />
             </div>
           )}
+
+          <ChatContextuelPanel
+            feature="coherence"
+            resultatActuel={data}
+            onMiseAJour={definirDonnees}
+            placeholder="Ex. « Explique cette contradiction plus en détail », « compare ces deux documents »…"
+          />
         </div>
       )}
     </div>

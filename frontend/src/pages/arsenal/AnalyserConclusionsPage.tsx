@@ -16,6 +16,7 @@ import EmptyState from "@/components/EmptyState";
 import ErrorState from "@/components/ErrorState";
 import RichOutput from "@/components/RichOutput";
 import { SkeletonList } from "@/components/Skeleton";
+import ChatContextuelPanel from "@/components/chat/ChatContextuelPanel";
 
 const EXTENSIONS_ACCEPTEES = ".pdf,.docx,.xlsx,.xls,.txt,.png,.jpg,.jpeg,.webp";
 
@@ -26,7 +27,7 @@ export default function AnalyserConclusionsPage() {
   const [enImport, setEnImport] = useState(false);
   const inputFichierRef = useRef<HTMLInputElement>(null);
 
-  const { data, loading, error, executer } = useLazyAction((t: string) => analyseApi.analyserConclusions(t, dossierActif?.id));
+  const { data, loading, error, executer, definirDonnees } = useLazyAction((t: string) => analyseApi.analyserConclusions(t, dossierActif?.id));
 
   const importerFichier = async (fichier: File) => {
     if (!dossierActif) return;
@@ -121,6 +122,8 @@ export default function AnalyserConclusionsPage() {
               </ul>
             </div>
           )}
+
+          <ChatContextuelPanel feature="conclusions" resultatActuel={data} onMiseAJour={definirDonnees} dossierId={dossierActif.id} />
         </div>
       )}
 

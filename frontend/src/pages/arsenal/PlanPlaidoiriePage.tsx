@@ -22,6 +22,7 @@ import EmptyState from "@/components/EmptyState";
 import ErrorState from "@/components/ErrorState";
 import PlanTimeline from "@/components/PlanTimeline";
 import { SkeletonList } from "@/components/Skeleton";
+import ChatContextuelPanel from "@/components/chat/ChatContextuelPanel";
 
 interface NavigationState {
   dureeMinutesPreremplie?: number;
@@ -36,7 +37,7 @@ export default function PlanPlaidoiriePage() {
   const [duree, setDuree] = useState(dureeInitiale);
   const [exportEnCours, setExportEnCours] = useState(false);
 
-  const { data, loading, error, executer } = useLazyAction((d: number) => analyseApi.genererPlan(dossierActif!.id, d));
+  const { data, loading, error, executer, definirDonnees } = useLazyAction((d: number) => analyseApi.genererPlan(dossierActif!.id, d));
 
   const exporter = async () => {
     if (!dossierActif || !data) return;
@@ -86,6 +87,14 @@ export default function PlanPlaidoiriePage() {
           </div>
 
           <PlanTimeline plan={data} />
+
+          <ChatContextuelPanel
+            feature="plan"
+            resultatActuel={data}
+            onMiseAJour={definirDonnees}
+            dossierId={dossierActif.id}
+            placeholder="Ex. « Rends l'accroche plus percutante », « adapte le ton pour une audience pénale »…"
+          />
         </div>
       )}
 

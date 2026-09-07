@@ -9,7 +9,7 @@
 
 import { apiRequest, BASE_URL } from "./http";
 import { obtenirClePersonnelle } from "./cleApiPersonnelle";
-import type { ConversationDetail, ConversationResume, MessageChat } from "./types";
+import type { ChatContextuelResultat, ConversationDetail, ConversationResume, FeatureChatContextuel, MessageChat } from "./types";
 
 export interface ChatStreamCallbacks {
   onRechercheDebut?: () => void;
@@ -120,6 +120,31 @@ export async function streamChat(messages: MessageChat[], options: ChatStreamOpt
     if (e instanceof DOMException && e.name === "AbortError") return;
     callbacks.onError?.("La connexion a été interrompue pendant la génération.");
   }
+}
+
+// --- Chat contextuel (édition d'un résultat déjà affiché) ---------------
+// Voir ARCHITECTURE_CHAT_CONTEXTUEL.md — un seul mécanisme réutilisé par
+// toutes les pages de génération. Pas de streaming ici (voir la note dans
+// backend/app/routers/chat.py) : la réponse est validée entièrement côté
+// serveur avant de pouvoir en renvoyer quoi que ce soit.
+
+export function envoyerMessageContextuel(
+  feature: FeatureChatContextuel,
+  message: string,
+  resultatActuel: unknown,
+  historique: MessageChat[] = [],
+  dossierId?: number | null
+): Promise<ChatContextuelResultat> {
+  return apiRequest<ChatContextuelResultat>("/api/chat/contextuel", {
+    method: "POST",
+    body: {
+      feature,
+      message,
+      resultat_actuel: resultatActuel,
+      historique,
+      dossier_id: dossierId ?? null,
+    },
+  });
 }
 
 // --- Historique des conversations (sauvegarde façon Claude.ai) -----------

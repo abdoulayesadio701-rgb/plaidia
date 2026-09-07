@@ -14,6 +14,7 @@ import Button from "@/components/Button";
 import EmptyState from "@/components/EmptyState";
 import ErrorState from "@/components/ErrorState";
 import { SkeletonBlock } from "@/components/Skeleton";
+import ChatContextuelPanel from "@/components/chat/ChatContextuelPanel";
 
 export default function PvAudiencePage() {
   const pousserToast = useAppStore((s) => s.pousserToast);
@@ -100,11 +101,19 @@ export default function PvAudiencePage() {
           {!loading && error && <ErrorState message={error} onRetry={() => void generer()} />}
 
           {!loading && !error && pvTexte && (
-            <textarea
-              className="input min-h-[380px] flex-1 resize-y font-serif text-[1.02rem] leading-relaxed"
-              value={pvTexte}
-              onChange={(e) => setPvTexte(e.target.value)}
-            />
+            <>
+              <textarea
+                className="input min-h-[380px] flex-1 resize-y font-serif text-[1.02rem] leading-relaxed"
+                value={pvTexte}
+                onChange={(e) => setPvTexte(e.target.value)}
+              />
+              <ChatContextuelPanel
+                feature="pv_audience"
+                resultatActuel={{ texte: pvTexte }}
+                onMiseAJour={(r) => setPvTexte(r.texte)}
+                placeholder="Ex. « Rends le style plus formel », « raccourcis le deuxième paragraphe »…"
+              />
+            </>
           )}
 
           {!loading && !error && !pvTexte && (
