@@ -50,6 +50,18 @@ export function validerCorpus(id: number): Promise<void> {
   return apiRequest<void>(`/api/jurisprudence/corpus/${id}/valider`, { method: "POST" });
 }
 
+/** Valide en un seul appel tous les textes en attente d'une même source
+ * (voir db.py::valider_texte_corpus_par_source) — pour les imports en
+ * masse où valider un par un serait irréaliste. `domaine` (optionnel)
+ * restreint la validation à ce sous-ensemble précis de la source (ex. un
+ * seul acte uniforme au sein d'un import OHADA de qualité inégale). */
+export function validerCorpusParSource(source: string, domaine?: string): Promise<{ source: string; domaine: string; nombre_valide: number }> {
+  return apiRequest<{ source: string; domaine: string; nombre_valide: number }>("/api/jurisprudence/corpus/valider-source", {
+    method: "POST",
+    body: { source, domaine: domaine ?? "" },
+  });
+}
+
 export function rejeterCorpus(id: number): Promise<void> {
   return apiRequest<void>(`/api/jurisprudence/corpus/${id}`, { method: "DELETE" });
 }

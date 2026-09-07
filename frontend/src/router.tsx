@@ -12,6 +12,7 @@ import type { ReactElement } from "react";
 import { createBrowserRouter } from "react-router-dom";
 import AppLayout from "@/layout/AppLayout";
 import HomePage from "@/pages/HomePage";
+import ParametresPage from "@/pages/ParametresPage";
 import LandingPage from "@/pages/LandingPage";
 import NotFoundPage from "@/pages/NotFoundPage";
 import Styleguide from "@/pages/Styleguide";
@@ -94,6 +95,9 @@ export const router = createBrowserRouter([
     element: <AppLayout />,
     children: [
       { index: true, element: <HomePage /> },
+      // Hors de navigation.ts : réglage transversal accessible en permanence
+      // depuis la TopBar, pas propre à un espace de travail (avocat/greffier).
+      { path: "parametres", element: <ParametresPage /> },
       ...routesActions,
       { path: "*", element: <NotFoundPage /> },
     ],

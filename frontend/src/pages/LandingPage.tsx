@@ -39,7 +39,7 @@ const FONCTIONNALITES = [
   {
     icone: "⚖",
     titre: "Analyser des conclusions adverses",
-    description: "Chaque argument décomposé en syllogisme — problème de droit, règle applicable, application aux faits — avec niveau de risque et pistes de réfutation.",
+    description: "Chaque argument décomposé en syllogisme – problème de droit, règle applicable, application aux faits – avec niveau de risque et pistes de réfutation.",
   },
   {
     icone: "🗣",
@@ -49,7 +49,7 @@ const FONCTIONNALITES = [
   {
     icone: "🎤",
     titre: "Plan de plaidoirie chronométré",
-    description: "Accroche, points minutés, conclusion — un plan prêt à l'oral, calé sur le temps de parole imparti.",
+    description: "Accroche, points minutés, conclusion – un plan prêt à l'oral, calé sur le temps de parole imparti.",
   },
   {
     icone: "🧭",
@@ -71,7 +71,7 @@ const FONCTIONNALITES = [
 const ETAPES = [
   {
     numero: "01",
-    titre: "Créez un dossier — ou essayez la démo",
+    titre: "Créez un dossier – ou essayez la démo",
     description: "Un dossier fictif de droit du travail, déjà rempli, est prêt à explorer sans inscription ni configuration.",
   },
   {
@@ -82,7 +82,7 @@ const ETAPES = [
   {
     numero: "03",
     titre: "Obtenez une analyse structurée et vérifiable",
-    description: "Chaque réponse signale elle-même ses propres limites — jamais une affirmation présentée comme acquise sans base solide.",
+    description: "Chaque réponse signale elle-même ses propres limites – jamais une affirmation présentée comme acquise sans base solide.",
   },
 ];
 

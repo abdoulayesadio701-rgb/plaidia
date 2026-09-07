@@ -25,6 +25,8 @@ from app.schemas.jurisprudence import (
     JuridictionActiveIn,
     JuridictionActiveOut,
     JurisprudenceOut,
+    ValiderCorpusSourceIn,
+    ValiderCorpusSourceOut,
 )
 from fastapi import APIRouter, HTTPException
 
@@ -139,6 +141,19 @@ def sources_corpus():
 @router.post("/corpus/{texte_id}/valider", status_code=204)
 def valider_corpus(texte_id: int):
     db.valider_texte_corpus(texte_id)
+
+
+@router.post("/corpus/valider-source", response_model=ValiderCorpusSourceOut)
+def valider_corpus_source(payload: ValiderCorpusSourceIn):
+    """Valide en un seul geste tous les textes en attente d'une même
+    source (voir db.py::valider_texte_corpus_par_source) -- pour les
+    imports en masse (dataset structuré) où une validation article par
+    article est irréaliste. Si `domaine` est fourni, restreint la
+    validation à ce sous-ensemble (utile quand un import contient des lots
+    de qualité inégale). Ne touche jamais les textes déjà validés ni ceux
+    d'une autre source/domaine."""
+    nombre = db.valider_texte_corpus_par_source(payload.source, domaine=payload.domaine or None)
+    return ValiderCorpusSourceOut(source=payload.source, domaine=payload.domaine, nombre_valide=nombre)
 
 
 @router.delete("/corpus/{texte_id}", status_code=204)

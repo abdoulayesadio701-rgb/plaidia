@@ -95,7 +95,7 @@ export default function TexteLongModal({ titre, consigne, onFermer, onValider }:
       const contenu = (await navigator.clipboard.readText()).trim();
       if (contenu) setTexte((precedent) => (precedent ? `${precedent}\n${contenu}` : contenu));
     } catch {
-      pousserToast("error", "Lecture du presse-papiers refusée par le navigateur — collez manuellement (Ctrl/Cmd+V) dans la zone.");
+      pousserToast("error", "Lecture du presse-papiers refusée par le navigateur – collez manuellement (Ctrl/Cmd+V) dans la zone.");
     }
   };
 

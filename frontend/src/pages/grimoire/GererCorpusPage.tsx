@@ -1,14 +1,17 @@
 /**
- * GererCorpusPage — /grimoire/corpus. Trois blocs :
+ * GererCorpusPage — /grimoire/corpus. Deux blocs :
  *  1. Importer un texte (OHADA, UE, Sénégal, CEDEAO, CEDH...) dans le corpus
  *     multi-source, non validé par défaut.
- *  2. Paramètres juridiques -- la juridiction active pour Consulter la
- *     jurisprudence et le Chat (Légifrance ou une source de corpus validée).
- *  3. Gérer le corpus -- tableau filtrable (source/pays/domaine),
- *     valider/rejeter chaque texte en attente.
+ *  2. Gérer le corpus -- tableau filtrable (source/pays/domaine),
+ *     valider/rejeter chaque texte en attente, valider en bloc par domaine.
+ *
+ * Le réglage de la juridiction active a déménagé dans ParametresPage.tsx --
+ * c'est un réglage transversal (utilisé aussi par le Chat), pas propre au
+ * Grimoire.
  */
 
-import { useState, type FormEvent } from "react";
+import { useMemo, useState, type FormEvent } from "react";
+import { Link } from "react-router-dom";
 import { jurisprudence as jurisprudenceApi } from "@/api";
 import type { CorpusTexte } from "@/api";
 import { useAppStore } from "@/store/useAppStore";
@@ -20,6 +23,7 @@ import Tabs from "@/components/Tabs";
 import EmptyState from "@/components/EmptyState";
 import ErrorState from "@/components/ErrorState";
 import RichOutput from "@/components/RichOutput";
+import ConfirmerModal from "@/components/ConfirmerModal";
 import { SkeletonList } from "@/components/Skeleton";
 
 const ONGLETS = [
@@ -34,10 +38,16 @@ export default function GererCorpusPage() {
         <p className="kicker">Le Grimoire</p>
         <h1 className="mt-1 font-serif text-h2 font-semibold text-gold-500">Gérer le corpus multi-source</h1>
         <p className="mt-2 text-sm text-warmgray">Textes juridiques hors Légifrance : OHADA, droit de l'Union européenne, droit sénégalais, CEDEAO, CEDH…</p>
+        <p className="mt-1 text-sm text-warmgray">
+          Pour choisir la juridiction active (utilisée par le Chat et « Consulter la jurisprudence »), voir{" "}
+          <Link to="/app/parametres" className="text-amethyst-400 hover:underline">
+            Paramètres
+          </Link>
+          .
+        </p>
       </div>
 
       <ImporterTexteSection />
-      <ParametresJuridiquesSection />
       <GererCorpusSection />
     </div>
   );
@@ -83,7 +93,7 @@ function ImporterTexteSection() {
         reference,
         date_texte: dateTexte,
       });
-      pousserToast("success", "Texte importé — en attente de validation.");
+      pousserToast("success", "Texte importé – en attente de validation.");
       reinitialiser();
       setOuvert(false);
       void chargerCompteursAttente();
@@ -190,34 +200,6 @@ function ImporterTexteSection() {
   );
 }
 
-function ParametresJuridiquesSection() {
-  const juridictionActive = useAppStore((s) => s.juridictionActive);
-  const definirJuridictionActive = useAppStore((s) => s.definirJuridictionActive);
-  const sourcesJuridictions = useAppStore((s) => s.sourcesJuridictions);
-
-  return (
-    <section className="card space-y-3 p-6">
-      <h2 className="font-serif text-h3 font-semibold text-gold-500">Paramètres juridiques</h2>
-      <p className="text-sm text-warmgray">
-        La juridiction active détermine le contexte utilisé par l'agent pour « Consulter la jurisprudence » et le Chat. Seules les
-        sources du corpus déjà validées apparaissent ici, en plus de Légifrance.
-      </p>
-      <select
-        className="input max-w-sm"
-        value={juridictionActive}
-        onChange={(e) => void definirJuridictionActive(e.target.value)}
-        aria-label="Juridiction active"
-      >
-        {sourcesJuridictions.map((s) => (
-          <option key={s} value={s}>
-            {s}
-          </option>
-        ))}
-      </select>
-    </section>
-  );
-}
-
 function GererCorpusSection() {
   const pousserToast = useAppStore((s) => s.pousserToast);
   const chargerCompteursAttente = useAppStore((s) => s.chargerCompteursAttente);
@@ -228,6 +210,8 @@ function GererCorpusSection() {
   const [domaine, setDomaine] = useState("");
   const [ligneOuverte, setLigneOuverte] = useState<number | null>(null);
   const [idsEnCours, setIdsEnCours] = useState<Set<number>>(new Set());
+  const [sourceAValiderEnBloc, setSourceAValiderEnBloc] = useState<{ source: string; domaine: string; nombre: number } | null>(null);
+  const [validationBlocEnCours, setValidationBlocEnCours] = useState(false);
 
   const { data: liste, loading, error, reload } = useAsync(
     () =>
@@ -274,6 +258,47 @@ function GererCorpusSection() {
     }
   };
 
+  // Regroupement par source PUIS par domaine, uniquement utile côté "En
+  // attente" -- un import en masse (voir db.py::valider_texte_corpus_par_source)
+  // peut mélanger des lots de qualité inégale au sein d'une même source (ex.
+  // un acte uniforme mal océrisé parmi d'autres propres dans un import
+  // OHADA) : le domaine (ex. le nom complet de l'acte) est le bon niveau de
+  // granularité pour valider en bloc sans devoir faire confiance à toute la
+  // source d'un coup.
+  const groupesParSourceEtDomaine = useMemo(() => {
+    if (onglet !== "attente" || !liste) return [];
+    const parSource = new Map<string, Map<string, CorpusTexte[]>>();
+    for (const item of liste) {
+      if (!parSource.has(item.source)) parSource.set(item.source, new Map());
+      const parDomaine = parSource.get(item.source)!;
+      const cleDomaine = item.domaine || "(sans domaine précisé)";
+      if (!parDomaine.has(cleDomaine)) parDomaine.set(cleDomaine, []);
+      parDomaine.get(cleDomaine)!.push(item);
+    }
+    return [...parSource.entries()].map(([src, parDomaine]) => [src, [...parDomaine.entries()]] as const);
+  }, [onglet, liste]);
+
+  const confirmerValidationEnBloc = async () => {
+    if (!sourceAValiderEnBloc) return;
+    setValidationBlocEnCours(true);
+    try {
+      const { nombre_valide } = await jurisprudenceApi.validerCorpusParSource(
+        sourceAValiderEnBloc.source,
+        sourceAValiderEnBloc.domaine || undefined
+      );
+      const cible = sourceAValiderEnBloc.domaine ? `« ${sourceAValiderEnBloc.domaine} »` : `toute la source « ${sourceAValiderEnBloc.source} »`;
+      pousserToast("success", `${nombre_valide} texte(s) validé(s) pour ${cible}.`);
+      setSourceAValiderEnBloc(null);
+      reload();
+      void chargerCompteursAttente();
+      void chargerSourcesJuridictions();
+    } catch (e) {
+      pousserToast("error", e instanceof Error ? e.message : "La validation en bloc a échoué.");
+    } finally {
+      setValidationBlocEnCours(false);
+    }
+  };
+
   return (
     <section className="space-y-4">
       <h2 className="font-serif text-h3 font-semibold text-gold-500">Le corpus</h2>
@@ -314,57 +339,160 @@ function GererCorpusSection() {
         />
       )}
 
-      {!loading && !error && liste && liste.length > 0 && (
-        <div className="space-y-2.5">
-          {liste.map((item) => {
-            const ouvert = ligneOuverte === item.id;
+      {!loading && !error && onglet === "attente" && groupesParSourceEtDomaine.length > 0 && (
+        <div className="space-y-8">
+          {groupesParSourceEtDomaine.map(([source, groupesDomaine]) => {
+            const totalSource = groupesDomaine.reduce((n, [, items]) => n + items.length, 0);
             return (
-              <div key={item.id} className="card space-y-2 p-4">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium text-ivory">{item.reference || "(sans référence)"}</p>
-                    <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-warmgray">
-                      <span>{item.source}</span>
-                      {item.pays && <span>· {item.pays}</span>}
-                      {item.type_texte && <span>· {item.type_texte}</span>}
-                      {item.domaine && <span>· {item.domaine}</span>}
-                      {item.date_texte && <span>· {item.date_texte}</span>}
-                    </div>
-                  </div>
-                  <div className="flex shrink-0 items-center gap-2">
-                    <button onClick={() => setLigneOuverte(ouvert ? null : item.id)} className="text-xs text-amethyst-400 hover:underline">
-                      {ouvert ? "Masquer" : "Lire"}
+              <div key={source} className="space-y-4">
+                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gold-600/20 pb-2">
+                  <p className="text-sm font-semibold text-gold-500">
+                    {source} <span className="font-normal text-warmgray">· {totalSource} en attente</span>
+                  </p>
+                  {groupesDomaine.length > 1 && totalSource > 1 && (
+                    <button
+                      onClick={() => setSourceAValiderEnBloc({ source, domaine: "", nombre: totalSource })}
+                      className="text-xs text-warmgray underline decoration-dotted hover:text-ivory"
+                      title="Valide tous les domaines de cette source en une fois – à réserver aux sources dont chaque lot est fiable"
+                    >
+                      Tout valider d'un coup ({totalSource})
                     </button>
-                    {onglet === "attente" && (
-                      <>
-                        <button
-                          disabled={idsEnCours.has(item.id)}
-                          onClick={() => void valider(item)}
-                          className="rounded-md border border-risk-low/40 bg-risk-low/10 px-2.5 py-1 text-xs font-semibold text-risk-low transition-colors hover:bg-risk-low/20 disabled:opacity-40"
-                        >
-                          ✓ Valider
-                        </button>
-                        <button
-                          disabled={idsEnCours.has(item.id)}
-                          onClick={() => void rejeter(item)}
-                          className="rounded-md border border-risk-high/40 bg-risk-high/10 px-2.5 py-1 text-xs font-semibold text-risk-high transition-colors hover:bg-risk-high/20 disabled:opacity-40"
-                        >
-                          ✕ Rejeter
-                        </button>
-                      </>
-                    )}
-                  </div>
+                  )}
                 </div>
-                {ouvert && (
-                  <div className="max-h-64 overflow-y-auto rounded-md bg-surface-2 p-4">
-                    <RichOutput texte={item.contenu} prose={false} className="text-sm" />
+
+                {groupesDomaine.map(([domaine, items]) => (
+                  <div key={domaine} className="space-y-2.5">
+                    <div className="flex flex-wrap items-center justify-between gap-3 rounded-md bg-surface-2/60 px-3 py-2">
+                      <p className="text-sm font-medium text-ivory">
+                        {domaine} <span className="text-warmgray">· {items.length}</span>
+                      </p>
+                      {items.length > 1 && (
+                        <button
+                          onClick={() => setSourceAValiderEnBloc({ source, domaine: domaine === "(sans domaine précisé)" ? "" : domaine, nombre: items.length })}
+                          className="rounded-md border border-risk-low/40 bg-risk-low/10 px-2.5 py-1 text-xs font-semibold text-risk-low transition-colors hover:bg-risk-low/20"
+                        >
+                          ✓ Valider en bloc ({items.length})
+                        </button>
+                      )}
+                    </div>
+                    {items.map((item) => (
+                      <LigneCorpus
+                        key={item.id}
+                        item={item}
+                        ouvert={ligneOuverte === item.id}
+                        enCours={idsEnCours.has(item.id)}
+                        onToggleLire={() => setLigneOuverte(ligneOuverte === item.id ? null : item.id)}
+                        onValider={() => void valider(item)}
+                        onRejeter={() => void rejeter(item)}
+                        afficherActions
+                      />
+                    ))}
                   </div>
-                )}
+                ))}
               </div>
             );
           })}
         </div>
       )}
+
+      {!loading && !error && onglet === "valide" && liste && liste.length > 0 && (
+        <div className="space-y-2.5">
+          {liste.map((item) => (
+            <LigneCorpus
+              key={item.id}
+              item={item}
+              ouvert={ligneOuverte === item.id}
+              enCours={false}
+              onToggleLire={() => setLigneOuverte(ligneOuverte === item.id ? null : item.id)}
+              afficherActions={false}
+            />
+          ))}
+        </div>
+      )}
+
+      {sourceAValiderEnBloc && (
+        <ConfirmerModal
+          titre="Valider en bloc"
+          texteBouton="Valider en bloc"
+          enCours={validationBlocEnCours}
+          onFermer={() => setSourceAValiderEnBloc(null)}
+          onConfirmer={confirmerValidationEnBloc}
+          description={
+            sourceAValiderEnBloc.domaine ? (
+              <p>
+                Tu confirmes faire confiance à <strong className="text-ivory">« {sourceAValiderEnBloc.domaine} »</strong> (source «{" "}
+                {sourceAValiderEnBloc.source} ») : les <strong className="text-ivory">{sourceAValiderEnBloc.nombre}</strong> textes en
+                attente de ce domaine précis deviennent immédiatement utilisables par l'agent en citation, sans relecture individuelle.
+                Les autres domaines de cette même source, s'il y en a, restent en attente séparément.
+              </p>
+            ) : (
+              <p>
+                Tu confirmes faire confiance à <strong className="text-ivory">toute la source « {sourceAValiderEnBloc.source} »</strong>{" "}
+                : les <strong className="text-ivory">{sourceAValiderEnBloc.nombre}</strong> textes en attente, tous domaines confondus,
+                deviennent immédiatement utilisables par l'agent en citation, sans relecture individuelle. Réservé aux sources dont tu es
+                sûr que <em>chaque</em> lot est fiable — pas un import dont certains sous-ensembles restent douteux.
+              </p>
+            )
+          }
+        />
+      )}
     </section>
+  );
+}
+
+interface LigneCorpusProps {
+  item: CorpusTexte;
+  ouvert: boolean;
+  enCours: boolean;
+  onToggleLire: () => void;
+  onValider?: () => void;
+  onRejeter?: () => void;
+  afficherActions: boolean;
+}
+
+function LigneCorpus({ item, ouvert, enCours, onToggleLire, onValider, onRejeter, afficherActions }: LigneCorpusProps) {
+  return (
+    <div className="card space-y-2 p-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-medium text-ivory">{item.reference || "(sans référence)"}</p>
+          <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-warmgray">
+            <span>{item.source}</span>
+            {item.pays && <span>· {item.pays}</span>}
+            {item.type_texte && <span>· {item.type_texte}</span>}
+            {item.domaine && <span>· {item.domaine}</span>}
+            {item.date_texte && <span>· {item.date_texte}</span>}
+          </div>
+        </div>
+        <div className="flex shrink-0 items-center gap-2">
+          <button onClick={onToggleLire} className="text-xs text-amethyst-400 hover:underline">
+            {ouvert ? "Masquer" : "Lire"}
+          </button>
+          {afficherActions && (
+            <>
+              <button
+                disabled={enCours}
+                onClick={onValider}
+                className="rounded-md border border-risk-low/40 bg-risk-low/10 px-2.5 py-1 text-xs font-semibold text-risk-low transition-colors hover:bg-risk-low/20 disabled:opacity-40"
+              >
+                ✓ Valider
+              </button>
+              <button
+                disabled={enCours}
+                onClick={onRejeter}
+                className="rounded-md border border-risk-high/40 bg-risk-high/10 px-2.5 py-1 text-xs font-semibold text-risk-high transition-colors hover:bg-risk-high/20 disabled:opacity-40"
+              >
+                ✕ Rejeter
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+      {ouvert && (
+        <div className="max-h-64 overflow-y-auto rounded-md bg-surface-2 p-4">
+          <RichOutput texte={item.contenu} prose={false} className="text-sm" />
+        </div>
+      )}
+    </div>
   );
 }

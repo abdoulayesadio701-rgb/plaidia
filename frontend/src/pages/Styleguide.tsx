@@ -10,7 +10,7 @@ import GothicMotif from "../components/GothicMotif";
 
 const PALETTE: { title: string; swatches: { name: string; className: string; hex: string }[] }[] = [
   {
-    title: "Fond — noir violacé",
+    title: "Fond – noir violacé",
     swatches: [
       { name: "void", className: "bg-void border border-gold-600/20", hex: "#0B0A0F" },
       { name: "surface", className: "bg-surface border border-gold-600/20", hex: "#14111C" },
@@ -19,7 +19,7 @@ const PALETTE: { title: string; swatches: { name: string; className: string; hex
     ],
   },
   {
-    title: "Or ancien — couleur principale",
+    title: "Or ancien – couleur principale",
     swatches: [
       { name: "gold-300", className: "bg-gold-300", hex: "#F0DDA0" },
       { name: "gold-400", className: "bg-gold-400", hex: "#E6C76A" },
@@ -29,7 +29,7 @@ const PALETTE: { title: string; swatches: { name: string; className: string; hex
     ],
   },
   {
-    title: "Améthyste — accent d'état",
+    title: "Améthyste – accent d'état",
     swatches: [
       { name: "amethyst-300", className: "bg-amethyst-300", hex: "#C4B5FD" },
       { name: "amethyst-400", className: "bg-amethyst-400", hex: "#8B5CF6" },

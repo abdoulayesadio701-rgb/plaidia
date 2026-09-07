@@ -61,7 +61,7 @@ export default function PvAudiencePage() {
           <p className="text-micro font-medium uppercase tracking-wide text-amethyst-400">Notes brutes</p>
           <textarea
             className="input min-h-[380px] flex-1 resize-y"
-            placeholder="Notez librement ce qui se dit pendant l'audience — l'agent les met en forme en PV structuré."
+            placeholder="Notez librement ce qui se dit pendant l'audience – l'agent les met en forme en PV structuré."
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             disabled={loading}

@@ -122,7 +122,7 @@ export default function RapportCompletPage() {
             ) : (
               <EmptyState
                 titre="Aucune analyse enregistrée"
-                description="Ce dossier n'a pas encore d'analyse de conclusions adverses enregistrée — utilisez « Analyser des conclusions adverses » d'abord."
+                description="Ce dossier n'a pas encore d'analyse de conclusions adverses enregistrée – utilisez « Analyser des conclusions adverses » d'abord."
               />
             ))}
 

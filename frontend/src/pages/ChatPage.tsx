@@ -171,7 +171,7 @@ export default function ChatPage() {
       setIndexMessageCopie(index);
       setTimeout(() => setIndexMessageCopie((i) => (i === index ? null : i)), 1500);
     } catch {
-      pousserToast("error", "Impossible de copier — presse-papiers indisponible dans ce contexte.");
+      pousserToast("error", "Impossible de copier – presse-papiers indisponible dans ce contexte.");
     }
   };
 
@@ -312,7 +312,7 @@ export default function ChatPage() {
       {modalTexteLongOuverte && (
         <TexteLongModal
           titre="Coller un texte long"
-          consigne="Collez ici le texte à analyser (réquisitoire, conclusions, jugement...) — il sera inséré dans la zone de saisie, à vous de compléter et d'envoyer."
+          consigne="Collez ici le texte à analyser (réquisitoire, conclusions, jugement...) – il sera inséré dans la zone de saisie, à vous de compléter et d'envoyer."
           onFermer={() => setModalTexteLongOuverte(false)}
           onValider={(texteColle) => {
             setTexte((precedent) => (precedent ? `${precedent}\n\n${texteColle}` : texteColle));

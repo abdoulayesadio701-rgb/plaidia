@@ -503,6 +503,37 @@ def rejeter_texte_corpus(texte_id):
     conn.close()
 
 
+def valider_texte_corpus_par_source(source, domaine=None):
+    """Valide en une seule fois tous les textes en attente d'une même
+    source -- pour les imports en masse (ex. un dataset structuré de
+    plusieurs milliers d'articles) où une validation une par une serait
+    irréaliste et, en pratique, ne serait jamais faite. L'avocat fait ainsi
+    explicitement confiance à LA SOURCE dans son ensemble, en un geste
+    conscient, plutôt qu'un import silencieusement pré-validé par le
+    programme ou des milliers de clics individuels qui ne se produiront
+    jamais.
+
+    `domaine` (optionnel) restreint la validation en bloc à un sous-ensemble
+    de la source (ex. un seul acte uniforme au sein d'une source "OHADA" qui
+    en regroupe plusieurs) -- utile quand un import contient des lots de
+    qualité inégale (ex. artefacts OCR sur certains actes seulement) : on
+    peut alors valider les lots fiables sans devoir faire confiance à toute
+    la source d'un bloc. Retourne le nombre de textes effectivement validés.
+    """
+    conn = get_connection()
+    if domaine:
+        cur = conn.execute(
+            "UPDATE corpus_juridique SET validee = 1 WHERE source = ? AND domaine = ? AND validee = 0",
+            (source, domaine),
+        )
+    else:
+        cur = conn.execute("UPDATE corpus_juridique SET validee = 1 WHERE source = ? AND validee = 0", (source,))
+    conn.commit()
+    nombre = cur.rowcount
+    conn.close()
+    return nombre
+
+
 # --- Conversations du chat (« Poser une question ») -------------------
 # Sauvegarde automatique à chaque message, sur le modèle de Claude.ai :
 # l'avocat n'a jamais à cliquer sur « Enregistrer » — chaque conversation

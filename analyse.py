@@ -138,7 +138,19 @@ Règles impératives sur les sources :
 - Sois exhaustif sur les points juridiques pertinents — ne saute pas une nuance ou une exception importante par souci de brièveté. Un avocat a besoin de la vue complète, pas d'un résumé qui cache des subtilités.
 - Sois concret et actionnable, pas un cours de droit général abstrait.
 - Ordonne toujours ta réponse du plus pertinent/urgent au moins important. Si un élément est critique ou urgent (délai à respecter, mesure de sécurité, action immédiate à prendre), donne-le en premier, avant toute demande de précisions — ne fais jamais attendre une information vitale derrière une liste de questions de clarification.
-- Si la question manque d'éléments essentiels pour répondre en détail, donne d'abord ce que tu peux dire de sûr et d'actionnable immédiatement, puis seulement ensuite précise les informations manquantes pour affiner."""
+- Si la question manque d'éléments essentiels pour répondre en détail, donne d'abord ce que tu peux dire de sûr et d'actionnable immédiatement, puis seulement ensuite précise les informations manquantes pour affiner.
+
+Qualité rédactionnelle :
+- Varie la longueur des phrases — évite les suites de phrases très courtes ou, à l'inverse, des phrases surchargées de propositions.
+- Emploie un vocabulaire précis mais jamais artificiellement sophistiqué ; n'utilise pas un mot savant là où un mot simple et exact suffit.
+- Évite de répéter le même mot ou la même tournure d'une phrase à l'autre.
+- Utilise des connecteurs logiques (cependant, ainsi, en revanche, de plus, néanmoins...) avec modération — un ou deux par paragraphe suffisent, jamais un par phrase.
+
+Typographie française :
+- Une espace avant ; : ? ! — jamais avant , ni . .
+- Guillemets français « … » pour toute citation, jamais de guillemets droits "...".
+- Apostrophe typographique ' (jamais l'apostrophe droite ').
+- Tiret d'incise court – pour une incise dans une phrase, jamais le tiret long —."""
 
 
 def repondre_question(question: str, contexte_recherche: str | None = None) -> str:
@@ -301,7 +313,8 @@ Règles impératives :
 - Registre soutenu et soigné malgré la simplicité — un français correct et professionnel, jamais familier, même en expliquant simplement. Phrases courtes, ton rassurant mais honnête — jamais de fausse promesse sur l'issue de l'affaire.
 - Structure la note en 3 parties courtes : "Où en est votre dossier", "Ce que cela signifie concrètement pour vous", "Les prochaines étapes".
 - Ne cite aucune référence juridique précise (article de loi, numéro de jurisprudence) — cette note est pour le client, pas pour le dossier judiciaire.
-- Reste strictement factuel, basé uniquement sur les informations fournies. N'invente aucun fait ni aucune échéance non mentionnée."""
+- Reste strictement factuel, basé uniquement sur les informations fournies. N'invente aucun fait ni aucune échéance non mentionnée.
+- Respecte la typographie française : guillemets « … », apostrophe typographique ', espace avant ; : ? !."""
 
 
 CHRONOLOGIE_SYSTEM_PROMPT = """Tu es un assistant qui aide un greffier francophone à structurer la chronologie d'une affaire à partir des documents et faits fournis.
@@ -448,7 +461,8 @@ Règles impératives :
 - N'invente RIEN qui ne soit pas dans les notes fournies — utilise "[À COMPLÉTER]" pour tout ce qui manque, plutôt que de deviner.
 - Précise en ouverture que ceci est une première version destinée à être relue, complétée et validée par le greffier.
 - Rédige dans le registre soutenu et solennel propre aux actes de procédure français.
-- N'invente aucune référence de texte de loi ou de procédure."""
+- N'invente aucune référence de texte de loi ou de procédure.
+- Respecte la typographie française : guillemets « … », apostrophe typographique ', espace avant ; : ? !."""
 
 
 def rediger_pv(notes_audience: str) -> str:
@@ -812,7 +826,19 @@ Règles impératives :
 - Reste factuel et neutre — décris ce que dit la jurisprudence, ne donne pas de conseil stratégique de défense (ce n'est pas le rôle de cette fonction).
 - Structure chaque section en listes à puces plutôt qu'en blocs denses dès que le contenu s'y prête, et mets en gras les éléments clés (référence de décision, principe dégagé).
 - La longueur de chaque section doit s'adapter à ce que les résultats de recherche permettent réellement de dire — bref si peu d'éléments, plus développé si le contexte le justifie.
-- Rédige en français soutenu et professionnel."""
+- Rédige en français soutenu et professionnel.
+
+Qualité rédactionnelle :
+- Varie la longueur des phrases — évite les suites de phrases très courtes ou, à l'inverse, des phrases surchargées de propositions.
+- Emploie un vocabulaire précis mais jamais artificiellement sophistiqué.
+- Évite de répéter le même mot ou la même tournure d'une phrase à l'autre.
+- Utilise des connecteurs logiques (cependant, ainsi, en revanche, de plus, néanmoins...) avec modération.
+
+Typographie française :
+- Une espace avant ; : ? ! — jamais avant , ni . .
+- Guillemets français « … » pour toute citation, jamais de guillemets droits "...".
+- Apostrophe typographique ' (jamais l'apostrophe droite ').
+- Tiret d'incise court – pour une incise dans une phrase, jamais le tiret long —."""
 
 
 def consulter_position_jurisprudence(sujet: str, contexte_recherche: str) -> str:
@@ -893,7 +919,7 @@ Objectif retenu : <le but fourni, ou "neutre — aucun objectif précisé" si ab
 
 Puis, pour CHAQUE décision de jurisprudence présente dans le contexte fourni (jamais une décision qui n'y figure pas), une fiche ainsi structurée, dans l'ordre du plus utile au moins utile compte tenu de l'objectif retenu :
 
-— <référence complète : juridiction, date, n° d'arrêt> —
+– <référence complète : juridiction, date, n° d'arrêt> –
 Faits : <résumé bref des faits de cette décision>
 Solution : <ce que la juridiction a effectivement décidé>
 Principe dégagé : <le principe juridique qu'on peut en tirer>
@@ -909,7 +935,17 @@ Règles impératives :
 - Reste factuel sur ce que chaque décision dit ; l'étiquette Favorable/Défavorable/Neutre est une aide à la lecture, pas un jugement de valeur sur la décision elle-même.
 - Rédige l'intégralité de la réponse — y compris les titres de section eux-mêmes ("Question juridique", "Objectif retenu", "Faits", "Solution", "Principe dégagé", etc.) — en français soutenu et professionnel, le registre attendu d'un écrit entre confrères.
 - Mets en gras (avec des doubles astérisques, ex. **ainsi**) les éléments qui méritent d'être repérés en un coup d'œil dans chaque fiche — la référence de la décision, le principe dégagé, l'étiquette de pertinence.
-- La longueur de chaque fiche doit s'adapter à ce que le contexte permet réellement de dire : reste bref si peu d'éléments sont disponibles, développe davantage si le contexte fourni le justifie — sans jamais combler par de l'invention."""
+- La longueur de chaque fiche doit s'adapter à ce que le contexte permet réellement de dire : reste bref si peu d'éléments sont disponibles, développe davantage si le contexte fourni le justifie — sans jamais combler par de l'invention.
+
+Qualité rédactionnelle :
+- Varie la longueur des phrases dans les champs "Faits" et "Solution" — évite les suites de phrases très courtes.
+- Emploie un vocabulaire précis mais jamais artificiellement sophistiqué ; évite de répéter le même mot d'une fiche à l'autre.
+
+Typographie française :
+- Une espace avant ; : ? ! — jamais avant , ni . .
+- Guillemets français « … » pour toute citation, jamais de guillemets droits "...".
+- Apostrophe typographique ' (jamais l'apostrophe droite ').
+- Tiret d'incise court – pour une incise dans une phrase, jamais le tiret long —."""
 
 
 def consulter_jurisprudence(question: str, contexte_recherche: str, qualification: str = "", but: str = "") -> str:

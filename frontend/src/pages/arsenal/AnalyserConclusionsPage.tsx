@@ -36,7 +36,7 @@ export default function AnalyserConclusionsPage() {
       setTexte((precedent) => (precedent ? `${precedent}\n\n${resultat.texte_extrait}` : resultat.texte_extrait));
       pousserToast(
         "success",
-        `« ${resultat.nom_fichier} » importé (${resultat.caracteres_extraits.toLocaleString("fr-FR")} caractères) — également ajouté aux faits du dossier.`
+        `« ${resultat.nom_fichier} » importé (${resultat.caracteres_extraits.toLocaleString("fr-FR")} caractères) – également ajouté aux faits du dossier.`
       );
     } catch (e) {
       pousserToast("error", e instanceof Error ? e.message : "Échec de l'import du fichier.");

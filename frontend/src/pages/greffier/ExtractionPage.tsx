@@ -48,7 +48,7 @@ export default function ExtractionPage() {
       setTexte((precedent) => (precedent ? `${precedent}\n\n${resultat.texte_extrait}` : resultat.texte_extrait));
       pousserToast(
         "success",
-        `« ${resultat.nom_fichier} » importé (${resultat.caracteres_extraits.toLocaleString("fr-FR")} caractères) — également ajouté aux faits de « ${dossierActif.nom} ».`
+        `« ${resultat.nom_fichier} » importé (${resultat.caracteres_extraits.toLocaleString("fr-FR")} caractères) – également ajouté aux faits de « ${dossierActif.nom} ».`
       );
     } catch (e) {
       pousserToast("error", e instanceof Error ? e.message : "Échec de l'import du fichier.");

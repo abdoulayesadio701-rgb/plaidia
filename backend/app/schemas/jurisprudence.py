@@ -61,6 +61,17 @@ class CorpusImportIn(BaseModel):
     date_texte: str = ""
 
 
+class ValiderCorpusSourceIn(BaseModel):
+    source: str = Field(..., min_length=1, max_length=200, description="Source exacte (ex. OHADA) dont valider les textes en attente")
+    domaine: str = Field("", max_length=300, description="Optionnel : restreint la validation à ce domaine précis au sein de la source (ex. un seul acte uniforme)")
+
+
+class ValiderCorpusSourceOut(BaseModel):
+    source: str
+    domaine: str = ""
+    nombre_valide: int
+
+
 class CorpusOut(BaseModel):
     id: int
     source: str

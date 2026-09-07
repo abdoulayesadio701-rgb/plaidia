@@ -42,7 +42,7 @@ export default function CommandBar() {
 
       const route = ROUTES_PAR_ACTION[intention.action];
       if (intention.confiance === "basse" || !route) {
-        pousserToast("info", "Je ne suis pas certain d'avoir bien compris — utilisez la barre latérale, ou reformulez votre demande.");
+        pousserToast("info", "Je ne suis pas certain d'avoir bien compris – utilisez la barre latérale, ou reformulez votre demande.");
         return;
       }
 
