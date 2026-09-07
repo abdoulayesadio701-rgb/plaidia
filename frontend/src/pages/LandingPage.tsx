@@ -15,6 +15,14 @@ import Button from "@/components/Button";
 import ArgumentCard from "@/components/ArgumentCard";
 import type { Argument } from "@/api";
 import justitiaBanniere from "@/assets/justitia-banniere.jpg";
+import {
+  IllustrationAnalyser,
+  IllustrationChat,
+  IllustrationPlan,
+  IllustrationSimulateur,
+  IllustrationChronologie,
+  IllustrationVerification,
+} from "@/components/illustrations/FeatureIllustrations";
 
 const URL_GITHUB = "https://github.com/abdoulayesadio701-rgb";
 const URL_LINKEDIN = "https://www.linkedin.com/in/abdoulaye-sadio";
@@ -37,32 +45,32 @@ const ARGUMENT_VITRINE: Argument = {
 
 const FONCTIONNALITES = [
   {
-    icone: "⚖",
+    Illustration: IllustrationAnalyser,
     titre: "Analyser des conclusions adverses",
     description: "Chaque argument décomposé en syllogisme – problème de droit, règle applicable, application aux faits – avec niveau de risque et pistes de réfutation.",
   },
   {
-    icone: "🗣",
+    Illustration: IllustrationChat,
     titre: "Chat juridique",
     description: "Posez une question précise, obtenez une réponse structurée appuyée sur la juridiction active, avec le garde-fou « À VÉRIFIER » intégré.",
   },
   {
-    icone: "🎤",
+    Illustration: IllustrationPlan,
     titre: "Plan de plaidoirie chronométré",
     description: "Accroche, points minutés, conclusion – un plan prêt à l'oral, calé sur le temps de parole imparti.",
   },
   {
-    icone: "🧭",
+    Illustration: IllustrationSimulateur,
     titre: "Simulateur d'objections",
     description: "Anticipez les questions pièges du magistrat ou de la partie adverse, avec une piste de réponse pour chacune.",
   },
   {
-    icone: "📅",
+    Illustration: IllustrationChronologie,
     titre: "Chronologie automatique",
     description: "Reconstitue la timeline d'une affaire à partir des pièces du dossier, période couverte et éléments manquants inclus.",
   },
   {
-    icone: "🧾",
+    Illustration: IllustrationVerification,
     titre: "Vérification procédurale",
     description: "Échéances identifiées avec leur statut, actes de procédure potentiellement manquants, points d'attention.",
   },
@@ -194,12 +202,14 @@ export default function LandingPage() {
         </div>
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {FONCTIONNALITES.map((f) => (
-            <div key={f.titre} className="card space-y-3 p-6">
-              <span className="text-2xl" aria-hidden="true">
-                {f.icone}
-              </span>
-              <h3 className="font-serif text-h3 font-semibold text-ivory">{f.titre}</h3>
-              <p className="text-sm leading-relaxed text-warmgray">{f.description}</p>
+            <div key={f.titre} className="card group overflow-hidden !p-0">
+              <div className="relative aspect-[8/5] overflow-hidden border-b border-gold-600/15 bg-gradient-to-br from-surface-2 to-surface">
+                <f.Illustration className="absolute inset-0 h-full w-full p-7 text-amethyst-600/70 transition-transform duration-300 ease-out group-hover:scale-[1.04]" />
+              </div>
+              <div className="space-y-3 p-6">
+                <h3 className="font-serif text-h3 font-semibold text-ivory">{f.titre}</h3>
+                <p className="text-sm leading-relaxed text-warmgray">{f.description}</p>
+              </div>
             </div>
           ))}
         </div>
