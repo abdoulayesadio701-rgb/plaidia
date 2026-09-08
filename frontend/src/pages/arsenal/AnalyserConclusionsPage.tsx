@@ -6,27 +6,26 @@
  * de logique de sauvegarde à écrire ici, juste à le signaler à l'écran.
  */
 
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { analyse as analyseApi, dossiers as dossiersApi } from "@/api";
 import { useAppStore, useDossierActif } from "@/store/useAppStore";
 import { useLazyAction } from "@/hooks/useLazyAction";
+import { EXTENSIONS_DOCUMENT } from "@/config/fichiers";
 import Button from "@/components/Button";
 import ArgumentCard from "@/components/ArgumentCard";
 import EmptyState from "@/components/EmptyState";
 import ErrorState from "@/components/ErrorState";
+import FileDropZone from "@/components/FileDropZone";
 import RichOutput from "@/components/RichOutput";
 import { SkeletonList } from "@/components/Skeleton";
 import ChatContextuelPanel from "@/components/chat/ChatContextuelPanel";
 import VerificationPanel from "@/components/VerificationPanel";
-
-const EXTENSIONS_ACCEPTEES = ".pdf,.docx,.xlsx,.xls,.txt,.png,.jpg,.jpeg,.webp";
 
 export default function AnalyserConclusionsPage() {
   const dossierActif = useDossierActif();
   const pousserToast = useAppStore((s) => s.pousserToast);
   const [texte, setTexte] = useState("");
   const [enImport, setEnImport] = useState(false);
-  const inputFichierRef = useRef<HTMLInputElement>(null);
 
   const { data, loading, error, executer, definirDonnees } = useLazyAction((t: string) => analyseApi.analyserConclusions(t, dossierActif?.id));
 
@@ -44,7 +43,6 @@ export default function AnalyserConclusionsPage() {
       pousserToast("error", e instanceof Error ? e.message : "Échec de l'import du fichier.");
     } finally {
       setEnImport(false);
-      if (inputFichierRef.current) inputFichierRef.current.value = "";
     }
   };
 
@@ -72,19 +70,13 @@ export default function AnalyserConclusionsPage() {
         />
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-3">
-            <input
-              ref={inputFichierRef}
-              type="file"
-              accept={EXTENSIONS_ACCEPTEES}
-              className="hidden"
-              onChange={(e) => {
-                const fichier = e.target.files?.[0];
-                if (fichier) void importerFichier(fichier);
-              }}
+            <FileDropZone
+              variante="compact"
+              extensions={EXTENSIONS_DOCUMENT}
+              loading={enImport}
+              disabled={loading}
+              onFichiers={(fichiers) => void importerFichier(fichiers[0])}
             />
-            <Button variant="secondary" loading={enImport} disabled={loading} onClick={() => inputFichierRef.current?.click()}>
-              📎 Importer un fichier
-            </Button>
             <span className="text-xs text-muted">PDF, Word, Excel, image — le texte extrait est aussi ajouté aux faits du dossier.</span>
           </div>
           <Button variant="primary" loading={loading} disabled={!texte.trim() || enImport} onClick={() => void executer(texte)}>

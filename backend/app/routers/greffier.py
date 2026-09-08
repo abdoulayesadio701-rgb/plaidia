@@ -23,6 +23,8 @@ from app.schemas.greffier import (
     ClassementOut,
     CoherenceIn,
     CoherenceOut,
+    ExportChronologieIn,
+    ExportVerificationProceduraleIn,
     ExtractionIn,
     ExtractionOut,
     PvAudienceExportIn,
@@ -48,6 +50,17 @@ def chronologie(payload: ChronologieIn):
         return demo_data.CHRONOLOGIE_DEMO
     contexte = construire_contexte_dossier(dossier)
     return legacy_analyse.construire_chronologie(contexte)
+
+
+@router.post("/chronologie/export")
+def exporter_chronologie(payload: ExportChronologieIn):
+    """Export CSV (export.py::exporter_csv) -- une chronologie est un
+    tableau (date, événement), un tableur est plus utile qu'un document
+    Word pour la retrier/filtrer ensuite (voir AUDIT_IMPORT_EXPORT.md §6)."""
+    dossier = get_dossier_or_404(payload.dossier_id)
+    lignes = [[e.date, e.evenement] for e in payload.evenements]
+    chemin = legacy_export.exporter_csv(f"{dossier['nom']} — Chronologie", ["Date", "Événement"], lignes)
+    return FileResponse(chemin, filename=os.path.basename(chemin), media_type="text/csv")
 
 
 @router.post("/extraction", response_model=ExtractionOut)
@@ -115,6 +128,41 @@ def verification_procedurale(payload: VerificationProceduraleIn):
     demo.exiger_cle_api()
     contexte = construire_contexte_dossier(dossier)
     return legacy_analyse.verifier_procedure(contexte)
+
+
+@router.post("/verification-procedurale/export")
+def exporter_verification_procedurale(payload: ExportVerificationProceduraleIn):
+    """Export Word générique -- rapport à archiver ou transmettre, seule
+    fonctionnalité sans export du couple avocat/greffier concerné (voir
+    AUDIT_IMPORT_EXPORT.md)."""
+    dossier = get_dossier_or_404(payload.dossier_id)
+    lignes = []
+    if payload.echeances_identifiees:
+        lignes.append("ÉCHÉANCES IDENTIFIÉES")
+        for e in payload.echeances_identifiees:
+            lignes.append(f"- {e.echeance} — {e.date} ({e.statut})")
+        lignes.append("")
+    if payload.actes_potentiellement_manquants:
+        lignes.append("ACTES POTENTIELLEMENT MANQUANTS")
+        for a in payload.actes_potentiellement_manquants:
+            lignes.append(f"- {a}")
+        lignes.append("")
+    if payload.points_attention:
+        lignes.append("POINTS D'ATTENTION")
+        for p in payload.points_attention:
+            lignes.append(f"- {p}")
+    texte = "\n".join(lignes)
+
+    chemin = legacy_export.exporter_texte_libre_word(
+        f"{dossier['nom']} — Vérification procédurale",
+        texte,
+        note_bas_page="Analyse automatisée à vérifier manuellement -- ne remplace pas le contrôle d'un professionnel du droit.",
+    )
+    return FileResponse(
+        chemin,
+        filename=os.path.basename(chemin),
+        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    )
 
 
 @router.post("/requisitoire", response_model=RequisitoireOut)

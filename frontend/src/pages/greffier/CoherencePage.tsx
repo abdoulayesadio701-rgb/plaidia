@@ -10,14 +10,14 @@ import { dossiers as dossiersApi, greffier as greffierApi } from "@/api";
 import type { Contradiction } from "@/api";
 import { useAppStore } from "@/store/useAppStore";
 import { useLazyAction } from "@/hooks/useLazyAction";
+import { EXTENSIONS_DOCUMENT } from "@/config/fichiers";
 import Button from "@/components/Button";
 import EmptyState from "@/components/EmptyState";
 import ErrorState from "@/components/ErrorState";
+import FileDropZone from "@/components/FileDropZone";
 import RichOutput from "@/components/RichOutput";
 import { SkeletonList } from "@/components/Skeleton";
 import ChatContextuelPanel from "@/components/chat/ChatContextuelPanel";
-
-const EXTENSIONS_ACCEPTEES = ".pdf,.docx,.xlsx,.xls,.txt,.png,.jpg,.jpeg,.webp";
 
 interface DocumentBrouillon {
   id: string;
@@ -107,19 +107,14 @@ export default function CoherencePage() {
               onChange={(e) => majDocument(doc.id, { texte: e.target.value })}
               disabled={loading || idEnImport === doc.id}
             />
-            <label className={`btn-secondary w-fit cursor-pointer text-xs ${loading || idEnImport ? "pointer-events-none opacity-60" : ""}`}>
-              {idEnImport === doc.id ? "Import en cours…" : "📎 Importer un fichier"}
-              <input
-                type="file"
-                accept={EXTENSIONS_ACCEPTEES}
-                className="hidden"
-                onChange={(e) => {
-                  const fichier = e.target.files?.[0];
-                  if (fichier) void importerFichier(doc.id, fichier);
-                  e.target.value = "";
-                }}
-              />
-            </label>
+            <FileDropZone
+              variante="compact"
+              extensions={EXTENSIONS_DOCUMENT}
+              loading={idEnImport === doc.id}
+              disabled={loading || (idEnImport !== null && idEnImport !== doc.id)}
+              className="text-xs"
+              onFichiers={(fichiers) => void importerFichier(doc.id, fichiers[0])}
+            />
           </div>
         ))}
 

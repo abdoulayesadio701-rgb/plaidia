@@ -21,6 +21,7 @@ from app.schemas.analyse import (
     ConclusionsOut,
     ExportAnalyseIn,
     ExportRapportCompletIn,
+    ExportSimulateurIn,
     PlanIn,
     PlanOut,
     RapportCompletIn,
@@ -116,6 +117,32 @@ def simuler_objections(payload: SimulateurIn):
         contexte_dossier=contexte,
     )
     return SimulateurOut(**pipeline.resultat_principal, verification=pipeline.verification)
+
+
+@router.post("/simulateur/export")
+def exporter_simulateur(payload: ExportSimulateurIn):
+    """Export Word générique (export.py::exporter_texte_libre_word) --
+    seule fonctionnalité de l'Arsenal qui n'avait pas d'export, alors que
+    Plan et Rapport complet en ont un (voir AUDIT_IMPORT_EXPORT.md)."""
+    dossier = get_dossier_or_404(payload.dossier_id)
+    lignes = []
+    for i, obj in enumerate(payload.objections, start=1):
+        lignes.append(f"{i}. [{obj.origine}] {obj.question}")
+        if obj.piege:
+            lignes.append(f"   Piège : {obj.piege}")
+        if obj.piste_reponse:
+            lignes.append(f"   Piste de réponse : {obj.piste_reponse}")
+        lignes.append("")
+    if payload.point_le_plus_faible:
+        lignes.append(f"Point le plus faible du dossier : {payload.point_le_plus_faible}")
+    texte = "\n".join(lignes)
+
+    chemin = legacy_export.exporter_texte_libre_word(f"{dossier['nom']} — Simulation d'objections", texte)
+    return FileResponse(
+        chemin,
+        filename=os.path.basename(chemin),
+        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    )
 
 
 @router.post("/rapport-complet", response_model=RapportCompletOut)

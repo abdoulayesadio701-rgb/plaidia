@@ -6,11 +6,13 @@
  */
 
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
-import { chat as chatApi } from "@/api";
+import { chat as chatApi, dossiers as dossiersApi } from "@/api";
 import type { MessageChat, Verification } from "@/api";
 import { useAppStore } from "@/store/useAppStore";
+import { EXTENSIONS_DOCUMENT } from "@/config/fichiers";
 import Logo from "@/components/Logo";
 import Button from "@/components/Button";
+import FileDropZone from "@/components/FileDropZone";
 import RichOutput from "@/components/RichOutput";
 import TexteLongModal from "@/components/TexteLongModal";
 import VerificationPanel from "@/components/VerificationPanel";
@@ -18,6 +20,27 @@ import VerificationPanel from "@/components/VerificationPanel";
 interface StatutRecherche {
   enCours: boolean;
   resultat: { n_articles: number; n_jurisprudence: number } | null;
+}
+
+interface PieceJointe {
+  id: string;
+  nom: string;
+  texte: string;
+  caracteres: number;
+}
+
+/** Compose le contenu réellement envoyé au modèle : le message tapé, suivi
+ * de chaque document joint sous un en-tête clair -- même convention que
+ * construire_contexte_dossier/controler_coherence côté backend ("---
+ * Document : X ---"). Le contenu du document reste une DONNÉE à analyser,
+ * jamais une instruction (voir EDITION_SYSTEM_PROMPT pour le précédent) --
+ * ce n'est jamais le fichier brut qui part au modèle, seulement le texte
+ * déjà extrait côté serveur (extract.py). */
+function composerContenuAvecPiecesJointes(messageTape: string, pieces: PieceJointe[]): string {
+  const message = messageTape.trim() || (pieces.length > 0 ? "Analyse le ou les documents joints." : "");
+  if (pieces.length === 0) return message;
+  const blocs = pieces.map((p) => `--- Document joint : ${p.nom} ---\n${p.texte}`).join("\n\n");
+  return `${message}\n\n${blocs}`;
 }
 
 export default function ChatPage() {
@@ -41,6 +64,8 @@ export default function ChatPage() {
   const [verificationDerniereReponse, setVerificationDerniereReponse] = useState<Verification | null>(null);
   const [modalTexteLongOuverte, setModalTexteLongOuverte] = useState(false);
   const [indexMessageCopie, setIndexMessageCopie] = useState<number | null>(null);
+  const [piecesJointes, setPiecesJointes] = useState<PieceJointe[]>([]);
+  const [importPieceJointeEnCours, setImportPieceJointeEnCours] = useState(false);
 
   const abortControllerRef = useRef<AbortController | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -89,14 +114,16 @@ export default function ChatPage() {
   };
 
   const envoyerMessage = async (contenuBrut: string) => {
-    const contenu = contenuBrut.trim();
-    if (!contenu || genererEnCours) return;
+    if (genererEnCours) return;
+    const contenu = composerContenuAvecPiecesJointes(contenuBrut, piecesJointes);
+    if (!contenu) return;
 
     const historiqueEnvoi: MessageChat[] = [...useAppStore.getState().chatHistorique, { role: "user", content: contenu }];
 
     ajouterMessageChat({ role: "user", content: contenu });
     ajouterMessageChat({ role: "assistant", content: "" }); // rempli au fil du flux SSE
     setTexte("");
+    setPiecesJointes([]);
     setStatutRecherche(rechercheLive ? { enCours: true, resultat: null } : null);
     setVerificationDerniereReponse(null);
     setGenererEnCours(true);
@@ -168,7 +195,33 @@ export default function ChatPage() {
     reinitialiserChat();
     setStatutRecherche(null);
     setVerificationDerniereReponse(null);
+    setPiecesJointes([]);
   };
+
+  // Extraction du texte du fichier joint, sans l'envoyer -- l'utilisateur
+  // voit le document apparaître comme une pièce jointe avant de composer
+  // et d'envoyer son message (voir ARCHITECTURE_MULTI_AGENTS.md §8 de la
+  // demande initiale). Si un dossier est actif, réutilise importerDocument
+  // (le texte est aussi ajouté aux faits du dossier, comme partout ailleurs
+  // dans l'app) ; sinon extraireFichier, qui n'écrit rien en base.
+  const joindreFichier = async (fichier: File) => {
+    setImportPieceJointeEnCours(true);
+    try {
+      const resultat = dossierActifId
+        ? await dossiersApi.importerDocument(dossierActifId, fichier)
+        : await dossiersApi.extraireFichier(fichier);
+      setPiecesJointes((liste) => [
+        ...liste,
+        { id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, nom: resultat.nom_fichier, texte: resultat.texte_extrait, caracteres: resultat.caracteres_extraits },
+      ]);
+    } catch (e) {
+      pousserToast("error", e instanceof Error ? e.message : "Échec de l'import du fichier.");
+    } finally {
+      setImportPieceJointeEnCours(false);
+    }
+  };
+
+  const retirerPieceJointe = (id: string) => setPiecesJointes((liste) => liste.filter((p) => p.id !== id));
 
   const onKeyDownComposer = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -295,6 +348,28 @@ export default function ChatPage() {
             </button>
           </div>
         )}
+
+        {piecesJointes.length > 0 && (
+          <div className="mb-2 flex flex-wrap gap-2">
+            {piecesJointes.map((p) => (
+              <span
+                key={p.id}
+                className="inline-flex items-center gap-1.5 rounded-pill border border-amethyst-400/40 bg-amethyst-400/10 px-2.5 py-1 text-xs text-amethyst-400"
+              >
+                📄 {p.nom} <span className="text-muted">({p.caracteres.toLocaleString("fr-FR")} car.)</span>
+                <button
+                  onClick={() => retirerPieceJointe(p.id)}
+                  className="ml-0.5 text-amethyst-400/70 hover:text-amethyst-400"
+                  aria-label={`Retirer ${p.nom}`}
+                  disabled={genererEnCours}
+                >
+                  ✕
+                </button>
+              </span>
+            ))}
+          </div>
+        )}
+
         <div className="flex items-end gap-2">
           <button
             type="button"
@@ -304,12 +379,24 @@ export default function ChatPage() {
           >
             📋 Texte long
           </button>
+          <FileDropZone
+            variante="compact"
+            extensions={EXTENSIONS_DOCUMENT}
+            multiple
+            loading={importPieceJointeEnCours}
+            disabled={genererEnCours}
+            libelleBouton="📎 Joindre un fichier"
+            className="shrink-0 text-xs"
+            onFichiers={(fichiers) => {
+              for (const fichier of Array.from(fichiers)) void joindreFichier(fichier);
+            }}
+          />
           <textarea
             ref={textareaRef}
             value={texte}
             onChange={(e) => setTexte(e.target.value)}
             onKeyDown={onKeyDownComposer}
-            placeholder="Posez votre question… (Entrée pour envoyer, Maj+Entrée pour un saut de ligne)"
+            placeholder="Posez votre question, ou joignez un document… (Entrée pour envoyer, Maj+Entrée pour un saut de ligne)"
             rows={1}
             className="input flex-1 resize-none"
             disabled={genererEnCours}
@@ -317,7 +404,7 @@ export default function ChatPage() {
           <Button
             variant="primary"
             onClick={() => void envoyerMessage(texte)}
-            disabled={genererEnCours || !texte.trim()}
+            disabled={genererEnCours || (!texte.trim() && piecesJointes.length === 0)}
             className="shrink-0"
           >
             Envoyer →

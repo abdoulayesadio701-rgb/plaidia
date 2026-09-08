@@ -15,6 +15,7 @@ import db
 import judilibre as legacy_judilibre
 import recherche_juridique as legacy_rj
 from app import demo, quality_pipeline
+from app.deps import extraire_texte_upload
 from app.schemas.jurisprudence import (
     CollecterIn,
     CollecterOut,
@@ -28,7 +29,7 @@ from app.schemas.jurisprudence import (
     ValiderCorpusSourceIn,
     ValiderCorpusSourceOut,
 )
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 
 router = APIRouter(prefix="/api/jurisprudence", tags=["jurisprudence"])
 
@@ -121,6 +122,40 @@ def importer_texte_corpus(payload: CorpusImportIn):
         domaine=payload.domaine,
         reference=payload.reference,
         date_texte=payload.date_texte,
+        validee=False,
+    )
+    textes = db.get_corpus_en_attente()
+    trouve = next((t for t in textes if t["id"] == texte_id), None)
+    if not trouve:
+        raise HTTPException(status_code=500, detail="Le texte importé n'a pas pu être relu après insertion.")
+    return trouve
+
+
+@router.post("/corpus/importer-fichier", response_model=CorpusOut, status_code=201)
+async def importer_fichier_corpus(
+    source: str = Form(..., description="Ex. OHADA, Union européenne, Droit sénégalais..."),
+    pays: str = Form(""),
+    type_texte: str = Form(""),
+    domaine: str = Form(""),
+    reference: str = Form(""),
+    date_texte: str = Form(""),
+    fichier: UploadFile = File(...),
+):
+    """Même import que POST /corpus, mais à partir d'un fichier (PDF, DOCX,
+    TXT...) plutôt que d'un texte collé -- les textes de corpus (actes
+    OHADA, textes de l'UE...) sont typiquement de longs documents déjà
+    disponibles sous cette forme (voir AUDIT_IMPORT_EXPORT.md). Réutilise
+    extraire_texte_upload (app.deps), le même point d'entrée que l'import
+    de documents de dossier -- aucune logique d'extraction dupliquée."""
+    texte_extrait = await extraire_texte_upload(fichier)
+    texte_id = db.ajouter_texte_corpus(
+        source=source,
+        contenu=texte_extrait,
+        pays=pays,
+        type_texte=type_texte,
+        domaine=domaine,
+        reference=reference or (fichier.filename or ""),
+        date_texte=date_texte,
         validee=False,
     )
     textes = db.get_corpus_en_attente()

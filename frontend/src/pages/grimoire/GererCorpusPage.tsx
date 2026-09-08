@@ -18,10 +18,12 @@ import { useAppStore } from "@/store/useAppStore";
 import { useAsync } from "@/hooks/useAsync";
 import { DOMAINES } from "@/config/domaines";
 import { SOURCES_CORPUS, TYPES_TEXTE_CORPUS } from "@/config/corpus";
+import { EXTENSIONS_DOCUMENT } from "@/config/fichiers";
 import Button from "@/components/Button";
 import Tabs from "@/components/Tabs";
 import EmptyState from "@/components/EmptyState";
 import ErrorState from "@/components/ErrorState";
+import FileDropZone from "@/components/FileDropZone";
 import RichOutput from "@/components/RichOutput";
 import ConfirmerModal from "@/components/ConfirmerModal";
 import { SkeletonList } from "@/components/Skeleton";
@@ -66,6 +68,11 @@ function ImporterTexteSection() {
   const [dateTexte, setDateTexte] = useState("");
   const [contenu, setContenu] = useState("");
   const [enCours, setEnCours] = useState(false);
+  // Coller du texte reste la méthode historique (toujours utile pour un
+  // extrait court) ; importer un fichier évite de recopier à la main un
+  // acte uniforme ou un texte de plusieurs dizaines de pages déjà
+  // disponible en PDF/DOCX (voir AUDIT_IMPORT_EXPORT.md).
+  const [modeImport, setModeImport] = useState<"texte" | "fichier">("texte");
 
   const reinitialiser = () => {
     setSource(SOURCES_CORPUS[0]);
@@ -78,22 +85,35 @@ function ImporterTexteSection() {
     setContenu("");
   };
 
+  const sourceFinale = source === "Autre" ? sourceLibre.trim() : source;
+  const metaCommune = { source: sourceFinale, pays, type_texte: typeTexte, domaine, reference, date_texte: dateTexte };
+
   const soumettre = async (e: FormEvent) => {
     e.preventDefault();
-    const sourceFinale = source === "Autre" ? sourceLibre.trim() : source;
     if (!sourceFinale || !contenu.trim()) return;
     setEnCours(true);
     try {
-      await jurisprudenceApi.importerTexteCorpus({
-        source: sourceFinale,
-        contenu: contenu.trim(),
-        pays,
-        type_texte: typeTexte,
-        domaine,
-        reference,
-        date_texte: dateTexte,
-      });
+      await jurisprudenceApi.importerTexteCorpus({ ...metaCommune, contenu: contenu.trim() });
       pousserToast("success", "Texte importé – en attente de validation.");
+      reinitialiser();
+      setOuvert(false);
+      void chargerCompteursAttente();
+    } catch (e) {
+      pousserToast("error", e instanceof Error ? e.message : "L'import a échoué.");
+    } finally {
+      setEnCours(false);
+    }
+  };
+
+  const importerFichier = async (fichier: File) => {
+    if (!sourceFinale) {
+      pousserToast("error", "Renseignez d'abord la source avant d'importer un fichier.");
+      return;
+    }
+    setEnCours(true);
+    try {
+      const resultat = await jurisprudenceApi.importerFichierCorpus(fichier, metaCommune);
+      pousserToast("success", `« ${resultat.reference || fichier.name} » importé – en attente de validation.`);
       reinitialiser();
       setOuvert(false);
       void chargerCompteursAttente();
@@ -178,22 +198,54 @@ function ImporterTexteSection() {
             </div>
           </div>
           <div>
-            <label htmlFor="it-contenu" className="mb-1.5 block text-sm text-warmgray">
-              Contenu
-            </label>
-            <textarea
-              id="it-contenu"
-              className="input min-h-[160px] resize-y"
-              placeholder="Collez ici le texte intégral (ou l'extrait pertinent) du texte juridique."
-              value={contenu}
-              onChange={(e) => setContenu(e.target.value)}
-            />
+            <div className="mb-2 flex w-fit rounded-md border border-gold-600/20 bg-surface-2 p-0.5 text-xs">
+              <button
+                type="button"
+                onClick={() => setModeImport("texte")}
+                className={`rounded-md px-3 py-1.5 font-medium transition-colors ${modeImport === "texte" ? "bg-amethyst-400/15 text-amethyst-400" : "text-warmgray hover:text-ivory"}`}
+              >
+                Coller le texte
+              </button>
+              <button
+                type="button"
+                onClick={() => setModeImport("fichier")}
+                className={`rounded-md px-3 py-1.5 font-medium transition-colors ${modeImport === "fichier" ? "bg-amethyst-400/15 text-amethyst-400" : "text-warmgray hover:text-ivory"}`}
+              >
+                Importer un fichier
+              </button>
+            </div>
+
+            {modeImport === "texte" ? (
+              <>
+                <label htmlFor="it-contenu" className="mb-1.5 block text-sm text-warmgray">
+                  Contenu
+                </label>
+                <textarea
+                  id="it-contenu"
+                  className="input min-h-[160px] resize-y"
+                  placeholder="Collez ici le texte intégral (ou l'extrait pertinent) du texte juridique."
+                  value={contenu}
+                  onChange={(e) => setContenu(e.target.value)}
+                />
+              </>
+            ) : (
+              <FileDropZone
+                extensions={EXTENSIONS_DOCUMENT}
+                loading={enCours}
+                disabled={!sourceFinale}
+                onFichiers={(fichiers) => void importerFichier(fichiers[0])}
+                titre="Déposez le texte juridique ici"
+                description="ou cliquez pour parcourir — PDF, Word, Excel, image ou texte. Renseignez d'abord la source ci-dessus."
+              />
+            )}
           </div>
-          <div className="flex justify-end">
-            <Button type="submit" variant="primary" loading={enCours} disabled={contenu.trim() === "" || (source === "Autre" && !sourceLibre.trim())}>
-              Importer
-            </Button>
-          </div>
+          {modeImport === "texte" && (
+            <div className="flex justify-end">
+              <Button type="submit" variant="primary" loading={enCours} disabled={contenu.trim() === "" || (source === "Autre" && !sourceLibre.trim())}>
+                Importer
+              </Button>
+            </div>
+          )}
         </form>
       )}
     </section>

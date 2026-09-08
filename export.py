@@ -471,3 +471,21 @@ def exporter_texte_libre_word(titre: str, texte: str, note_bas_page: str = "") -
     path = EXPORTS_DIR / filename
     doc.save(str(path))
     return str(path)
+
+
+def exporter_csv(titre: str, en_tetes: list[str], lignes: list[list[str]]) -> str:
+    """Export générique d'un tableau en CSV — pour les résultats
+    naturellement tabulaires (ex. chronologie) où un tableur est plus
+    approprié qu'un document Word (voir AUDIT_IMPORT_EXPORT.md §6).
+    UTF-8 avec BOM (utf-8-sig) pour qu'Excel affiche correctement les
+    accents à l'ouverture directe du fichier, sans réglage manuel."""
+    import csv
+
+    EXPORTS_DIR.mkdir(exist_ok=True)
+    filename = _nom_fichier(titre, "csv")
+    path = EXPORTS_DIR / filename
+    with open(path, "w", newline="", encoding="utf-8-sig") as f:
+        writer = csv.writer(f)
+        writer.writerow(en_tetes)
+        writer.writerows(lignes)
+    return str(path)

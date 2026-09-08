@@ -20,6 +20,13 @@ export function chronologie(dossierId: number): Promise<ChronologieResultat> {
   return apiRequest<ChronologieResultat>("/api/greffier/chronologie", { method: "POST", body: { dossier_id: dossierId } });
 }
 
+export function exporterChronologie(dossierId: number, resultat: ChronologieResultat): Promise<{ blob: Blob; filename?: string }> {
+  return apiRequestBlob("/api/greffier/chronologie/export", {
+    method: "POST",
+    body: { dossier_id: dossierId, evenements: resultat.evenements, periode_couverte: resultat.periode_couverte },
+  });
+}
+
 export function extraction(texte: string): Promise<ExtractionResultat> {
   return apiRequest<ExtractionResultat>("/api/greffier/extraction", { method: "POST", body: { texte } });
 }
@@ -48,6 +55,21 @@ export function verificationProcedurale(dossierId: number): Promise<Verification
   return apiRequest<VerificationProceduraleResultat>("/api/greffier/verification-procedurale", {
     method: "POST",
     body: { dossier_id: dossierId },
+  });
+}
+
+export function exporterVerificationProcedurale(
+  dossierId: number,
+  resultat: VerificationProceduraleResultat
+): Promise<{ blob: Blob; filename?: string }> {
+  return apiRequestBlob("/api/greffier/verification-procedurale/export", {
+    method: "POST",
+    body: {
+      dossier_id: dossierId,
+      echeances_identifiees: resultat.echeances_identifiees,
+      actes_potentiellement_manquants: resultat.actes_potentiellement_manquants,
+      points_attention: resultat.points_attention,
+    },
   });
 }
 

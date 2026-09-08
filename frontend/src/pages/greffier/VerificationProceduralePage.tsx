@@ -12,8 +12,9 @@
  * d'attention (plus doux, en doré -- même convention que PlanTimeline).
  */
 
-import { greffier as greffierApi } from "@/api";
-import { useDossierActif } from "@/store/useAppStore";
+import { useState } from "react";
+import { greffier as greffierApi, downloadBlob } from "@/api";
+import { useAppStore, useDossierActif } from "@/store/useAppStore";
 import { useLazyAction } from "@/hooks/useLazyAction";
 import Button from "@/components/Button";
 import EmptyState from "@/components/EmptyState";
@@ -30,7 +31,22 @@ const CLASSE_STATUT_DEFAUT = "badge border-muted/30 bg-surface-2 text-warmgray";
 
 export default function VerificationProceduralePage() {
   const dossierActif = useDossierActif();
+  const pousserToast = useAppStore((s) => s.pousserToast);
+  const [exportEnCours, setExportEnCours] = useState(false);
   const { data, loading, error, executer, definirDonnees } = useLazyAction(() => greffierApi.verificationProcedurale(dossierActif!.id));
+
+  const exporter = async () => {
+    if (!dossierActif || !data) return;
+    setExportEnCours(true);
+    try {
+      const { blob, filename } = await greffierApi.exporterVerificationProcedurale(dossierActif.id, data);
+      downloadBlob(blob, filename ?? `${dossierActif.nom}_verification_procedurale.docx`);
+    } catch (e) {
+      pousserToast("error", e instanceof Error ? e.message : "Échec de l'export.");
+    } finally {
+      setExportEnCours(false);
+    }
+  };
 
   if (!dossierActif) {
     return <EmptyState titre="Aucun dossier sélectionné" description="Sélectionnez ou créez un dossier pour vérifier sa procédure." />;
@@ -44,9 +60,16 @@ export default function VerificationProceduralePage() {
           <h1 className="mt-1 font-serif text-h2 font-semibold text-gold-500">Échéances et actes manquants</h1>
           <p className="mt-2 text-sm text-warmgray">Dossier actif : {dossierActif.nom}</p>
         </div>
-        <Button variant="primary" loading={loading} onClick={() => void executer()}>
-          {data ? "↻ Relancer la vérification" : "Vérifier la procédure"}
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          {data && (
+            <Button variant="secondary" loading={exportEnCours} onClick={() => void exporter()}>
+              ⬇ Exporter en Word
+            </Button>
+          )}
+          <Button variant="primary" loading={loading} onClick={() => void executer()}>
+            {data ? "↻ Relancer la vérification" : "Vérifier la procédure"}
+          </Button>
+        </div>
       </div>
 
       {loading && <SkeletonList count={2} />}

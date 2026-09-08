@@ -20,6 +20,12 @@ class ChronologieOut(BaseModel):
     elements_manquants: list[str] = []
 
 
+class ExportChronologieIn(BaseModel):
+    dossier_id: int
+    evenements: list[EvenementOut] = []
+    periode_couverte: str = ""
+
+
 class ExtractionIn(BaseModel):
     texte: str = Field(..., min_length=1, max_length=MAX_TEXTE_CARACTERES, description="Texte du document à traiter")
 
@@ -94,6 +100,13 @@ class EcheanceOut(BaseModel):
 
 
 class VerificationProceduraleOut(BaseModel):
+    echeances_identifiees: list[EcheanceOut] = []
+    actes_potentiellement_manquants: list[str] = []
+    points_attention: list[str] = []
+
+
+class ExportVerificationProceduraleIn(BaseModel):
+    dossier_id: int
     echeances_identifiees: list[EcheanceOut] = []
     actes_potentiellement_manquants: list[str] = []
     points_attention: list[str] = []

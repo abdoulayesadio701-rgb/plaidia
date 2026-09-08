@@ -27,6 +27,13 @@ export function simulerObjections(dossierId: number): Promise<SimulateurResultat
   return apiRequest<SimulateurResultat>("/api/analyse/simulateur", { method: "POST", body: { dossier_id: dossierId } });
 }
 
+export function exporterSimulateur(dossierId: number, resultat: SimulateurResultat): Promise<{ blob: Blob; filename?: string }> {
+  return apiRequestBlob("/api/analyse/simulateur/export", {
+    method: "POST",
+    body: { dossier_id: dossierId, objections: resultat.objections, point_le_plus_faible: resultat.point_le_plus_faible },
+  });
+}
+
 export function rapportComplet(dossierId: number, tempsMinutes?: number): Promise<RapportCompletResultat> {
   return apiRequest<RapportCompletResultat>("/api/analyse/rapport-complet", {
     method: "POST",

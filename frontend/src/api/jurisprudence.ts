@@ -3,7 +3,7 @@
  * (backend/app/routers/jurisprudence.py).
  */
 
-import { apiRequest } from "./http";
+import { apiRequest, apiUpload } from "./http";
 import type { CollecterResultat, ConsulterResultat, CorpusImportInput, CorpusTexte, Jurisprudence } from "./types";
 
 export function consulterJurisprudence(question: string, but = "", source = "Légifrance (France)"): Promise<ConsulterResultat> {
@@ -32,6 +32,22 @@ export function rejeterJurisprudence(id: number): Promise<void> {
 
 export function importerTexteCorpus(input: CorpusImportInput): Promise<CorpusTexte> {
   return apiRequest<CorpusTexte>("/api/jurisprudence/corpus", { method: "POST", body: input });
+}
+
+/** Import d'un texte de corpus à partir d'un fichier (PDF, DOCX, TXT...)
+ * plutôt que d'un texte collé -- voir AUDIT_IMPORT_EXPORT.md. Les métadonnées
+ * sont les mêmes que importerTexteCorpus, `contenu` en moins (extrait
+ * côté serveur). */
+export function importerFichierCorpus(fichier: File, meta: Omit<CorpusImportInput, "contenu">): Promise<CorpusTexte> {
+  const formData = new FormData();
+  formData.append("fichier", fichier);
+  formData.append("source", meta.source);
+  formData.append("pays", meta.pays ?? "");
+  formData.append("type_texte", meta.type_texte ?? "");
+  formData.append("domaine", meta.domaine ?? "");
+  formData.append("reference", meta.reference ?? "");
+  formData.append("date_texte", meta.date_texte ?? "");
+  return apiUpload<CorpusTexte>("/api/jurisprudence/corpus/importer-fichier", formData);
 }
 
 export function corpusEnAttente(): Promise<CorpusTexte[]> {

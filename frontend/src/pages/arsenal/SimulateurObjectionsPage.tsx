@@ -5,8 +5,8 @@
  */
 
 import { useState } from "react";
-import { analyse as analyseApi } from "@/api";
-import { useDossierActif } from "@/store/useAppStore";
+import { analyse as analyseApi, downloadBlob } from "@/api";
+import { useAppStore, useDossierActif } from "@/store/useAppStore";
 import { useLazyAction } from "@/hooks/useLazyAction";
 import Button from "@/components/Button";
 import EmptyState from "@/components/EmptyState";
@@ -19,10 +19,25 @@ import VerificationPanel from "@/components/VerificationPanel";
 
 export default function SimulateurObjectionsPage() {
   const dossierActif = useDossierActif();
+  const pousserToast = useAppStore((s) => s.pousserToast);
   const [modeEntrainement, setModeEntrainement] = useState(false);
   const [revelees, setRevelees] = useState<Set<number>>(new Set());
+  const [exportEnCours, setExportEnCours] = useState(false);
 
   const { data, loading, error, executer, definirDonnees } = useLazyAction(() => analyseApi.simulerObjections(dossierActif!.id));
+
+  const exporter = async () => {
+    if (!dossierActif || !data) return;
+    setExportEnCours(true);
+    try {
+      const { blob, filename } = await analyseApi.exporterSimulateur(dossierActif.id, data);
+      downloadBlob(blob, filename ?? `${dossierActif.nom}_simulateur.docx`);
+    } catch (e) {
+      pousserToast("error", e instanceof Error ? e.message : "Échec de l'export.");
+    } finally {
+      setExportEnCours(false);
+    }
+  };
 
   const basculerEntrainement = () => {
     setModeEntrainement((v) => !v);
@@ -44,9 +59,14 @@ export default function SimulateurObjectionsPage() {
           <p className="mt-2 text-sm text-warmgray">Dossier actif : {dossierActif.nom}</p>
         </div>
         {data && (
-          <Button variant="ghost" loading={loading} onClick={() => void executer()}>
-            🔄 Relancer
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="secondary" loading={exportEnCours} onClick={() => void exporter()}>
+              ⬇ Exporter en Word
+            </Button>
+            <Button variant="ghost" loading={loading} onClick={() => void executer()}>
+              🔄 Relancer
+            </Button>
+          </div>
         )}
       </div>
 

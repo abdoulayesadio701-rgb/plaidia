@@ -91,6 +91,12 @@ class SimulateurOut(BaseModel):
     verification: Optional[VerificationOut] = None
 
 
+class ExportSimulateurIn(BaseModel):
+    dossier_id: int
+    objections: list[ObjectionOut] = []
+    point_le_plus_faible: str = ""
+
+
 class RapportCompletIn(BaseModel):
     dossier_id: int
     temps_minutes: Optional[int] = Field(None, ge=1, le=180, description="Omis = pas de plan de plaidoirie généré")
