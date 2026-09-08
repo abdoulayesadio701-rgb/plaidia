@@ -52,7 +52,7 @@ const FONCTIONNALITES = [
   {
     Illustration: IllustrationChat,
     titre: "Chat juridique",
-    description: "Posez une question précise, obtenez une réponse structurée appuyée sur la juridiction active, avec le garde-fou « À VÉRIFIER » intégré.",
+    description: "Posez une question précise, obtenez une réponse structurée appuyée sur la juridiction active — avec, sur les questions les plus sensibles, une vérification multi-agents avant l'affichage.",
   },
   {
     Illustration: IllustrationPlan,
@@ -158,8 +158,8 @@ export default function LandingPage() {
           </h1>
           <p className="max-w-prose text-base leading-relaxed text-warmgray sm:text-lg">
             Plaid'IA analyse des conclusions adverses, chronomètre un plan de plaidoirie, simule les objections du
-            magistrat et vérifie la procédure — avec, à chaque réponse, un garde-fou qui signale lui-même ce qui reste
-            à vérifier.
+            magistrat et vérifie la procédure — avec, sur les analyses les plus sensibles, plusieurs contrôles
+            indépendants qui vérifient chaque réponse avant qu'elle ne s'affiche.
           </p>
           <div className="flex flex-wrap items-center gap-4 pt-2">
             <Button variant="primary" onClick={essayerLaDemo}>
