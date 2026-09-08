@@ -435,4 +435,58 @@
   .sidebar-signature-text {
     @apply font-serif text-xs italic leading-tight text-warmgray;
   }
+
+  /* ---------- Page de connexion -- écran scindé, ton délibérément sombre
+     (voir ConnexionPage.tsx). Seule page de toute l'app à déroger au thème
+     clair général -- une page d'accès, vue une fois puis rarement revue,
+     porte sa propre identité plus dramatique qu'un écran de travail
+     quotidien ; même logique que le parchemin ou le marqueur "À VÉRIFIER"
+     ailleurs dans ce fichier : une exception délibérée, pas un oubli. Les
+     valeurs hexadécimales sont volontairement littérales (pas les tokens
+     --color-void/--color-surface, désormais clairs) pour rester stables
+     quelle que soit l'évolution future de la palette générale de l'app. */
+  .connexion-page {
+    @apply grid min-h-screen grid-cols-1 lg:grid-cols-2;
+    background: #0b0a0f;
+  }
+  .connexion-photo {
+    @apply relative hidden overflow-hidden lg:block;
+  }
+  .connexion-photo > img {
+    @apply absolute inset-0 h-full w-full object-cover;
+    object-position: 78% 22%;
+    filter: grayscale(0.35) contrast(1.25) brightness(0.55);
+  }
+  .connexion-photo-scrim {
+    @apply pointer-events-none absolute inset-0;
+    background: linear-gradient(180deg, rgba(11, 10, 15, 0.15) 0%, rgba(11, 10, 15, 0.55) 55%, rgba(11, 10, 15, 0.94) 100%);
+  }
+  .connexion-photo-wash {
+    @apply pointer-events-none absolute inset-0;
+    background: linear-gradient(160deg, rgba(139, 75, 168, 0.5), transparent 55%, rgba(23, 35, 60, 0.65));
+    mix-blend-mode: soft-light;
+  }
+  .connexion-photo-mobile {
+    @apply relative h-48 overflow-hidden lg:hidden;
+  }
+  .connexion-photo-mobile > img {
+    @apply absolute inset-0 h-full w-full object-cover;
+    object-position: 78% 25%;
+    filter: grayscale(0.35) contrast(1.25) brightness(0.5);
+  }
+  .connexion-form-panel {
+    @apply flex items-center justify-center px-6 py-12 sm:px-12 sm:py-16;
+    background: #0f0d15;
+  }
+  .connexion-input {
+    @apply w-full rounded-md border border-white/10 bg-white/[0.04] px-3.5 py-2.5 text-sm text-white placeholder:text-white/30 transition-colors duration-150;
+  }
+  .connexion-input:focus-visible {
+    @apply outline-none;
+    border-color: rgb(var(--color-amethyst-400));
+    box-shadow: 0 0 0 3px rgb(var(--color-amethyst-400) / 0.25);
+  }
+  .connexion-input-erreur {
+    border-color: rgb(var(--color-risk-high) / 0.7);
+  }
 }

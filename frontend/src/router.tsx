@@ -14,6 +14,7 @@ import AppLayout from "@/layout/AppLayout";
 import HomePage from "@/pages/HomePage";
 import ParametresPage from "@/pages/ParametresPage";
 import LandingPage from "@/pages/LandingPage";
+import ConnexionPage from "@/pages/ConnexionPage";
 import NotFoundPage from "@/pages/NotFoundPage";
 import Styleguide from "@/pages/Styleguide";
 import ChatPage from "@/pages/ChatPage";
@@ -92,6 +93,10 @@ export const router = createBrowserRouter([
   // /styleguide a son propre habillage complet (hero, nav interne) -- rendu
   // hors AppLayout pour ne pas empiler deux barres de navigation.
   { path: "/styleguide", element: <Styleguide /> },
+  // Écran d'accès, hors AppLayout -- voir l'en-tête de ConnexionPage.tsx :
+  // formulaire non relié à une authentification réelle (aucun backend de
+  // comptes n'existe aujourd'hui), à connecter plus tard si besoin.
+  { path: "/connexion", element: <ConnexionPage /> },
   {
     path: "/app",
     element: <AppLayout />,
