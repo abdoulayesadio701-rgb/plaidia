@@ -14,7 +14,7 @@ import analyse as legacy_analyse
 import db
 import judilibre as legacy_judilibre
 import recherche_juridique as legacy_rj
-from app import demo
+from app import demo, quality_pipeline
 from app.schemas.jurisprudence import (
     CollecterIn,
     CollecterOut,
@@ -53,13 +53,23 @@ def consulter(payload: ConsulterIn):
         else:
             contexte_recherche = ""
 
-    reponse = legacy_analyse.consulter_jurisprudence(
-        payload.question,
-        contexte_recherche,
-        qualification=notions.get("qualification_juridique", ""),
-        but=notions.get("but", payload.but),
+    # Pipeline complet (§9 ARCHITECTURE_MULTI_AGENTS.md) : c'est ici que le
+    # contrôle déterministe des citations est le plus fort -- contexte_recherche
+    # contient les références réellement retrouvées (Légifrance/Judilibre en
+    # direct, ou corpus validé), donc chaque décision citée dans la réponse
+    # peut être confrontée à une source concrète, pas seulement au texte brut.
+    pipeline = quality_pipeline.executer_pipeline_complet(
+        feature="jurisprudence_consultation",
+        texte_a_screener=payload.question,
+        fonction_principale=lambda: legacy_analyse.consulter_jurisprudence(
+            payload.question,
+            contexte_recherche,
+            qualification=notions.get("qualification_juridique", ""),
+            but=notions.get("but", payload.but),
+        ),
+        sources_textes=[contexte_recherche] if contexte_recherche else [],
     )
-    return ConsulterOut(notions=notions, reponse=reponse)
+    return ConsulterOut(notions=notions, reponse=pipeline.resultat_principal, verification=pipeline.verification)
 
 
 @router.post("/collecter", response_model=CollecterOut)

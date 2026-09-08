@@ -32,8 +32,9 @@ def _log_chat(message: str) -> None:
 import analyse as legacy_analyse
 import db
 import recherche_juridique as legacy_rj
-from app import chat_actions, demo, demo_data
+from app import chat_actions, demo, demo_data, quality_pipeline
 from app.deps import construire_contexte_dossier, get_dossier_or_404
+from app.security_guard import executer_garde_fou
 from app.schemas.chat import (
     ChatContextuelIn,
     ChatContextuelOut,
@@ -87,6 +88,21 @@ def chat_stream(payload: ChatStreamIn):
         dossier = get_dossier_or_404(payload.dossier_id)
         contexte_dossier = "\n\n" + construire_contexte_dossier(dossier)
 
+    # Garde-fou d'entrée + agent de compréhension (§1-2, §10
+    # ARCHITECTURE_MULTI_AGENTS.md) -- résolus ici pour la même raison que
+    # dossier_id ci-dessus : security_guard.DemandeRefusee doit encore
+    # pouvoir devenir une vraie réponse 422 JSON, plus possible une fois le
+    # flux SSE démarré. C'est le seul endpoint où l'agent d'intention est
+    # utile : contrairement à /api/analyse/conclusions ou /plan, la tâche
+    # n'est pas connue à l'avance ici -- c'est l'agent d'intention qui
+    # détermine dynamiquement si le trio qualité (vérificateur/critique/
+    # validation finale) sera nécessaire après la génération, pour ne pas
+    # l'exécuter sur une simple question conversationnelle.
+    intention = None
+    if not demo.mode_demo_effectif() and dernier_message_utilisateur.strip():
+        historique_pour_intention = messages[:-1] if len(messages) > 1 else None
+        _, intention = quality_pipeline.executer_garde_fou_et_intention(dernier_message_utilisateur, historique_pour_intention)
+
     def event_stream_demo():
         """Même séquence d'événements SSE que le flux réel (recherche_debut/
         recherche_resultat simulés si demandé, puis delta mot à mot, puis
@@ -129,9 +145,27 @@ def chat_stream(payload: ChatStreamIn):
                 contexte_recherche, _, _ = _construire_contexte_recherche(payload.juridiction, False, "")
             contexte_recherche += contexte_dossier
 
+            fragments_accumules = []
             for fragment in legacy_analyse.repondre_conversation_stream(messages, contexte_recherche=contexte_recherche):
+                fragments_accumules.append(fragment)
                 yield _sse("delta", {"text": fragment})
                 nb_fragments += 1
+
+            # Trio qualité (§10), seulement si l'agent d'intention l'a jugé
+            # nécessaire -- événement SSE additif "verification", envoyé
+            # AVANT "done" pour que le front puisse l'associer au message en
+            # cours de finalisation plutôt qu'à un message déjà sauvegardé.
+            # Un front qui ignore cet événement n'est pas affecté.
+            if intention is not None:
+                texte_reponse = "".join(fragments_accumules)
+                verification = quality_pipeline.executer_trio_qualite_si_necessaire(
+                    texte_reponse,
+                    intention,
+                    sources_textes=[contexte_recherche] if payload.recherche_live else None,
+                    contexte_dossier=contexte_dossier,
+                )
+                if verification is not None:
+                    yield _sse("verification", verification)
 
             yield _sse("done", {})
         except Exception as e:
@@ -168,6 +202,14 @@ def chat_stream(payload: ChatStreamIn):
 @router.post("/contextuel", response_model=ChatContextuelOut)
 def chat_contextuel(payload: ChatContextuelIn):
     demo.exiger_cle_api()
+
+    # Garde-fou d'entrée seulement (§1, §9) -- pas le trio qualité complet
+    # ici : une édition locale est déjà protégée par la validation de
+    # app.chat_actions (le modèle propose un scope/une opération, le code
+    # vérifie qu'ils correspondent réellement au résultat affiché avant de
+    # rien appliquer), donc ajouter vérificateur/critique/validation finale
+    # sur chaque petite modification serait disproportionné.
+    executer_garde_fou(payload.message)
 
     contexte_dossier = ""
     if payload.dossier_id is not None:

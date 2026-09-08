@@ -37,6 +37,7 @@ from slowapi.util import get_remote_address  # noqa: E402
 
 from app import demo, demo_data  # noqa: E402
 from app.routers import analyse, chat, dossiers, greffier, intention, jurisprudence, notes  # noqa: E402
+from app.security_guard import DemandeRefusee  # noqa: E402
 
 
 def _ensemencer_dossier_demo():
@@ -167,11 +168,13 @@ async def document_numerise_handler(request, exc: legacy_extract.DocumentNumeris
     return JSONResponse(status_code=422, content={"detail": str(exc)})
 
 
-@app.exception_handler(legacy_extract.DocumentNumeriseError)
-async def document_numerise_handler(request, exc: legacy_extract.DocumentNumeriseError):
-    # PDF sans couche de texte exploitable (scan) -- voir extract.py §8.
-    # 422 : le fichier est valide, c'est son contenu qui n'est pas exploitable.
-    return JSONResponse(status_code=422, content={"detail": str(exc)})
+@app.exception_handler(DemandeRefusee)
+async def demande_refusee_handler(request, exc: DemandeRefusee):
+    # Garde-fou d'entrée (sécurité, voir security_guard.py et
+    # ARCHITECTURE_MULTI_AGENTS.md §1) -- la demande n'a jamais atteint
+    # l'agent principal. 422 : la requête est valide, c'est son contenu qui
+    # est refusé.
+    return JSONResponse(status_code=422, content={"detail": exc.reason})
 
 
 @app.exception_handler(ImportError)

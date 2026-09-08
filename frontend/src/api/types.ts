@@ -72,10 +72,40 @@ export interface Argument {
   refutations: Refutation[];
 }
 
+// --- Vérification multi-agents (backend/app/schemas/verification.py) ------
+// Bloc additif produit par le pipeline de vérification (voir
+// ARCHITECTURE_MULTI_AGENTS.md) -- toujours optionnel, absent en mode démo
+// ou si le garde-fou/pipeline n'est pas applicable à la fonctionnalité.
+
+export type StatutVerification = "VERIFIE" | "PARTIELLEMENT_VERIFIE" | "A_VERIFIER" | "NON_VERIFIE" | string;
+export type StatutConfiance = "VERIFIE" | "A_VERIFIER" | "INCERTAIN" | string;
+
+export interface ElementVerifie {
+  affirmation: string;
+  statut: StatutVerification;
+  commentaire: string;
+}
+
+export interface Critique {
+  cible: string;
+  type: string;
+  commentaire: string;
+  gravite: string;
+}
+
+export interface Verification {
+  statut_global: StatutConfiance;
+  elements: ElementVerifie[];
+  critiques: Critique[];
+  points_a_verifier: string[];
+  synthese_utilisateur: string;
+}
+
 export interface ConclusionsResultat {
   arguments: Argument[];
   points_attention: string[];
   analyse_id?: number | null;
+  verification?: Verification | null;
 }
 
 export interface ResumeResultat {
@@ -96,6 +126,7 @@ export interface PlanResultat {
   plan: PointPlan[];
   conclusion: string;
   points_attention: string[];
+  verification?: Verification | null;
 }
 
 export interface Objection {
@@ -108,6 +139,7 @@ export interface Objection {
 export interface SimulateurResultat {
   objections: Objection[];
   point_le_plus_faible: string;
+  verification?: Verification | null;
 }
 
 export interface RapportCompletResultat {
@@ -149,6 +181,7 @@ export interface Notions {
 export interface ConsulterResultat {
   notions: Notions;
   reponse: string;
+  verification?: Verification | null;
 }
 
 export interface DecisionCollectee {
@@ -341,11 +374,15 @@ export interface ChatContextuelResultat {
   reponse_agent: string;
 }
 
-/** Événements du flux SSE POST /api/chat/stream — voir backend/README.md */
+/** Événements du flux SSE POST /api/chat/stream — voir backend/README.md.
+ * "verification" (additif, ARCHITECTURE_MULTI_AGENTS.md §10) n'est envoyé
+ * que si l'agent d'intention a jugé la question suffisamment substantielle
+ * pour justifier le trio qualité -- absent la plupart du temps. */
 export type ChatStreamEvent =
   | { event: "recherche_debut"; data: Record<string, never> }
   | { event: "recherche_resultat"; data: { n_articles: number; n_jurisprudence: number } }
   | { event: "delta"; data: { text: string } }
+  | { event: "verification"; data: Verification }
   | { event: "done"; data: Record<string, never> }
   | { event: "error"; data: { detail: string } };
 

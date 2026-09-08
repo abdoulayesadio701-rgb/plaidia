@@ -15,6 +15,7 @@ import ErrorState from "@/components/ErrorState";
 import RichOutput from "@/components/RichOutput";
 import { SkeletonList } from "@/components/Skeleton";
 import ChatContextuelPanel from "@/components/chat/ChatContextuelPanel";
+import VerificationPanel from "@/components/VerificationPanel";
 
 export default function ConsulterJurisprudencePage() {
   const juridictionActive = useAppStore((s) => s.juridictionActive);
@@ -94,6 +95,8 @@ export default function ConsulterJurisprudencePage() {
           <div className="card p-6">
             <RichOutput texte={data.reponse} />
           </div>
+
+          <VerificationPanel verification={data.verification} />
 
           <ChatContextuelPanel
             feature="jurisprudence_consultation"

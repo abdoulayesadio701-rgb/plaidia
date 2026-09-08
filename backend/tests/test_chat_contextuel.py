@@ -19,9 +19,25 @@ dépendante du réseau ni d'une clé API.
 """
 
 import analyse as legacy_analyse
+import pytest
 from fastapi.testclient import TestClient
 
 _HEADERS_CLE_TEST = {"x-anthropic-api-key": "sk-ant-cle-de-test"}
+
+
+@pytest.fixture(autouse=True)
+def _garde_fou_toujours_permissif(monkeypatch):
+    """Le garde-fou d'entrée (app.security_guard, voir
+    ARCHITECTURE_MULTI_AGENTS.md §1) s'exécute désormais avant
+    traiter_message_edition sur /api/chat/contextuel -- un appel réel
+    supplémentaire que ces tests ne veulent pas dépendre du réseau, au même
+    titre que traiter_message_edition lui-même (monkeypatché individuellement
+    dans chaque test ci-dessous)."""
+    monkeypatch.setattr(
+        legacy_analyse,
+        "evaluer_garde_fou_entree",
+        lambda texte: {"allowed": True, "risk_level": "low", "reason": "", "requires_clarification": False},
+    )
 
 
 def test_modification_locale_validee_est_appliquee(client: TestClient, monkeypatch):

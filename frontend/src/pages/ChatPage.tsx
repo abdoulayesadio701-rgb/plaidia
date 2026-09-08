@@ -7,12 +7,13 @@
 
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { chat as chatApi } from "@/api";
-import type { MessageChat } from "@/api";
+import type { MessageChat, Verification } from "@/api";
 import { useAppStore } from "@/store/useAppStore";
 import Logo from "@/components/Logo";
 import Button from "@/components/Button";
 import RichOutput from "@/components/RichOutput";
 import TexteLongModal from "@/components/TexteLongModal";
+import VerificationPanel from "@/components/VerificationPanel";
 
 interface StatutRecherche {
   enCours: boolean;
@@ -34,6 +35,10 @@ export default function ChatPage() {
   const [rechercheLive, setRechercheLive] = useState(false);
   const [genererEnCours, setGenererEnCours] = useState(false);
   const [statutRecherche, setStatutRecherche] = useState<StatutRecherche | null>(null);
+  // Additif (§10) : la vérification multi-agents ne porte que sur le
+  // dernier message assistant reçu -- réinitialisée à chaque nouvel envoi,
+  // jamais persistée dans l'historique (voir ChatStreamCallbacks.onVerification).
+  const [verificationDerniereReponse, setVerificationDerniereReponse] = useState<Verification | null>(null);
   const [modalTexteLongOuverte, setModalTexteLongOuverte] = useState(false);
   const [indexMessageCopie, setIndexMessageCopie] = useState<number | null>(null);
 
@@ -93,6 +98,7 @@ export default function ChatPage() {
     ajouterMessageChat({ role: "assistant", content: "" }); // rempli au fil du flux SSE
     setTexte("");
     setStatutRecherche(rechercheLive ? { enCours: true, resultat: null } : null);
+    setVerificationDerniereReponse(null);
     setGenererEnCours(true);
 
     const controller = new AbortController();
@@ -118,6 +124,11 @@ export default function ChatPage() {
           console.log("[chat] delta", JSON.stringify(fragment));
           accumulateur += fragment;
           remplacerDernierMessageChat(accumulateur);
+        },
+        onVerification: (verification) => {
+          // eslint-disable-next-line no-console
+          console.log("[chat] verification", verification.statut_global);
+          setVerificationDerniereReponse(verification);
         },
         onDone: () => {
           // eslint-disable-next-line no-console
@@ -156,6 +167,7 @@ export default function ChatPage() {
     if (genererEnCours) annulerGeneration();
     reinitialiserChat();
     setStatutRecherche(null);
+    setVerificationDerniereReponse(null);
   };
 
   const onKeyDownComposer = (e: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -264,6 +276,10 @@ export default function ChatPage() {
             </div>
           );
         })}
+
+        {!genererEnCours && verificationDerniereReponse && (
+          <VerificationPanel verification={verificationDerniereReponse} />
+        )}
       </div>
 
       {/* Zone de saisie */}

@@ -122,7 +122,7 @@ export default function LandingPage() {
             Comment ça marche
           </a>
           <a href="#garde-fou" className="transition-colors hover:text-ivory">
-            Garde-fou anti-hallucination
+            Vérification multi-agents
           </a>
         </nav>
         <div className="flex items-center gap-3">
@@ -198,7 +198,7 @@ export default function LandingPage() {
       <section id="fonctionnalites" className="relative mx-auto max-w-6xl px-6 py-20">
         <div className="mx-auto mb-12 max-w-2xl text-center">
           <p className="kicker mx-auto">Ce que fait l'outil</p>
-          <h2 className="mt-2 font-serif text-h1 font-semibold text-gold-500">Six espaces de travail, un seul garde-fou</h2>
+          <h2 className="mt-2 font-serif text-h1 font-semibold text-gold-500">Six espaces de travail, un même principe : vérifier avant d'affirmer</h2>
         </div>
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {FONCTIONNALITES.map((f) => (
@@ -248,21 +248,40 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* --- Garde-fou anti-hallucination --------------------------------- */}
-      <section id="garde-fou" className="relative mx-auto max-w-4xl px-6 py-20">
-        <div className="card space-y-4 border-gold-500/30 p-8 text-center">
-          <p className="kicker mx-auto">Le garde-fou</p>
-          <h2 className="font-serif text-h1 font-semibold text-gold-500">
-            Un <mark className="marker-verify">À VÉRIFIER</mark> plutôt qu'une fausse certitude
-          </h2>
-          <p className="mx-auto max-w-prose text-sm leading-relaxed text-warmgray sm:text-base">
-            Chaque fois que l'agent s'appuie sur une référence, une jurisprudence ou une règle qu'il n'a pas la
-            certitude de bien citer, il l'annonce lui-même — au lieu de l'affirmer comme un fait établi. Le marqueur
-            est visuel, impossible à manquer, et reste le même dans tout l'outil : conclusions adverses, chat,
-            simulateur d'objections. Une IA juridique qui ne sait pas dire « je ne suis pas sûr » est plus dangereuse
-            qu'utile — c'est le principe fondateur de Plaid'IA.
+      {/* --- Garde-fou anti-hallucination : architecture multi-agents ----- */}
+      <section id="garde-fou" className="relative mx-auto max-w-5xl px-6 py-20">
+        <div className="mx-auto max-w-2xl text-center">
+          <p className="kicker mx-auto">Plusieurs garde-fous, un même objectif</p>
+          <h2 className="mt-2 font-serif text-h1 font-semibold text-gold-500">Vérifier avant d'affirmer</h2>
+          <p className="mx-auto mt-4 max-w-prose text-sm leading-relaxed text-warmgray sm:text-base">
+            Sur les analyses les plus sensibles, l'agent qui rédige n'est jamais le seul juge de sa propre réponse.
+            Avant qu'elle n'atteigne l'écran, cinq contrôles indépendants l'examinent chacun sous un angle différent —
+            et chaque affirmation reste marquée <mark className="marker-verify">À VÉRIFIER</mark> tant qu'aucun
+            d'eux n'a pu la confirmer.
           </p>
         </div>
+
+        <div className="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
+          {[
+            { icone: "🛡", titre: "Sécurité", texte: "Contrôle la demande — hors-sujet, ambiguë ou manipulatrice — avant qu'elle n'atteigne un agent d'analyse." },
+            { icone: "🎯", titre: "Intention", texte: "Comprend ce qui est réellement demandé, et détermine si la question appelle une vérification approfondie." },
+            { icone: "📚", titre: "Vérification juridique", texte: "Confronte chaque référence citée aux sources réellement disponibles — jamais une confirmation de complaisance." },
+            { icone: "⚖", titre: "Critique", texte: "Joue le contradicteur : cherche activement les faiblesses du raisonnement, comme le ferait la partie adverse." },
+            { icone: "✓", titre: "Validation", texte: "Consolide les deux contrôles précédents en un statut clair — sans jamais inventer une source pour combler un doute." },
+          ].map((etape) => (
+            <div key={etape.titre} className="card space-y-2 p-5 text-center">
+              <p className="text-2xl" aria-hidden="true">{etape.icone}</p>
+              <p className="text-sm font-semibold text-ivory">{etape.titre}</p>
+              <p className="text-xs leading-relaxed text-warmgray">{etape.texte}</p>
+            </div>
+          ))}
+        </div>
+
+        <p className="mx-auto mt-8 max-w-prose text-center text-xs leading-relaxed text-muted sm:text-sm">
+          Plusieurs contrôles indépendants ne rendent pas une réponse automatiquement correcte — ils aident à repérer
+          plus tôt les erreurs, les contradictions et les points qui restent à vérifier. Plaid'IA distingue toujours
+          ce qui est vérifié, ce qui est probable, et ce qui reste incertain.
+        </p>
       </section>
 
       {/* --- Footer ------------------------------------------------------- */}

@@ -15,6 +15,7 @@ import RichOutput from "@/components/RichOutput";
 import LabeledField from "@/components/LabeledField";
 import { SkeletonList } from "@/components/Skeleton";
 import ChatContextuelPanel from "@/components/chat/ChatContextuelPanel";
+import VerificationPanel from "@/components/VerificationPanel";
 
 export default function SimulateurObjectionsPage() {
   const dossierActif = useDossierActif();
@@ -123,6 +124,8 @@ export default function SimulateurObjectionsPage() {
               <RichOutput texte={data.point_le_plus_faible} prose={false} className="text-sm" />
             </div>
           )}
+
+          <VerificationPanel verification={data.verification} />
 
           <ChatContextuelPanel
             feature="simulateur"

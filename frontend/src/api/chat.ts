@@ -9,12 +9,17 @@
 
 import { apiRequest, BASE_URL } from "./http";
 import { obtenirClePersonnelle } from "./cleApiPersonnelle";
-import type { ChatContextuelResultat, ConversationDetail, ConversationResume, FeatureChatContextuel, MessageChat } from "./types";
+import type { ChatContextuelResultat, ConversationDetail, ConversationResume, FeatureChatContextuel, MessageChat, Verification } from "./types";
 
 export interface ChatStreamCallbacks {
   onRechercheDebut?: () => void;
   onRechercheResultat?: (data: { n_articles: number; n_jurisprudence: number }) => void;
   onDelta?: (text: string) => void;
+  /** Additif (ARCHITECTURE_MULTI_AGENTS.md §10) -- envoyé seulement si
+   * l'agent d'intention a jugé la question suffisamment substantielle pour
+   * justifier le trio qualité, juste avant "done". Absent la plupart du
+   * temps (question conversationnelle simple). */
+  onVerification?: (verification: Verification) => void;
   onDone?: () => void;
   onError?: (message: string) => void;
 }
@@ -89,6 +94,9 @@ export async function streamChat(messages: MessageChat[], options: ChatStreamOpt
         break;
       case "delta":
         callbacks.onDelta?.((data as { text: string }).text);
+        break;
+      case "verification":
+        callbacks.onVerification?.(data as Verification);
         break;
       case "done":
         callbacks.onDone?.();

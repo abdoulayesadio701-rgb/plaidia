@@ -14,7 +14,7 @@ import os
 import analyse as legacy_analyse
 import db
 import export as legacy_export
-from app import demo, demo_data
+from app import demo, demo_data, quality_pipeline
 from app.deps import construire_contexte_dossier, get_dossier_or_404
 from app.schemas.analyse import (
     ConclusionsIn,
@@ -51,7 +51,18 @@ def analyser_conclusions(payload: ConclusionsIn):
             get_dossier_or_404(payload.dossier_id)
         return ConclusionsOut(arguments=resultat["arguments"], points_attention=resultat["points_attention"], analyse_id=None)
 
-    resultat = legacy_analyse.analyser_conclusions(payload.texte)
+    # Pipeline complet (§9 ARCHITECTURE_MULTI_AGENTS.md) : garde-fou d'entrée
+    # -> agent principal (inchangé) -> vérificateur juridique -> critique ->
+    # validation finale. Le texte source lui-même sert de référence au
+    # contrôle déterministe des citations (analyser_conclusions ne cite
+    # normalement que ce qui figure dans les conclusions adverses fournies).
+    pipeline = quality_pipeline.executer_pipeline_complet(
+        feature="conclusions",
+        texte_a_screener=payload.texte,
+        fonction_principale=lambda: legacy_analyse.analyser_conclusions(payload.texte),
+        sources_textes=[payload.texte],
+    )
+    resultat = pipeline.resultat_principal
     analyse_id = None
     if payload.dossier_id is not None:
         get_dossier_or_404(payload.dossier_id)
@@ -62,6 +73,7 @@ def analyser_conclusions(payload: ConclusionsIn):
         arguments=resultat.get("arguments", []),
         points_attention=resultat.get("points_attention", []),
         analyse_id=analyse_id,
+        verification=pipeline.verification,
     )
 
 
@@ -80,7 +92,14 @@ def generer_plan(payload: PlanIn):
     if demo.mode_demo_effectif():
         return demo_data.PLAN_DEMO
     contexte = construire_contexte_dossier(dossier)
-    return legacy_analyse.generer_plan_plaidoirie(contexte, payload.temps_minutes)
+    pipeline = quality_pipeline.executer_pipeline_complet(
+        feature="plan",
+        texte_a_screener=contexte,
+        fonction_principale=lambda: legacy_analyse.generer_plan_plaidoirie(contexte, payload.temps_minutes),
+        sources_textes=[contexte],
+        contexte_dossier=contexte,
+    )
+    return PlanOut(**pipeline.resultat_principal, verification=pipeline.verification)
 
 
 @router.post("/simulateur", response_model=SimulateurOut)
@@ -89,11 +108,26 @@ def simuler_objections(payload: SimulateurIn):
     if demo.mode_demo_effectif():
         return demo_data.SIMULATEUR_DEMO
     contexte = construire_contexte_dossier(dossier)
-    return legacy_analyse.simuler_objections(contexte)
+    pipeline = quality_pipeline.executer_pipeline_complet(
+        feature="simulateur",
+        texte_a_screener=contexte,
+        fonction_principale=lambda: legacy_analyse.simuler_objections(contexte),
+        sources_textes=[contexte],
+        contexte_dossier=contexte,
+    )
+    return SimulateurOut(**pipeline.resultat_principal, verification=pipeline.verification)
 
 
 @router.post("/rapport-complet", response_model=RapportCompletOut)
 def rapport_complet(payload: RapportCompletIn):
+    # Volontairement SANS le pipeline qualité ici : ce endpoint génère déjà
+    # jusqu'à 2 analyses en parallèle (plan + simulateur) ; y ajouter le trio
+    # qualité pour chacune multiplierait par ~4 le nombre d'appels Claude
+    # d'une seule requête HTTP (jusqu'à 8-10 appels), au risque de délais
+    # inacceptables -- contraire à la consigne "éviter les appels inutiles,
+    # les coûts" (§9). Pour un contrôle qualité complet sur le plan ou le
+    # simulateur d'un dossier, utiliser les endpoints /plan et /simulateur
+    # dédiés (pipeline complet), qui restent utilisables séparément.
     dossier = get_dossier_or_404(payload.dossier_id)
 
     if demo.mode_demo_effectif():

@@ -5,6 +5,7 @@ from typing import Optional
 from pydantic import BaseModel, Field
 
 from app.demo import MAX_TEXTE_CARACTERES
+from app.schemas.verification import VerificationOut
 
 
 class ConclusionsIn(BaseModel):
@@ -38,6 +39,9 @@ class ConclusionsOut(BaseModel):
     arguments: list[ArgumentOut]
     points_attention: list[str] = []
     analyse_id: Optional[int] = Field(None, description="Id de l'analyse enregistrée en base, si dossier_id était fourni")
+    verification: Optional[VerificationOut] = Field(
+        None, description="Contrôle multi-agents additif (vérificateur juridique, critique, validation finale) — absent en mode démo, voir ARCHITECTURE_MULTI_AGENTS.md"
+    )
 
 
 class ResumeIn(BaseModel):
@@ -67,6 +71,7 @@ class PlanOut(BaseModel):
     plan: list[PointPlanOut] = []
     conclusion: str = ""
     points_attention: list[str] = []
+    verification: Optional[VerificationOut] = None
 
 
 class SimulateurIn(BaseModel):
@@ -83,6 +88,7 @@ class ObjectionOut(BaseModel):
 class SimulateurOut(BaseModel):
     objections: list[ObjectionOut] = []
     point_le_plus_faible: str = ""
+    verification: Optional[VerificationOut] = None
 
 
 class RapportCompletIn(BaseModel):

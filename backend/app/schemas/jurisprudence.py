@@ -5,6 +5,7 @@ from typing import Optional
 from pydantic import BaseModel, Field
 
 from app.demo import MAX_TEXTE_CARACTERES
+from app.schemas.verification import VerificationOut
 
 
 class ConsulterIn(BaseModel):
@@ -23,6 +24,7 @@ class NotionsOut(BaseModel):
 class ConsulterOut(BaseModel):
     notions: NotionsOut
     reponse: str
+    verification: Optional[VerificationOut] = None
 
 
 class CollecterIn(BaseModel):

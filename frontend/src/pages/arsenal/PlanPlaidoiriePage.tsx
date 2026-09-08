@@ -23,6 +23,7 @@ import ErrorState from "@/components/ErrorState";
 import PlanTimeline from "@/components/PlanTimeline";
 import { SkeletonList } from "@/components/Skeleton";
 import ChatContextuelPanel from "@/components/chat/ChatContextuelPanel";
+import VerificationPanel from "@/components/VerificationPanel";
 
 interface NavigationState {
   dureeMinutesPreremplie?: number;
@@ -87,6 +88,8 @@ export default function PlanPlaidoiriePage() {
           </div>
 
           <PlanTimeline plan={data} />
+
+          <VerificationPanel verification={data.verification} />
 
           <ChatContextuelPanel
             feature="plan"

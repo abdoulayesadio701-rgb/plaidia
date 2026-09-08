@@ -17,6 +17,7 @@ import ErrorState from "@/components/ErrorState";
 import RichOutput from "@/components/RichOutput";
 import { SkeletonList } from "@/components/Skeleton";
 import ChatContextuelPanel from "@/components/chat/ChatContextuelPanel";
+import VerificationPanel from "@/components/VerificationPanel";
 
 const EXTENSIONS_ACCEPTEES = ".pdf,.docx,.xlsx,.xls,.txt,.png,.jpg,.jpeg,.webp";
 
@@ -122,6 +123,8 @@ export default function AnalyserConclusionsPage() {
               </ul>
             </div>
           )}
+
+          <VerificationPanel verification={data.verification} />
 
           <ChatContextuelPanel feature="conclusions" resultatActuel={data} onMiseAJour={definirDonnees} dossierId={dossierActif.id} />
         </div>

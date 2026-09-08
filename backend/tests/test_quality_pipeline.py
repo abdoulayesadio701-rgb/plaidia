@@ -1,0 +1,182 @@
+"""
+test_quality_pipeline.py — Tests de l'orchestrateur et des agents de QUALITÉ
+(app.quality_pipeline), voir ARCHITECTURE_MULTI_AGENTS.md §4-6, §9.
+
+Portée : la mécanique déterministe (contrôle des citations, autorité du code
+sur le LLM, dégradation propre) est testée directement, sans réseau. Le
+jugement réel des agents LLM (verifier_juridiquement, critiquer_reponse,
+valider_finalement) est mocké -- leur comportement réel a été vérifié
+manuellement avec une clé API réelle pendant le développement, comme pour
+traiter_message_edition (voir test_chat_contextuel.py)."""
+
+import time
+
+import analyse as legacy_analyse
+import app.quality_pipeline as quality_pipeline
+import pytest
+from app.security_guard import DemandeRefusee
+
+
+# --- Contrôle déterministe des citations -----------------------------------
+
+def test_extraire_citations_detecte_article_et_jurisprudence():
+    texte = "Selon l'article L. 1232-1 du Code du travail, confirmé par Cass. soc., 12 mars 2020, n° 18-12.345, ..."
+    citations = quality_pipeline._extraire_citations(texte)
+    assert any("1232-1" in c for c in citations)
+    assert any(c.startswith("n°") for c in citations)
+
+
+def test_verifier_citations_marque_verifie_si_presente_dans_les_sources():
+    texte = "Voir l'article L. 1232-1 du Code du travail."
+    resultats = quality_pipeline._verifier_citations(texte, ["Extrait : ... article L. 1232-1 dispose que ..."])
+    assert resultats
+    assert all(r["statut_deterministe"] == "VERIFIE" for r in resultats)
+
+
+def test_verifier_citations_marque_non_verifie_si_absente_des_sources():
+    texte = "Voir l'article L. 9999-9 du Code du travail, qui n'existe dans aucune source fournie."
+    resultats = quality_pipeline._verifier_citations(texte, ["Ce texte source ne mentionne aucun article de ce type."])
+    assert resultats
+    assert all(r["statut_deterministe"] == "NON_VERIFIE" for r in resultats)
+
+
+def test_verifier_citations_sans_aucune_source_disponible():
+    texte = "Voir l'article L. 1232-1 du Code du travail."
+    resultats = quality_pipeline._verifier_citations(texte, [])
+    assert all(r["statut_deterministe"] == "AUCUNE_SOURCE" for r in resultats)
+
+
+def test_citation_deja_signalee_a_verifier_par_le_modele_nest_pas_recontrolee():
+    """Une citation que le modèle a lui-même honnêtement préfixée
+    « À VÉRIFIER » ne doit pas ressortir comme une citation dissimulée --
+    elle est ignorée par le contrôle déterministe, pas signalée en plus."""
+    texte = "À VÉRIFIER : article L. 9999-9 du Code du travail."
+    resultats = quality_pipeline._verifier_citations(texte, [])
+    assert resultats == []
+
+
+# --- Autorité du code sur la couche LLM du vérificateur ---------------------
+
+def test_le_code_corrige_une_citation_que_le_llm_declare_a_tort_verifiee():
+    """Garantit EN CODE (pas seulement par instruction de prompt) que le
+    contrôle déterministe fait autorité : même si la couche LLM du
+    vérificateur "hallucine sa propre confirmation", le statut final ne
+    peut jamais dépasser NON_VERIFIE pour une citation absente des sources."""
+    citations = [{"citation": "article L. 9999-9", "statut_deterministe": "NON_VERIFIE"}]
+    elements_llm_menteur = [{"affirmation": "article L. 9999-9", "statut": "VERIFIE", "commentaire": "Semble correct."}]
+    corriges = quality_pipeline._appliquer_autorite_deterministe(elements_llm_menteur, citations)
+    assert len(corriges) == 1
+    assert corriges[0]["statut"] == "NON_VERIFIE"
+
+
+def test_citation_non_verifiee_omise_par_le_llm_est_ajoutee_quand_meme():
+    citations = [{"citation": "article L. 9999-9", "statut_deterministe": "NON_VERIFIE"}]
+    corriges = quality_pipeline._appliquer_autorite_deterministe([], citations)
+    assert len(corriges) == 1
+    assert corriges[0]["statut"] == "NON_VERIFIE"
+
+
+def test_statut_global_ne_peut_pas_rester_verifie_si_un_element_est_non_verifie():
+    elements = [{"affirmation": "x", "statut": "NON_VERIFIE", "commentaire": ""}]
+    assert quality_pipeline._recalculer_statut_global("VERIFIE", elements) == "NON_VERIFIE"
+    assert quality_pipeline._recalculer_statut_global("VERIFIE", []) == "VERIFIE"
+
+
+# --- Orchestrateur : pipeline complet ---------------------------------------
+
+def _mocker_agents_qualite(monkeypatch, *, verif=None, critique=None, final=None):
+    monkeypatch.setattr(legacy_analyse, "evaluer_garde_fou_entree", lambda texte: {"allowed": True, "risk_level": "low", "reason": "", "requires_clarification": False})
+    monkeypatch.setattr(legacy_analyse, "verifier_juridiquement", verif or (lambda *a, **k: {"statut_global": "A_VERIFIER", "elements": []}))
+    monkeypatch.setattr(legacy_analyse, "critiquer_reponse", critique or (lambda *a, **k: {"critiques": [], "synthese": ""}))
+    monkeypatch.setattr(legacy_analyse, "valider_finalement", final or (lambda verif, crit: {"statut_global": "A_VERIFIER", "points_a_verifier": [], "points_forts": [], "synthese_utilisateur": "Synthèse."}))
+
+
+def test_pipeline_complet_execute_agent_principal_et_renvoie_verification(monkeypatch):
+    _mocker_agents_qualite(monkeypatch)
+    resultat = quality_pipeline.executer_pipeline_complet(
+        feature="conclusions",
+        texte_a_screener="texte quelconque",
+        fonction_principale=lambda: {"arguments": [], "points_attention": []},
+        sources_textes=["texte quelconque"],
+    )
+    assert resultat.resultat_principal == {"arguments": [], "points_attention": []}
+    assert resultat.verification is not None
+    assert resultat.verification["synthese_utilisateur"] == "Synthèse."
+    agents_executes = [e.agent for e in resultat.trace]
+    assert agents_executes == ["garde_fou_entree", "agent_principal", "legal_verifier", "critic_agent", "final_validator"]
+
+
+def test_pipeline_complet_refuse_par_le_garde_fou_najamais_lagent_principal(monkeypatch):
+    appels_agent_principal = []
+    monkeypatch.setattr(
+        legacy_analyse,
+        "evaluer_garde_fou_entree",
+        lambda texte: {"allowed": False, "risk_level": "high", "reason": "Refusé.", "requires_clarification": False},
+    )
+    with pytest.raises(DemandeRefusee):
+        quality_pipeline.executer_pipeline_complet(
+            feature="conclusions",
+            texte_a_screener="texte suspect",
+            fonction_principale=lambda: appels_agent_principal.append(1) or {},
+        )
+    assert appels_agent_principal == []
+
+
+def test_pipeline_complet_degrade_proprement_si_un_agent_qualite_echoue(monkeypatch):
+    """Un agent qualité en échec ne doit jamais faire échouer la requête ni
+    perdre le résultat de l'agent principal -- voir §9/§14."""
+
+    def _verifier_en_echec(*a, **k):
+        raise RuntimeError("panne simulée de l'API")
+
+    _mocker_agents_qualite(monkeypatch, verif=_verifier_en_echec)
+    resultat = quality_pipeline.executer_pipeline_complet(
+        feature="conclusions",
+        texte_a_screener="texte",
+        fonction_principale=lambda: {"arguments": ["ok"]},
+        sources_textes=["texte"],
+    )
+    assert resultat.resultat_principal == {"arguments": ["ok"]}
+    assert resultat.verification is not None  # dégradé, jamais absent silencieusement
+    trace_verif = next(e for e in resultat.trace if e.agent == "legal_verifier")
+    assert trace_verif.statut == "degrade"
+
+
+def test_pipeline_complet_degrade_proprement_sur_timeout(monkeypatch):
+    monkeypatch.setattr(quality_pipeline, "_TIMEOUT_AGENT_QUALITE", 0.05)
+
+    def _critique_lente(*a, **k):
+        time.sleep(0.3)
+        return {"critiques": [], "synthese": "trop tard"}
+
+    _mocker_agents_qualite(monkeypatch, critique=_critique_lente)
+    resultat = quality_pipeline.executer_pipeline_complet(
+        feature="conclusions",
+        texte_a_screener="texte",
+        fonction_principale=lambda: {"arguments": []},
+        sources_textes=["texte"],
+    )
+    assert resultat.resultat_principal == {"arguments": []}
+    trace_critique = next(e for e in resultat.trace if e.agent == "critic_agent")
+    assert trace_critique.statut == "degrade"
+
+
+# --- Pipeline conversationnel (profondeur dynamique, §9/§10) ---------------
+
+def test_trio_qualite_non_execute_si_intention_ne_le_demande_pas(monkeypatch):
+    appels = []
+    monkeypatch.setattr(legacy_analyse, "verifier_juridiquement", lambda *a, **k: appels.append(1) or {})
+    resultat = quality_pipeline.executer_trio_qualite_si_necessaire(
+        "réponse quelconque", {"necessite_verification_approfondie": False}
+    )
+    assert resultat is None
+    assert appels == []
+
+
+def test_trio_qualite_execute_si_intention_le_demande(monkeypatch):
+    _mocker_agents_qualite(monkeypatch)
+    resultat = quality_pipeline.executer_trio_qualite_si_necessaire(
+        "réponse quelconque avec une affirmation juridique", {"necessite_verification_approfondie": True}
+    )
+    assert resultat is not None
+    assert "statut_global" in resultat
