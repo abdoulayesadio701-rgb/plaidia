@@ -56,8 +56,24 @@ def test_reponse_non_json_du_modele_ne_bloque_jamais(monkeypatch):
 
 def test_champs_manquants_dans_la_reponse_json_recoivent_des_defauts(monkeypatch):
     monkeypatch.setattr(legacy_analyse, "_client", lambda: _FakeClient("{}"))
-    evaluation = legacy_analyse.evaluer_garde_fou_entree("un texte")
+    # Plus de 25 caractères pour dépasser le raccourci "message court" et
+    # exercer réellement le chemin d'appel au modèle (voir le test dédié
+    # au raccourci ci-dessous).
+    evaluation = legacy_analyse.evaluer_garde_fou_entree("Un texte assez long pour ne pas être court-circuité.")
     assert evaluation == {"allowed": True, "risk_level": "low", "reason": "", "requires_clarification": False}
+
+
+def test_message_court_ne_declenche_aucun_appel_et_laisse_passer(monkeypatch):
+    """Régression réelle : un simple "Bonjour" avait été rejeté par le
+    modèle comme "hors périmètre juridique", cassant l'ouverture normale
+    d'une conversation de chat (vérifié avec un vrai appel API). Les
+    messages courts ne doivent plus jamais atteindre le modèle."""
+    appels = []
+    monkeypatch.setattr(legacy_analyse, "_client", lambda: appels.append(1) or _FakeClient('{"allowed": false}'))
+    for message in ("Bonjour", "Merci beaucoup", "Salut, ça va ?"):
+        evaluation = legacy_analyse.evaluer_garde_fou_entree(message)
+        assert evaluation["allowed"] is True
+    assert appels == []
 
 
 def test_executer_garde_fou_laisse_passer_une_demande_autorisee(monkeypatch):
