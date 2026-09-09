@@ -118,7 +118,10 @@ exacte. » Jamais présenté comme une preuve d'exactitude.
 - ✅ Schémas additifs (`VerificationOut`), aucune régression sur les schémas existants.
 - ✅ Front : section garde-fou de la LandingPage refaite en présentation à 5 badges ; `VerificationPanel.tsx` (additif) sur les 4 pages du pipeline complet + Chat juridique.
 - ✅ Tests : `test_security_guard.py`, `test_quality_pipeline.py` (mécanique déterministe et dégradation, sans dépendance réseau), `test_chat_contextuel.py` adapté (le garde-fou s'exécute désormais avant `traiter_message_edition`). 91 tests backend verts, `tsc --noEmit` et `vite build` propres.
-- ⚠️ Le jugement réel des 5 agents LLM (vérificateur, critique, validation finale, garde-fou, intention) n'a pas été vérifié avec un vrai appel API pendant cette implémentation — seule leur mécanique d'orchestration l'a été. À vérifier manuellement avec une vraie clé avant mise en production, comme cela avait été fait pour `traiter_message_edition`.
+- ✅ Vérifié depuis avec de vrais appels API (clé réelle, pas de mocks) sur les 3 pipelines : `/api/analyse/conclusions` (vérificateur complet, citation absente correctement `NON_VERIFIE`), `/api/jurisprudence/consulter` (le critique a produit une vraie critique substantielle sur un agent principal trop prudent), `/api/chat/stream` (l'intention a bien déclenché le trio sur une question de fond, qui a détecté deux numéros d'arrêt inventés). Deux bugs réels trouvés et corrigés à cette occasion :
+  - Le garde-fou rejetait à tort les messages courts/informels ("Bonjour") comme hors périmètre — corrigé par un court-circuit déterministe (≤ 25 caractères) + reformulation du prompt.
+  - Le timeout par agent qualité (20s) était trop court pour des analyses substantielles, faisant systématiquement dégrader vérificateur/critique alors que l'agent principal avait le temps d'aboutir — porté à 45s.
+- ⚠️ Un aller-retour complet du pipeline conversationnel (garde-fou + intention + génération + trio) peut prendre plus de 2 minutes sur une question de fond — cohérent avec le choix assumé de privilégier la profondeur à la vitesse sur ce cas précis (voir §2), mais à garder en tête pour l'expérience utilisateur du Chat.
 
 ## 8. Recommandations pour la suite
 
