@@ -38,7 +38,16 @@ import analyse as legacy_analyse
 
 from app.security_guard import DemandeRefusee, executer_garde_fou  # noqa: F401  (DemandeRefusee ré-exportée pour les routers/tests)
 
-_TIMEOUT_AGENT_QUALITE = 20  # secondes -- par agent (vérificateur, critique, validateur), indépendamment les uns des autres.
+_TIMEOUT_AGENT_QUALITE = 45  # secondes -- par agent (vérificateur, critique, validateur), indépendamment les uns des autres.
+# 20s (valeur initiale) s'est révélé trop court à l'usage réel : sur une
+# analyse de conclusions substantielle (constaté avec un vrai appel API),
+# le vérificateur et le critique tombaient systématiquement en dégradation
+# (repli déterministe, critiques toujours vides) alors que l'appel
+# principal, lui, avait le temps d'aboutir -- un pipeline "complet" qui
+# dégrade presque toujours son étage qualité perd l'essentiel de sa valeur.
+# Un total de plusieurs dizaines de secondes reste acceptable : ce pipeline
+# n'est réservé qu'aux analyses à fort enjeu (voir §2 ARCHITECTURE_MULTI_AGENTS.md),
+# où l'utilisateur attend déjà une réponse approfondie, pas instantanée.
 
 
 def _log(message: str) -> None:
