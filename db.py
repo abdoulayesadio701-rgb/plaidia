@@ -98,6 +98,16 @@ CREATE TABLE IF NOT EXISTS parametres (
     valeur TEXT
 );
 
+CREATE TABLE IF NOT EXISTS versions_document (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    dossier_id INTEGER,             -- NULL pour les fonctionnalités indépendantes d'un dossier (style, pv_audience...)
+    feature TEXT NOT NULL,          -- "conclusions" | "plan" | ... (même valeur que ChatContextuelPanel.feature)
+    contenu_json TEXT NOT NULL,     -- le résultat complet après modification, tel quel
+    resume_modification TEXT,       -- la reponse_agent de l'édition qui a produit cette version, ou une description de restauration
+    auteur TEXT NOT NULL,           -- "ia" | "utilisateur" (voir db.py::enregistrer_version/restaurer_version)
+    date_creation TEXT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS elements_epingles (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     type TEXT NOT NULL,            -- "dossier" | "analyse" (voir app/schemas/epingles.py pour la liste à jour)
@@ -138,6 +148,7 @@ def _migrer_colonnes_manquantes(conn):
 
 
 TABLES = (
+    "versions_document",
     "elements_epingles",
     "parametres",
     "conversations_chat",
@@ -223,6 +234,7 @@ def delete_dossier(dossier_id):
     l'original -- voir epingler() ci-dessous)."""
     conn = get_connection()
     conn.execute("DELETE FROM elements_epingles WHERE dossier_id = ?", (dossier_id,))
+    conn.execute("DELETE FROM versions_document WHERE dossier_id = ?", (dossier_id,))
     conn.execute("DELETE FROM dossiers WHERE id = ?", (dossier_id,))
     conn.commit()
     conn.close()
@@ -653,6 +665,69 @@ def set_parametre(cle, valeur):
     )
     conn.commit()
     conn.close()
+
+
+# --- Versions de document (voir AUDIT_TASKBAR.md, étape 4) --------------
+# Branché sur le mécanisme d'édition contextuelle déjà existant
+# (chat_actions.appliquer_patch, voir ARCHITECTURE_CHAT_CONTEXTUEL.md) :
+# chaque patch appliqué avec succès devient une ligne ici -- c'est le point
+# où une nouvelle version d'un résultat naît déjà dans le code actuel,
+# jusqu'ici jamais conservée. Jamais de suppression automatique d'une
+# ancienne version (voir §8 de la demande) : restaurer_version AJOUTE une
+# nouvelle ligne identique à l'ancienne plutôt que de revenir en arrière.
+
+def enregistrer_version(dossier_id, feature: str, contenu, resume_modification: str = "", auteur: str = "ia") -> int:
+    conn = get_connection()
+    cur = conn.execute(
+        "INSERT INTO versions_document (dossier_id, feature, contenu_json, resume_modification, auteur, date_creation) "
+        "VALUES (?, ?, ?, ?, ?, ?)",
+        (dossier_id, feature, json.dumps(contenu, ensure_ascii=False), resume_modification, auteur, datetime.now().isoformat(timespec="seconds")),
+    )
+    conn.commit()
+    version_id = cur.lastrowid
+    conn.close()
+    return version_id
+
+
+def lister_versions(feature: str, dossier_id=None) -> list:
+    conn = get_connection()
+    if dossier_id is None:
+        rows = conn.execute(
+            "SELECT * FROM versions_document WHERE feature = ? AND dossier_id IS NULL ORDER BY date_creation DESC, id DESC", (feature,)
+        ).fetchall()
+    else:
+        rows = conn.execute(
+            "SELECT * FROM versions_document WHERE feature = ? AND dossier_id = ? ORDER BY date_creation DESC, id DESC", (feature, dossier_id)
+        ).fetchall()
+    conn.close()
+    return rows
+
+
+def get_version(version_id: int):
+    conn = get_connection()
+    row = conn.execute("SELECT * FROM versions_document WHERE id = ?", (version_id,)).fetchone()
+    conn.close()
+    return row
+
+
+def restaurer_version(version_id: int):
+    """Ne supprime ni ne modifie aucune ligne existante -- ajoute une
+    NOUVELLE version portant le même contenu que celle restaurée, avec
+    auteur="utilisateur". L'historique complet reste donc lisible même
+    après plusieurs restaurations successives. Retourne la nouvelle ligne,
+    ou None si version_id est introuvable."""
+    original = get_version(version_id)
+    if not original:
+        return None
+    contenu = json.loads(original["contenu_json"])
+    nouvel_id = enregistrer_version(
+        original["dossier_id"],
+        original["feature"],
+        contenu,
+        resume_modification=f"Restauration de la version du {original['date_creation']}",
+        auteur="utilisateur",
+    )
+    return get_version(nouvel_id)
 
 
 # --- Épinglage ----------------------------------------------------------

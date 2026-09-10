@@ -14,6 +14,7 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import type { FeatureChatContextuel } from "@/api";
 import { useChatContextuel } from "./useChatContextuel";
+import VersionsHistorique from "./VersionsHistorique";
 import Button from "@/components/Button";
 import RichOutput from "@/components/RichOutput";
 
@@ -73,6 +74,7 @@ export default function ChatContextuelPanel<T>({
       <div className="flex items-center justify-between">
         <p className="text-sm font-semibold text-ivory">Demander à l'agent</p>
         <div className="flex items-center gap-3">
+          <VersionsHistorique feature={feature} dossierId={dossierId} onRestaurer={onMiseAJour} />
           {messages.length > 0 && (
             <button type="button" onClick={reinitialiser} className="text-xs text-muted hover:text-warmgray">
               Réinitialiser le fil

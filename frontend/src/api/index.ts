@@ -10,6 +10,7 @@ export * as greffier from "./greffier";
 export * as chat from "./chat";
 export * as intention from "./intention";
 export * as epingles from "./epingles";
+export * as versions from "./versions";
 export * as config from "./config";
 
 export { ApiError, downloadBlob } from "./http";

@@ -36,7 +36,7 @@ from slowapi.middleware import SlowAPIMiddleware  # noqa: E402
 from slowapi.util import get_remote_address  # noqa: E402
 
 from app import demo, demo_data  # noqa: E402
-from app.routers import analyse, chat, dossiers, epingles, greffier, intention, jurisprudence, notes  # noqa: E402
+from app.routers import analyse, chat, dossiers, epingles, greffier, intention, jurisprudence, notes, versions  # noqa: E402
 from app.security_guard import DemandeRefusee  # noqa: E402
 
 
@@ -199,6 +199,7 @@ app.include_router(greffier.router)
 app.include_router(chat.router)
 app.include_router(intention.router)
 app.include_router(epingles.router)
+app.include_router(versions.router)
 
 
 @app.get("/api/health", tags=["health"])

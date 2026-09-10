@@ -387,6 +387,20 @@ export type ChatStreamEvent =
   | { event: "error"; data: { detail: string } };
 
 // ---------------------------------------------------------------------
+// Versions (backend/app/schemas/versions.py)
+// ---------------------------------------------------------------------
+
+export interface VersionDocument {
+  id: number;
+  dossier_id?: number | null;
+  feature: string;
+  contenu: unknown;
+  resume_modification?: string;
+  auteur: "ia" | "utilisateur" | string;
+  date_creation: string;
+}
+
+// ---------------------------------------------------------------------
 // Épinglage (backend/app/schemas/epingles.py)
 // ---------------------------------------------------------------------
 

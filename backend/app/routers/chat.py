@@ -233,6 +233,17 @@ def chat_contextuel(payload: ChatContextuelIn):
             resultat_modifie = chat_actions.appliquer_patch(
                 payload.resultat_actuel, action["scope"], action["operation"], action["contenu_modifie"]
             )
+            # Versioning (§8 de la demande, AUDIT_TASKBAR.md étape 4) : le
+            # patch vient d'être validé ET appliqué -- c'est précisément le
+            # moment où une nouvelle version du résultat naît. Jamais
+            # bloquant : un échec d'écriture ici ne doit jamais faire
+            # échouer une édition qui a par ailleurs réussi.
+            try:
+                db.enregistrer_version(
+                    payload.dossier_id, payload.feature, resultat_modifie, resume_modification=action["reponse_agent"], auteur="ia"
+                )
+            except Exception as e:
+                _log_chat(f"échec de l'enregistrement de la version (non bloquant) : {e}")
         except chat_actions.ActionInvalide as e:
             # Le modèle a proposé une action qui ne correspond pas au
             # résultat réel -- jamais appliquée, jamais renvoyée comme si
