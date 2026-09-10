@@ -16,6 +16,7 @@ import Sidebar from "./Sidebar";
 import StatusBar from "./StatusBar";
 import DemoBanner from "./DemoBanner";
 import ToastContainer from "@/components/ToastContainer";
+import RechercheGlobaleModal from "@/components/RechercheGlobaleModal";
 
 export default function AppLayout() {
   const chargerDossiers = useAppStore((s) => s.chargerDossiers);
@@ -25,8 +26,25 @@ export default function AppLayout() {
   const chargerConfiguration = useAppStore((s) => s.chargerConfiguration);
   const chargerEpingles = useAppStore((s) => s.chargerEpingles);
   const definirSidebarRepliee = useAppStore((s) => s.definirSidebarRepliee);
+  const rechercheGlobaleOuverte = useAppStore((s) => s.rechercheGlobaleOuverte);
+  const ouvrirRechercheGlobale = useAppStore((s) => s.ouvrirRechercheGlobale);
+  const fermerRechercheGlobale = useAppStore((s) => s.fermerRechercheGlobale);
 
   useSuivreRecents();
+
+  // Raccourci clavier Ctrl/Cmd+K -- palette de recherche accessible de
+  // partout dans l'app, pas seulement via le bouton de TaskBar (voir §11
+  // de la demande : "recherche globale").
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        ouvrirRechercheGlobale();
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [ouvrirRechercheGlobale]);
 
   useEffect(() => {
     void chargerDossiers();
@@ -61,6 +79,7 @@ export default function AppLayout() {
       </div>
       <StatusBar />
       <ToastContainer />
+      {rechercheGlobaleOuverte && <RechercheGlobaleModal onFermer={fermerRechercheGlobale} />}
     </div>
   );
 }

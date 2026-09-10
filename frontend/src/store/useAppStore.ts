@@ -71,6 +71,14 @@ interface AppState {
   basculerSidebar: () => void;
   definirSidebarRepliee: (repliee: boolean) => void;
 
+  // --- Recherche globale (voir AUDIT_TASKBAR.md, étape 3) ---------------
+  // État centralisé pour que le bouton de TaskBar ET le raccourci clavier
+  // Ctrl/Cmd+K (voir AppLayout) contrôlent la même modale, montée une
+  // seule fois plutôt que dupliquée à chaque endroit qui pourrait l'ouvrir.
+  rechercheGlobaleOuverte: boolean;
+  ouvrirRechercheGlobale: () => void;
+  fermerRechercheGlobale: () => void;
+
   // --- Configuration serveur (mode démo, voir GET /api/config) ---------
   demoMode: boolean;
   dossierDemoNom: string | null;
@@ -222,6 +230,10 @@ export const useAppStore = create<AppState>((set, get) => ({
   sidebarReplie: false,
   basculerSidebar: () => set((s) => ({ sidebarReplie: !s.sidebarReplie })),
   definirSidebarRepliee: (repliee) => set({ sidebarReplie: repliee }),
+
+  rechercheGlobaleOuverte: false,
+  ouvrirRechercheGlobale: () => set({ rechercheGlobaleOuverte: true }),
+  fermerRechercheGlobale: () => set({ rechercheGlobaleOuverte: false }),
 
   demoMode: false,
   dossierDemoNom: null,

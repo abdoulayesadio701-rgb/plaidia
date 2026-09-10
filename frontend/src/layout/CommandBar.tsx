@@ -10,12 +10,21 @@ import { useNavigate } from "react-router-dom";
 import { intention as intentionApi } from "@/api";
 import { useAppStore } from "@/store/useAppStore";
 
+// Élargie à l'étape 3 du chantier "barre de tâches" (AUDIT_TASKBAR.md) --
+// le backend (analyse.py::INTENTION_SYSTEM_PROMPT) reconnaît aussi
+// "export"/"domaine"/"menu"/"quitter", mais ce sont des actions ponctuelles
+// sur une page déjà ouverte, pas une destination de navigation : les router
+// ici n'aurait pas de sens (pas de page "Export" ou "Changer de domaine").
 const ROUTES_PAR_ACTION: Record<string, string> = {
   analyser: "/arsenal/analyser",
   resumer: "/arsenal/resumer",
   plan: "/arsenal/plan",
   simulateur: "/arsenal/simulateur",
+  rapport: "/arsenal/rapport-complet",
   note: "/carnet/note",
+  notes_consulter: "/carnet/notes",
+  note_client: "/carnet/note-client",
+  importer: "/chemise/preparer",
 };
 
 export default function CommandBar() {
