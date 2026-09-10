@@ -20,6 +20,7 @@ import { SkeletonList } from "@/components/Skeleton";
 import ChatContextuelPanel from "@/components/chat/ChatContextuelPanel";
 import VerificationPanel from "@/components/VerificationPanel";
 import StatutDocumentMenu, { StatutDocumentBadge } from "@/components/StatutDocument";
+import PinButton from "@/components/PinButton";
 import { useAsync } from "@/hooks/useAsync";
 
 export default function ConsulterJurisprudencePage() {
@@ -120,7 +121,7 @@ export default function ConsulterJurisprudencePage() {
 
       {!loading && !documentLoading && !error && !documentError && data && (
         <div className="space-y-5">
-          <div className="flex items-center justify-between gap-3"><span className="text-sm text-warmgray">Consultation sauvegardée</span><div className="flex items-center gap-2"><StatutDocumentBadge statut={data.statut ?? "Brouillon"} /><StatutDocumentMenu statut={data.statut ?? "Brouillon"} loading={statutEnCours} onChange={changerStatut} /></div></div>
+          <div className="flex items-center justify-between gap-3"><span className="text-sm text-warmgray">Consultation sauvegardée</span><div className="flex items-center gap-2"><StatutDocumentBadge statut={data.statut ?? "Brouillon"} /><StatutDocumentMenu statut={data.statut ?? "Brouillon"} loading={statutEnCours} onChange={changerStatut} /><PinButton type="document_genere" referenceId={data.document_id!} dossierId={dossierActif.id} libelle={`Consultation — ${dossierActif.nom}`} /></div></div>
           <div className="card space-y-2 border-amethyst-400/30 p-5">
             <p className="text-micro font-medium uppercase tracking-wide text-amethyst-400">Notions identifiées</p>
             <div className="flex flex-wrap gap-2">

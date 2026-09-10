@@ -272,6 +272,7 @@ def delete_dossier(dossier_id):
     l'original -- voir epingler() ci-dessous)."""
     conn = get_connection()
     conn.execute("DELETE FROM elements_epingles WHERE dossier_id = ?", (dossier_id,))
+    conn.execute("DELETE FROM elements_epingles WHERE type IN ('analyse', 'document_genere', 'conversation') AND dossier_id = ?", (dossier_id,))
     conn.execute("DELETE FROM versions_document WHERE dossier_id = ?", (dossier_id,))
     conn.execute("DELETE FROM documents_generes WHERE dossier_id = ?", (dossier_id,))
     conn.execute("DELETE FROM dossiers WHERE id = ?", (dossier_id,))
@@ -964,7 +965,40 @@ def verifier_document_modifiable(document_id):
 # l'original, et supprimer l'original (voir delete_dossier ci-dessus)
 # nettoie le(s) pin(s) qui le référençaient.
 
+class CibleEpingleIntrouvable(ValueError):
+    """La cible d'une épingle n'existe pas ou n'appartient pas au dossier."""
+
+
+def verifier_cible_epingle(type_element: str, reference_id: int, dossier_id=None):
+    _assurer_migration()
+    conn = get_connection()
+    if type_element == "dossier":
+        row = conn.execute("SELECT id FROM dossiers WHERE id = ?", (reference_id,)).fetchone()
+        conn.close()
+        if not row:
+            raise CibleEpingleIntrouvable(f"Dossier {reference_id} introuvable.")
+        return reference_id
+    if type_element == "analyse":
+        row = conn.execute("SELECT dossier_id FROM analyses WHERE id = ?", (reference_id,)).fetchone()
+    elif type_element == "document_genere":
+        row = conn.execute("SELECT dossier_id FROM documents_generes WHERE id = ?", (reference_id,)).fetchone()
+    elif type_element == "conversation":
+        row = conn.execute("SELECT dossier_id FROM conversations_chat WHERE id = ?", (reference_id,)).fetchone()
+    else:
+        conn.close()
+        raise CibleEpingleIntrouvable(f"Type d'épingle inconnu : {type_element}.")
+    conn.close()
+    if not row:
+        raise CibleEpingleIntrouvable(f"Cible {type_element} {reference_id} introuvable.")
+    if dossier_id is not None and row["dossier_id"] != dossier_id:
+        raise CibleEpingleIntrouvable(f"La cible {type_element} {reference_id} n'appartient pas au dossier indiqué.")
+    if row["dossier_id"] is None and type_element != "dossier":
+        raise CibleEpingleIntrouvable(f"La cible {type_element} {reference_id} n'est rattachée à aucun dossier.")
+    return row["dossier_id"]
+
+
 def epingler(type_element: str, reference_id: int, dossier_id: int | None, libelle: str) -> int:
+    verifier_cible_epingle(type_element, reference_id, dossier_id)
     conn = get_connection()
     cur = conn.execute(
         "INSERT INTO elements_epingles (type, reference_id, dossier_id, libelle, date_creation) VALUES (?, ?, ?, ?, ?)",
@@ -987,7 +1021,30 @@ def lister_epingles() -> list:
     conn = get_connection()
     rows = conn.execute("SELECT * FROM elements_epingles ORDER BY date_creation DESC").fetchall()
     conn.close()
-    return rows
+    valides = []
+    for row in rows:
+        try:
+            verifier_cible_epingle(row["type"], row["reference_id"], row["dossier_id"])
+            item = dict(row)
+            if row["type"] == "dossier":
+                cible = get_dossier(row["reference_id"])
+                item["cible_titre"] = cible["nom"] if cible else None
+            elif row["type"] == "analyse":
+                analyse_conn = get_connection()
+                analyse = analyse_conn.execute("SELECT date FROM analyses WHERE id = ?", (row["reference_id"],)).fetchone()
+                analyse_conn.close()
+                item["cible_titre"] = f"Analyse du {analyse['date'][:10]}" if analyse else None
+            elif row["type"] == "document_genere":
+                document = get_document_genere(row["reference_id"])
+                item["cible_titre"] = document["titre"] if document else None
+                item["cible_feature"] = document["feature"] if document else None
+            elif row["type"] == "conversation":
+                conversation = get_conversation_chat(row["reference_id"])
+                item["cible_titre"] = conversation["titre"] if conversation else None
+            valides.append(item)
+        except CibleEpingleIntrouvable:
+            continue
+    return valides
 
 
 def deja_epingle(type_element: str, reference_id: int):

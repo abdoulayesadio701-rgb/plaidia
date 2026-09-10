@@ -19,6 +19,7 @@ import { SkeletonList } from "@/components/Skeleton";
 import ChatContextuelPanel from "@/components/chat/ChatContextuelPanel";
 import VerificationPanel from "@/components/VerificationPanel";
 import StatutDocumentMenu, { StatutDocumentBadge } from "@/components/StatutDocument";
+import PinButton from "@/components/PinButton";
 import { useAsync } from "@/hooks/useAsync";
 
 export default function SimulateurObjectionsPage() {
@@ -120,7 +121,7 @@ export default function SimulateurObjectionsPage() {
 
       {!loading && !documentLoading && !error && !documentError && data && (
         <div className="space-y-5">
-          <div className="flex items-center justify-between gap-3"><div className="flex items-center gap-2"><span className="text-sm text-warmgray">Document sauvegardé</span><StatutDocumentBadge statut={data.statut ?? "Brouillon"} /></div><StatutDocumentMenu statut={data.statut ?? "Brouillon"} loading={statutEnCours} onChange={changerStatut} /></div>
+          <div className="flex items-center justify-between gap-3"><div className="flex items-center gap-2"><span className="text-sm text-warmgray">Document sauvegardé</span><StatutDocumentBadge statut={data.statut ?? "Brouillon"} /></div><div className="flex items-center gap-2"><StatutDocumentMenu statut={data.statut ?? "Brouillon"} loading={statutEnCours} onChange={changerStatut} /><PinButton type="document_genere" referenceId={data.document_id!} dossierId={dossierActif.id} libelle={`Simulateur — ${dossierActif.nom}`} /></div></div>
           <label className="flex w-fit cursor-pointer items-center gap-2.5 rounded-md border border-gold-600/20 bg-surface px-4 py-2.5 text-sm text-warmgray">
             <button
               type="button"

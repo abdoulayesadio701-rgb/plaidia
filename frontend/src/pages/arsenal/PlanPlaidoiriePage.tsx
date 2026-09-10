@@ -26,6 +26,7 @@ import { SkeletonList } from "@/components/Skeleton";
 import ChatContextuelPanel from "@/components/chat/ChatContextuelPanel";
 import VerificationPanel from "@/components/VerificationPanel";
 import StatutDocumentMenu, { StatutDocumentBadge } from "@/components/StatutDocument";
+import PinButton from "@/components/PinButton";
 import { useAsync } from "@/hooks/useAsync";
 
 interface NavigationState {
@@ -115,7 +116,7 @@ export default function PlanPlaidoiriePage() {
         <div className="space-y-6">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-2"><p className="text-sm text-warmgray">Plan généré pour {duree} min de parole.</p><StatutDocumentBadge statut={data.statut ?? "Brouillon"} /></div>
-            <div className="flex items-center gap-2"><StatutDocumentMenu statut={data.statut ?? "Brouillon"} loading={statutEnCours} onChange={changerStatut} /><Button variant="secondary" loading={exportEnCours} onClick={() => void exporter()}>⬇ Exporter en Word</Button></div>
+            <div className="flex items-center gap-2"><StatutDocumentMenu statut={data.statut ?? "Brouillon"} loading={statutEnCours} onChange={changerStatut} /><PinButton type="document_genere" referenceId={data.document_id!} dossierId={dossierActif.id} libelle={`Plan — ${dossierActif.nom}`} /><Button variant="secondary" loading={exportEnCours} onClick={() => void exporter()}>⬇ Exporter en Word</Button></div>
           </div>
 
           <PlanTimeline plan={data} />
