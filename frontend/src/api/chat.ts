@@ -165,8 +165,15 @@ export function obtenirConversation(id: number): Promise<ConversationDetail> {
   return apiRequest<ConversationDetail>(`/api/chat/conversations/${id}`);
 }
 
-export function creerConversation(titre: string, historique: MessageChat[]): Promise<ConversationResume> {
-  return apiRequest<ConversationResume>("/api/chat/conversations", { method: "POST", body: { titre, historique } });
+export function creerConversation(titre: string, historique: MessageChat[], dossierId?: number | null): Promise<ConversationResume> {
+  return apiRequest<ConversationResume>("/api/chat/conversations", {
+    method: "POST",
+    body: { titre, historique, dossier_id: dossierId ?? null },
+  });
+}
+
+export function listerConversationsDossier(dossierId: number): Promise<ConversationResume[]> {
+  return apiRequest<ConversationResume[]>(`/api/chat/conversations/dossier/${dossierId}`);
 }
 
 export function mettreAJourConversation(id: number, historique: MessageChat[]): Promise<ConversationResume> {

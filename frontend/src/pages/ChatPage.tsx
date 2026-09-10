@@ -6,6 +6,7 @@
  */
 
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
+import { useSearchParams } from "react-router-dom";
 import { chat as chatApi, dossiers as dossiersApi } from "@/api";
 import type { MessageChat, Verification } from "@/api";
 import { useAppStore } from "@/store/useAppStore";
@@ -44,6 +45,7 @@ function composerContenuAvecPiecesJointes(messageTape: string, pieces: PieceJoin
 }
 
 export default function ChatPage() {
+  const [searchParams] = useSearchParams();
   const chatHistorique = useAppStore((s) => s.chatHistorique);
   const ajouterMessageChat = useAppStore((s) => s.ajouterMessageChat);
   const remplacerDernierMessageChat = useAppStore((s) => s.remplacerDernierMessageChat);
@@ -71,6 +73,32 @@ export default function ChatPage() {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const conteneurRef = useRef<HTMLDivElement>(null);
 
+  const conversationIdParam = searchParams.get("conversation_id");
+  const dossierIdParam = searchParams.get("dossier_id");
+  const dossierIdDepuisUrl = dossierIdParam && /^\d+$/.test(dossierIdParam) ? Number(dossierIdParam) : null;
+  const dossierIdChat = dossierIdDepuisUrl ?? dossierActifId;
+
+  useEffect(() => {
+    if (!conversationIdParam) return;
+    const conversationId = Number(conversationIdParam);
+    if (!Number.isInteger(conversationId) || conversationId <= 0) {
+      pousserToast("error", "Le lien de conversation est invalide.");
+      return;
+    }
+    let actif = true;
+    void chatApi
+      .obtenirConversation(conversationId)
+      .then((conversation) => {
+        if (actif) chargerConversationChat(conversation.id, conversation.historique);
+      })
+      .catch((e) => {
+        if (actif) pousserToast("error", e instanceof Error ? e.message : "Impossible de charger cette conversation.");
+      });
+    return () => {
+      actif = false;
+    };
+  }, [conversationIdParam, chargerConversationChat, pousserToast]);
+
   // Défilement automatique vers le dernier message -- pas de scrollIntoView
   // animé ici : à chaque fragment reçu pendant le streaming, un défilement
   // "smooth" répété deviendrait saccadé. scrollTop direct = instantané.
@@ -96,7 +124,7 @@ export default function ChatPage() {
         const premierMessage = historique.find((m) => m.role === "user")?.content.trim() ?? "";
         let titre = premierMessage.replace(/\s+/g, " ").slice(0, 60);
         if (premierMessage.length > 60) titre += "…";
-        const conversation = await chatApi.creerConversation(titre || "Conversation sans titre", historique);
+        const conversation = await chatApi.creerConversation(titre || "Conversation sans titre", historique, dossierIdChat);
         // `historique` est un tableau immuable (chaque action du store en
         // recrée un) : s'il a changé pendant l'appel réseau (ex. "Nouvelle
         // conversation" cliqué juste après un arrêt de génération), ne pas
@@ -134,7 +162,7 @@ export default function ChatPage() {
 
     await chatApi.streamChat(
       historiqueEnvoi,
-      { rechercheLive, juridiction: juridictionActive, dossierId: dossierActifId, signal: controller.signal },
+      { rechercheLive, juridiction: juridictionActive, dossierId: dossierIdChat, signal: controller.signal },
       {
         onRechercheDebut: () => {
           // eslint-disable-next-line no-console

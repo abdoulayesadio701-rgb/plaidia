@@ -275,6 +275,12 @@ def lister_conversations():
     return db.lister_conversations_chat()
 
 
+@router.get("/conversations/dossier/{dossier_id}", response_model=list[ConversationOut])
+def lister_conversations_dossier(dossier_id: int):
+    get_dossier_or_404(dossier_id)
+    return db.lister_conversations_chat_par_dossier(dossier_id)
+
+
 @router.get("/conversations/{conversation_id}", response_model=ConversationDetailOut)
 def obtenir_conversation(conversation_id: int):
     conversation = db.get_conversation_chat(conversation_id)
@@ -285,8 +291,10 @@ def obtenir_conversation(conversation_id: int):
 
 @router.post("/conversations", response_model=ConversationOut, status_code=201)
 def creer_conversation(payload: ConversationCreate):
+    if payload.dossier_id is not None:
+        get_dossier_or_404(payload.dossier_id)
     historique = [m.model_dump() for m in payload.historique]
-    conversation_id = db.creer_conversation_chat(payload.titre, historique)
+    conversation_id = db.creer_conversation_chat(payload.titre, historique, payload.dossier_id)
     return next(c for c in db.lister_conversations_chat() if c["id"] == conversation_id)
 
 

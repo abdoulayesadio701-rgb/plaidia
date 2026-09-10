@@ -39,6 +39,7 @@ class ChatStreamIn(BaseModel):
 class ConversationCreate(BaseModel):
     titre: str = Field(..., min_length=1)
     historique: list[MessageChat]
+    dossier_id: Optional[int] = None
 
 
 class ConversationUpdate(BaseModel):
@@ -50,6 +51,7 @@ class ConversationOut(BaseModel):
     titre: str
     date_creation: str
     date_modification: str
+    dossier_id: Optional[int] = None
 
 
 class ConversationDetailOut(BaseModel):
@@ -57,6 +59,7 @@ class ConversationDetailOut(BaseModel):
     titre: str
     date_creation: str
     date_modification: str
+    dossier_id: Optional[int] = None
     historique: list[MessageChat]
 
 

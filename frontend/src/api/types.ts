@@ -340,6 +340,7 @@ export interface ConversationResume {
   titre: string;
   date_creation: string;
   date_modification: string;
+  dossier_id: number | null;
 }
 
 export interface ConversationDetail extends ConversationResume {

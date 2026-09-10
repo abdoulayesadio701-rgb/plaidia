@@ -90,7 +90,9 @@ CREATE TABLE IF NOT EXISTS conversations_chat (
     titre TEXT NOT NULL,
     contenu_json TEXT NOT NULL,
     date_creation TEXT NOT NULL,
-    date_modification TEXT NOT NULL
+    date_modification TEXT NOT NULL,
+    dossier_id INTEGER,
+    FOREIGN KEY (dossier_id) REFERENCES dossiers(id) ON DELETE SET NULL
 );
 
 CREATE TABLE IF NOT EXISTS parametres (
@@ -144,6 +146,14 @@ def _migrer_colonnes_manquantes(conn):
     colonnes_existantes = {row["name"] for row in cur.fetchall()}
     if "numero_dossier" not in colonnes_existantes:
         conn.execute("ALTER TABLE dossiers ADD COLUMN numero_dossier TEXT")
+        conn.commit()
+
+    cur = conn.execute("PRAGMA table_info(conversations_chat)")
+    colonnes_existantes = {row["name"] for row in cur.fetchall()}
+    if "dossier_id" not in colonnes_existantes:
+        conn.execute(
+            "ALTER TABLE conversations_chat ADD COLUMN dossier_id INTEGER REFERENCES dossiers(id) ON DELETE SET NULL"
+        )
         conn.commit()
 
 
@@ -571,14 +581,17 @@ def valider_texte_corpus_par_source(source, domaine=None):
 # est retrouvable plus tard dans la liste, et supprimable pour libérer
 # de l'espace si la base grossit trop avec le temps.
 
-def creer_conversation_chat(titre, historique):
+def creer_conversation_chat(titre, historique, dossier_id=None):
     """Crée une nouvelle conversation enregistrée et retourne son id.
-    `historique` est la liste [{"role": ..., "content": ...}, ...]."""
+    `historique` est la liste [{"role": ..., "content": ...}, ...].
+    Les conversations existantes ou indépendantes d'un dossier gardent
+    `dossier_id` à NULL."""
+    _assurer_migration()
     conn = get_connection()
     maintenant = datetime.now().isoformat()
     cur = conn.execute(
-        "INSERT INTO conversations_chat (titre, contenu_json, date_creation, date_modification) VALUES (?, ?, ?, ?)",
-        (titre, json.dumps(historique, ensure_ascii=False), maintenant, maintenant),
+        "INSERT INTO conversations_chat (titre, contenu_json, date_creation, date_modification, dossier_id) VALUES (?, ?, ?, ?, ?)",
+        (titre, json.dumps(historique, ensure_ascii=False), maintenant, maintenant, dossier_id),
     )
     conn.commit()
     nouvel_id = cur.lastrowid
@@ -589,6 +602,7 @@ def creer_conversation_chat(titre, historique):
 def mettre_a_jour_conversation_chat(conversation_id, historique):
     """Réenregistre le contenu complet d'une conversation existante —
     appelé après chaque nouvel échange, silencieusement."""
+    _assurer_migration()
     conn = get_connection()
     conn.execute(
         "UPDATE conversations_chat SET contenu_json = ?, date_modification = ? WHERE id = ?",
@@ -602,18 +616,33 @@ def lister_conversations_chat():
     """Liste toutes les conversations enregistrées, les plus récemment
     modifiées en premier — pour l'affichage façon « historique des
     discussions » de Claude.ai."""
+    _assurer_migration()
     conn = get_connection()
     cur = conn.execute(
-        "SELECT id, titre, date_creation, date_modification FROM conversations_chat ORDER BY date_modification DESC"
+        "SELECT id, titre, date_creation, date_modification, dossier_id FROM conversations_chat ORDER BY date_modification DESC"
     )
     rows = [dict(r) for r in cur.fetchall()]
     conn.close()
     return rows
 
 
+def lister_conversations_chat_par_dossier(dossier_id):
+    """Liste les conversations explicitement rattachées à un dossier."""
+    _assurer_migration()
+    conn = get_connection()
+    rows = conn.execute(
+        "SELECT id, titre, date_creation, date_modification, dossier_id "
+        "FROM conversations_chat WHERE dossier_id = ? ORDER BY date_modification DESC",
+        (dossier_id,),
+    ).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
 def get_conversation_chat(conversation_id):
     """Récupère une conversation enregistrée, avec son historique déjà
     décodé (liste de messages), prête à être rechargée dans le chat."""
+    _assurer_migration()
     conn = get_connection()
     cur = conn.execute("SELECT * FROM conversations_chat WHERE id = ?", (conversation_id,))
     row = cur.fetchone()
@@ -627,6 +656,7 @@ def get_conversation_chat(conversation_id):
 
 def supprimer_conversation_chat(conversation_id):
     """Supprime une conversation enregistrée — pour libérer de l'espace."""
+    _assurer_migration()
     conn = get_connection()
     conn.execute("DELETE FROM conversations_chat WHERE id = ?", (conversation_id,))
     conn.commit()

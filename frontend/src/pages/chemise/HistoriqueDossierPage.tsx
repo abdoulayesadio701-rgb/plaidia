@@ -6,8 +6,10 @@
  */
 
 import { dossiers as dossiersApi } from "@/api";
+import { chat as chatApi } from "@/api";
 import { useDossierActif } from "@/store/useAppStore";
 import { useAsync } from "@/hooks/useAsync";
+import { Link } from "react-router-dom";
 import ArgumentCard from "@/components/ArgumentCard";
 import Accordion from "@/components/Accordion";
 import EmptyState from "@/components/EmptyState";
@@ -31,6 +33,17 @@ export default function HistoriqueDossierPage() {
     dossierActif !== null
   );
 
+  const {
+    data: conversations,
+    loading: conversationsLoading,
+    error: conversationsError,
+    reload: reloadConversations,
+  } = useAsync(
+    () => chatApi.listerConversationsDossier(dossierActif!.id),
+    [dossierActif?.id],
+    dossierActif !== null
+  );
+
   if (!dossierActif) {
     return <EmptyState titre="Aucun dossier sélectionné" description="Sélectionnez ou créez un dossier pour consulter sa fiche et son historique." />;
   }
@@ -40,6 +53,9 @@ export default function HistoriqueDossierPage() {
       <div>
         <p className="kicker">La Chemise</p>
         <h1 className="mt-1 font-serif text-h2 font-semibold text-gold-500">{dossierActif.nom}</h1>
+        <Link to={`/app/chat?dossier_id=${dossierActif.id}`} className="btn-secondary mt-3 inline-flex">
+          Ouvrir le chat de ce dossier
+        </Link>
       </div>
 
       <div className="card space-y-4 p-6">
@@ -66,6 +82,36 @@ export default function HistoriqueDossierPage() {
             </p>
           )}
         </div>
+      </div>
+
+      <div>
+        <h2 className="mb-3 font-serif text-h3 font-semibold text-gold-500">Conversations du dossier</h2>
+
+        {conversationsLoading && <SkeletonList count={2} />}
+
+        {!conversationsLoading && conversationsError && <ErrorState message={conversationsError} onRetry={reloadConversations} />}
+
+        {!conversationsLoading && !conversationsError && conversations && conversations.length === 0 && (
+          <EmptyState
+            titre="Aucune conversation rattachée"
+            description="Les nouvelles conversations ouvertes depuis ce dossier apparaîtront ici."
+          />
+        )}
+
+        {!conversationsLoading && !conversationsError && conversations && conversations.length > 0 && (
+          <div className="space-y-2">
+            {conversations.map((conversation) => (
+              <Link
+                key={conversation.id}
+                to={`/app/chat?conversation_id=${conversation.id}`}
+                className="card flex items-center justify-between gap-4 p-4 transition-colors hover:border-gold-500/40"
+              >
+                <span className="min-w-0 truncate text-sm font-medium text-ivory">{conversation.titre}</span>
+                <span className="shrink-0 text-xs text-muted">{formaterDate(conversation.date_modification)}</span>
+              </Link>
+            ))}
+          </div>
+        )}
       </div>
 
       <div>
