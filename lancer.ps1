@@ -5,16 +5,14 @@ $frontend = Join-Path $root "frontend"
 $backendUrl = "http://localhost:8000/api/health"
 $frontendUrl = "http://localhost:5173"
 
-Start-Process powershell.exe -WorkingDirectory $backend -ArgumentList @(
-    "-NoExit",
-    "-Command",
-    "python -m uvicorn app.main:app --reload --port 8000"
+Start-Process cmd.exe -ArgumentList @(
+    "/k",
+    "cd /d `"$backend`" && python -m uvicorn app.main:app --reload --port 8000"
 ) -WindowStyle Normal
 
-Start-Process powershell.exe -WorkingDirectory $frontend -ArgumentList @(
-    "-NoExit",
-    "-Command",
-    "npm run dev"
+Start-Process cmd.exe -ArgumentList @(
+    "/k",
+    "cd /d `"$frontend`" && npm run dev"
 ) -WindowStyle Normal
 
 function Wait-ForUrl([string]$url, [string]$name) {
