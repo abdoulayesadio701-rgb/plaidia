@@ -27,10 +27,11 @@ function formaterDate(iso: string): string {
 interface VersionsHistoriqueProps<T> {
   feature: string;
   dossierId?: number | null;
+  documentId?: number | null;
   onRestaurer: (contenu: T) => void;
 }
 
-export default function VersionsHistorique<T>({ feature, dossierId, onRestaurer }: VersionsHistoriqueProps<T>) {
+export default function VersionsHistorique<T>({ feature, dossierId, documentId, onRestaurer }: VersionsHistoriqueProps<T>) {
   const [ouvert, setOuvert] = useState(false);
   const [liste, setListe] = useState<VersionDocument[]>([]);
   const [chargement, setChargement] = useState(false);
@@ -40,7 +41,7 @@ export default function VersionsHistorique<T>({ feature, dossierId, onRestaurer 
   const charger = async () => {
     setChargement(true);
     try {
-      setListe(await versionsApi.listerVersions(feature, dossierId));
+      setListe(await versionsApi.listerVersions(feature, dossierId, documentId));
     } catch {
       // L'historique reste simplement vide si le backend n'est pas joignable -- non bloquant.
     } finally {

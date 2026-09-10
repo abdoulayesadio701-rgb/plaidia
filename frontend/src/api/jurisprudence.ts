@@ -6,8 +6,8 @@
 import { apiRequest, apiUpload } from "./http";
 import type { CollecterResultat, ConsulterResultat, CorpusImportInput, CorpusTexte, Jurisprudence } from "./types";
 
-export function consulterJurisprudence(question: string, but = "", source = "Légifrance (France)"): Promise<ConsulterResultat> {
-  return apiRequest<ConsulterResultat>("/api/jurisprudence/consulter", { method: "POST", body: { question, but, source } });
+export function consulterJurisprudence(question: string, but = "", source = "Légifrance (France)", dossierId: number): Promise<ConsulterResultat> {
+  return apiRequest<ConsulterResultat>("/api/jurisprudence/consulter", { method: "POST", body: { question, but, source, dossier_id: dossierId } });
 }
 
 export function collecterJurisprudence(query: string, domaine = ""): Promise<CollecterResultat> {

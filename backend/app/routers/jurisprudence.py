@@ -39,6 +39,9 @@ JURIDICTION_PAR_DEFAUT = "Légifrance (France)"
 @router.post("/consulter", response_model=ConsulterOut)
 def consulter(payload: ConsulterIn):
     demo.exiger_cle_api()
+    dossier = db.get_dossier(payload.dossier_id)
+    if not dossier:
+        raise HTTPException(status_code=404, detail=f"Dossier {payload.dossier_id} introuvable.")
     notions = legacy_analyse.identifier_notions_juridiques(payload.question, payload.but)
     mots_cles = notions.get("mots_cles_recherche") or []
     requete_recherche = " ".join(mots_cles) if mots_cles else payload.question
@@ -70,7 +73,15 @@ def consulter(payload: ConsulterIn):
         ),
         sources_textes=[contexte_recherche] if contexte_recherche else [],
     )
-    return ConsulterOut(notions=notions, reponse=pipeline.resultat_principal, verification=pipeline.verification)
+    resultat = {"notions": notions, "reponse": pipeline.resultat_principal, "verification": pipeline.verification}
+    document = db.creer_document_genere(
+        payload.dossier_id,
+        "jurisprudence_consultation",
+        f"Consultation — {payload.question[:60]}",
+        {"question": payload.question, "but": payload.but, "source": payload.source},
+        resultat,
+    )
+    return ConsulterOut(**resultat, document_id=document["id"], statut=document["statut"])
 
 
 @router.post("/collecter", response_model=CollecterOut)

@@ -25,8 +25,8 @@ def _vers_sortie(row) -> dict:
 
 
 @router.get("/", response_model=list[VersionOut])
-def lister(feature: str, dossier_id: int | None = None):
-    return [_vers_sortie(v) for v in db.lister_versions(feature, dossier_id)]
+def lister(feature: str, dossier_id: int | None = None, document_id: int | None = None):
+    return [_vers_sortie(v) for v in db.lister_versions(feature, dossier_id, document_id)]
 
 
 @router.post("/{version_id}/restaurer", response_model=VersionOut)

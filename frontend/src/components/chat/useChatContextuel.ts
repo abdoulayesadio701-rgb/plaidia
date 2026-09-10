@@ -20,7 +20,8 @@ export function useChatContextuel<T>(
   feature: FeatureChatContextuel,
   resultatActuel: T,
   onMiseAJour: (nouveauResultat: T) => void,
-  dossierId?: number | null
+  dossierId?: number | null,
+  documentId?: number | null
 ) {
   const [messages, setMessages] = useState<MessageChat[]>([]);
   const [loading, setLoading] = useState(false);
@@ -37,7 +38,7 @@ export function useChatContextuel<T>(
     setErreur(null);
 
     try {
-      const resultat = await chatApi.envoyerMessageContextuel(feature, contenu, resultatActuel, historiquePrecedent, dossierId);
+      const resultat = await chatApi.envoyerMessageContextuel(feature, contenu, resultatActuel, historiquePrecedent, dossierId, documentId);
       setMessages((m) => [...m, { role: "assistant", content: resultat.reponse_agent }]);
       if (resultat.resultat_modifie !== null && resultat.resultat_modifie !== undefined) {
         onMiseAJour(resultat.resultat_modifie as T);

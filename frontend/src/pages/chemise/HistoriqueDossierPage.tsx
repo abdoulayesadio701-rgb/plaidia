@@ -50,6 +50,17 @@ export default function HistoriqueDossierPage() {
     dossierActif !== null
   );
 
+  const {
+    data: documentsGeneres,
+    loading: documentsLoading,
+    error: documentsError,
+    reload: reloadDocuments,
+  } = useAsync(
+    () => dossiersApi.listerDocumentsGeneres(dossierActif!.id),
+    [dossierActif?.id],
+    dossierActif !== null
+  );
+
   useEffect(() => {
     if (analyses) setStatuts(Object.fromEntries(analyses.map((analyse) => [analyse.id, analyse.statut])));
   }, [analyses]);
@@ -105,6 +116,32 @@ export default function HistoriqueDossierPage() {
             </p>
           )}
         </div>
+      </div>
+
+      <div>
+        <h2 className="mb-3 font-serif text-h3 font-semibold text-gold-500">Documents générés</h2>
+        {documentsLoading && <SkeletonList count={2} />}
+        {!documentsLoading && documentsError && <ErrorState message={documentsError} onRetry={reloadDocuments} />}
+        {!documentsLoading && !documentsError && documentsGeneres && documentsGeneres.length === 0 && (
+          <EmptyState titre="Aucun document généré" description="Les plans, simulateurs et consultations produits pour ce dossier apparaîtront ici." />
+        )}
+        {!documentsLoading && !documentsError && documentsGeneres && documentsGeneres.length > 0 && (
+          <div className="space-y-2">
+            {documentsGeneres.map((document) => {
+              const chemin = document.feature === "plan" ? "arsenal/plan" : document.feature === "simulateur" ? "arsenal/simulateur" : "grimoire/jurisprudence";
+              return (
+                <Link
+                  key={document.id}
+                  to={`/app/${chemin}?document_id=${document.id}`}
+                  className="card flex items-center justify-between gap-4 p-4 transition-colors hover:border-gold-500/40"
+                >
+                  <div className="min-w-0"><p className="truncate text-sm font-medium text-ivory">{document.titre}</p><p className="text-xs text-muted">{document.feature}</p></div>
+                  <div className="flex shrink-0 items-center gap-2"><StatutDocumentBadge statut={document.statut} /><span className="text-xs text-muted">Rouvrir</span></div>
+                </Link>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       <div>

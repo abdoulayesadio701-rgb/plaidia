@@ -104,11 +104,25 @@ CREATE TABLE IF NOT EXISTS parametres (
 CREATE TABLE IF NOT EXISTS versions_document (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     dossier_id INTEGER,             -- NULL pour les fonctionnalités indépendantes d'un dossier (style, pv_audience...)
+    document_id INTEGER,
     feature TEXT NOT NULL,          -- "conclusions" | "plan" | ... (même valeur que ChatContextuelPanel.feature)
     contenu_json TEXT NOT NULL,     -- le résultat complet après modification, tel quel
     resume_modification TEXT,       -- la reponse_agent de l'édition qui a produit cette version, ou une description de restauration
     auteur TEXT NOT NULL,           -- "ia" | "utilisateur" (voir db.py::enregistrer_version/restaurer_version)
     date_creation TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS documents_generes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    dossier_id INTEGER NOT NULL,
+    feature TEXT NOT NULL,
+    titre TEXT NOT NULL,
+    parametres_json TEXT NOT NULL DEFAULT '{}',
+    contenu_json TEXT NOT NULL,
+    statut TEXT NOT NULL DEFAULT 'Brouillon',
+    date_creation TEXT NOT NULL,
+    date_modification TEXT NOT NULL,
+    FOREIGN KEY (dossier_id) REFERENCES dossiers(id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS elements_epingles (
@@ -163,8 +177,15 @@ def _migrer_colonnes_manquantes(conn):
         )
         conn.commit()
 
+    cur = conn.execute("PRAGMA table_info(versions_document)")
+    colonnes_existantes = {row["name"] for row in cur.fetchall()}
+    if "document_id" not in colonnes_existantes:
+        conn.execute("ALTER TABLE versions_document ADD COLUMN document_id INTEGER")
+        conn.commit()
+
 
 TABLES = (
+    "documents_generes",
     "versions_document",
     "elements_epingles",
     "parametres",
@@ -252,6 +273,7 @@ def delete_dossier(dossier_id):
     conn = get_connection()
     conn.execute("DELETE FROM elements_epingles WHERE dossier_id = ?", (dossier_id,))
     conn.execute("DELETE FROM versions_document WHERE dossier_id = ?", (dossier_id,))
+    conn.execute("DELETE FROM documents_generes WHERE dossier_id = ?", (dossier_id,))
     conn.execute("DELETE FROM dossiers WHERE id = ?", (dossier_id,))
     conn.commit()
     conn.close()
@@ -789,12 +811,13 @@ def set_parametre(cle, valeur):
 # ancienne version (voir §8 de la demande) : restaurer_version AJOUTE une
 # nouvelle ligne identique à l'ancienne plutôt que de revenir en arrière.
 
-def enregistrer_version(dossier_id, feature: str, contenu, resume_modification: str = "", auteur: str = "ia") -> int:
+def enregistrer_version(dossier_id, feature: str, contenu, resume_modification: str = "", auteur: str = "ia", document_id=None) -> int:
+    _assurer_migration()
     conn = get_connection()
     cur = conn.execute(
-        "INSERT INTO versions_document (dossier_id, feature, contenu_json, resume_modification, auteur, date_creation) "
-        "VALUES (?, ?, ?, ?, ?, ?)",
-        (dossier_id, feature, json.dumps(contenu, ensure_ascii=False), resume_modification, auteur, datetime.now().isoformat(timespec="seconds")),
+        "INSERT INTO versions_document (dossier_id, document_id, feature, contenu_json, resume_modification, auteur, date_creation) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?)",
+        (dossier_id, document_id, feature, json.dumps(contenu, ensure_ascii=False), resume_modification, auteur, datetime.now().isoformat(timespec="seconds")),
     )
     conn.commit()
     version_id = cur.lastrowid
@@ -802,15 +825,18 @@ def enregistrer_version(dossier_id, feature: str, contenu, resume_modification: 
     return version_id
 
 
-def lister_versions(feature: str, dossier_id=None) -> list:
+def lister_versions(feature: str, dossier_id=None, document_id=None) -> list:
     conn = get_connection()
+    filtre_document = " AND document_id = ?" if document_id is not None else ""
     if dossier_id is None:
         rows = conn.execute(
-            "SELECT * FROM versions_document WHERE feature = ? AND dossier_id IS NULL ORDER BY date_creation DESC, id DESC", (feature,)
+            f"SELECT * FROM versions_document WHERE feature = ? AND dossier_id IS NULL{filtre_document} ORDER BY date_creation DESC, id DESC",
+            (feature, document_id) if document_id is not None else (feature,),
         ).fetchall()
     else:
         rows = conn.execute(
-            "SELECT * FROM versions_document WHERE feature = ? AND dossier_id = ? ORDER BY date_creation DESC, id DESC", (feature, dossier_id)
+            f"SELECT * FROM versions_document WHERE feature = ? AND dossier_id = ?{filtre_document} ORDER BY date_creation DESC, id DESC",
+            (feature, dossier_id, document_id) if document_id is not None else (feature, dossier_id),
         ).fetchall()
     conn.close()
     return rows
@@ -839,8 +865,97 @@ def restaurer_version(version_id: int):
         contenu,
         resume_modification=f"Restauration de la version du {original['date_creation']}",
         auteur="utilisateur",
+        document_id=original["document_id"] if "document_id" in original.keys() else None,
     )
     return get_version(nouvel_id)
+
+
+# --- Documents générés --------------------------------------------------
+
+def creer_document_genere(dossier_id, feature, titre, parametres, contenu):
+    _assurer_migration()
+    maintenant = datetime.now().isoformat(timespec="seconds")
+    conn = get_connection()
+    cur = conn.execute(
+        "INSERT INTO documents_generes (dossier_id, feature, titre, parametres_json, contenu_json, statut, date_creation, date_modification) "
+        "VALUES (?, ?, ?, ?, ?, 'Brouillon', ?, ?)",
+        (dossier_id, feature, titre, json.dumps(parametres, ensure_ascii=False), json.dumps(contenu, ensure_ascii=False), maintenant, maintenant),
+    )
+    conn.commit()
+    document_id = cur.lastrowid
+    conn.close()
+    return get_document_genere(document_id)
+
+
+def get_document_genere(document_id):
+    _assurer_migration()
+    conn = get_connection()
+    row = conn.execute("SELECT * FROM documents_generes WHERE id = ?", (document_id,)).fetchone()
+    conn.close()
+    if not row:
+        return None
+    document = dict(row)
+    document["parametres"] = json.loads(document.pop("parametres_json"))
+    document["contenu"] = json.loads(document.pop("contenu_json"))
+    return document
+
+
+def lister_documents_generes(dossier_id, feature=None):
+    _assurer_migration()
+    conn = get_connection()
+    if feature:
+        rows = conn.execute(
+            "SELECT id FROM documents_generes WHERE dossier_id = ? AND feature = ? ORDER BY date_modification DESC, id DESC",
+            (dossier_id, feature),
+        ).fetchall()
+    else:
+        rows = conn.execute(
+            "SELECT id FROM documents_generes WHERE dossier_id = ? ORDER BY date_modification DESC, id DESC", (dossier_id,)
+        ).fetchall()
+    conn.close()
+    return [get_document_genere(row["id"]) for row in rows]
+
+
+def mettre_a_jour_document_genere(document_id, contenu, parametres=None):
+    document = verifier_document_modifiable(document_id)
+    if not document:
+        return None
+    conn = get_connection()
+    conn.execute(
+        "UPDATE documents_generes SET contenu_json = ?, parametres_json = ?, date_modification = ? WHERE id = ?",
+        (json.dumps(contenu, ensure_ascii=False), json.dumps(parametres if parametres is not None else document["parametres"], ensure_ascii=False), datetime.now().isoformat(timespec="seconds"), document_id),
+    )
+    conn.commit()
+    conn.close()
+    return get_document_genere(document_id)
+
+
+def changer_statut_document(document_id, nouveau_statut):
+    document = get_document_genere(document_id)
+    if not document:
+        return None
+    statut = valider_transition_statut(document["statut"], nouveau_statut)
+    if statut == document["statut"]:
+        return document
+    conn = get_connection()
+    conn.execute(
+        "UPDATE documents_generes SET statut = ?, date_modification = ? WHERE id = ?",
+        (statut, datetime.now().isoformat(timespec="seconds"), document_id),
+    )
+    conn.commit()
+    conn.close()
+    enregistrer_version(
+        document["dossier_id"], document["feature"], {"document_id": document_id, "statut": statut},
+        resume_modification=f"Statut changé : {document['statut']} -> {statut}", auteur="utilisateur", document_id=document_id,
+    )
+    return get_document_genere(document_id)
+
+
+def verifier_document_modifiable(document_id):
+    document = get_document_genere(document_id)
+    if document and document["statut"] == "Final":
+        raise DocumentFinalError(f"Le document {document_id} est Final et ne peut plus être modifié.")
+    return document
 
 
 # --- Épinglage ----------------------------------------------------------

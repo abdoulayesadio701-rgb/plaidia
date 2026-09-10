@@ -4,8 +4,10 @@
  * la faire souffler — désactiver le mode l'affiche tout de suite (relecture).
  */
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { analyse as analyseApi, downloadBlob } from "@/api";
+import type { SimulateurResultat, StatutDocument } from "@/api";
 import { useAppStore, useDossierActif } from "@/store/useAppStore";
 import { useLazyAction } from "@/hooks/useLazyAction";
 import Button from "@/components/Button";
@@ -16,15 +18,45 @@ import LabeledField from "@/components/LabeledField";
 import { SkeletonList } from "@/components/Skeleton";
 import ChatContextuelPanel from "@/components/chat/ChatContextuelPanel";
 import VerificationPanel from "@/components/VerificationPanel";
+import StatutDocumentMenu, { StatutDocumentBadge } from "@/components/StatutDocument";
+import { useAsync } from "@/hooks/useAsync";
 
 export default function SimulateurObjectionsPage() {
   const dossierActif = useDossierActif();
+  const [searchParams] = useSearchParams();
   const pousserToast = useAppStore((s) => s.pousserToast);
   const [modeEntrainement, setModeEntrainement] = useState(false);
   const [revelees, setRevelees] = useState<Set<number>>(new Set());
   const [exportEnCours, setExportEnCours] = useState(false);
+  const [statutEnCours, setStatutEnCours] = useState(false);
+  const documentId = Number(searchParams.get("document_id"));
+  const aDocument = Number.isInteger(documentId) && documentId > 0;
 
   const { data, loading, error, executer, definirDonnees } = useLazyAction(() => analyseApi.simulerObjections(dossierActif!.id));
+  const { data: document, loading: documentLoading, error: documentError } = useAsync(
+    () => analyseApi.obtenirDocumentGenere(documentId),
+    [documentId, dossierActif?.id],
+    aDocument && dossierActif !== null
+  );
+
+  useEffect(() => {
+    if (!document || document.feature !== "simulateur" || document.dossier_id !== dossierActif?.id) return;
+    definirDonnees({ ...(document.contenu as unknown as SimulateurResultat), document_id: document.id, statut: document.statut });
+  }, [document, dossierActif?.id, definirDonnees]);
+
+  const changerStatut = async (statut: StatutDocument) => {
+    if (!data?.document_id) return;
+    setStatutEnCours(true);
+    try {
+      await analyseApi.changerStatutDocument(data.document_id, statut);
+      definirDonnees({ ...data, statut });
+      pousserToast("success", `Document passé au statut « ${statut} ».`);
+    } catch (e) {
+      pousserToast("error", e instanceof Error ? e.message : "Impossible de changer le statut.");
+    } finally {
+      setStatutEnCours(false);
+    }
+  };
 
   const exporter = async () => {
     if (!dossierActif || !data) return;
@@ -82,12 +114,13 @@ export default function SimulateurObjectionsPage() {
         />
       )}
 
-      {loading && <SkeletonList count={3} />}
+      {(loading || documentLoading) && <SkeletonList count={3} />}
 
-      {!loading && error && <ErrorState message={error} onRetry={() => void executer()} />}
+      {!loading && !documentLoading && (error || documentError) && <ErrorState message={error ?? documentError ?? "Erreur de chargement."} onRetry={() => void executer()} />}
 
-      {!loading && !error && data && (
+      {!loading && !documentLoading && !error && !documentError && data && (
         <div className="space-y-5">
+          <div className="flex items-center justify-between gap-3"><div className="flex items-center gap-2"><span className="text-sm text-warmgray">Document sauvegardé</span><StatutDocumentBadge statut={data.statut ?? "Brouillon"} /></div><StatutDocumentMenu statut={data.statut ?? "Brouillon"} loading={statutEnCours} onChange={changerStatut} /></div>
           <label className="flex w-fit cursor-pointer items-center gap-2.5 rounded-md border border-gold-600/20 bg-surface px-4 py-2.5 text-sm text-warmgray">
             <button
               type="button"
@@ -152,6 +185,7 @@ export default function SimulateurObjectionsPage() {
             resultatActuel={data}
             onMiseAJour={definirDonnees}
             dossierId={dossierActif.id}
+            documentId={data.document_id}
             placeholder="Ex. « Développe la piste de réponse sur l'objection n°2 »…"
           />
         </div>

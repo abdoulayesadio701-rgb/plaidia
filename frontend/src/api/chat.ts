@@ -141,7 +141,8 @@ export function envoyerMessageContextuel(
   message: string,
   resultatActuel: unknown,
   historique: MessageChat[] = [],
-  dossierId?: number | null
+  dossierId?: number | null,
+  documentId?: number | null
 ): Promise<ChatContextuelResultat> {
   return apiRequest<ChatContextuelResultat>("/api/chat/contextuel", {
     method: "POST",
@@ -151,6 +152,7 @@ export function envoyerMessageContextuel(
       resultat_actuel: resultatActuel,
       historique,
       dossier_id: dossierId ?? null,
+      document_id: documentId ?? null,
     },
   });
 }

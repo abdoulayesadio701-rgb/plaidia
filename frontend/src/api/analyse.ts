@@ -3,7 +3,7 @@
  */
 
 import { apiRequest, apiRequestBlob } from "./http";
-import type { ConclusionsResultat, PlanResultat, RapportCompletResultat, ResumeResultat, SimulateurResultat, StatutDocument, StyleResultat, TraductionResultat } from "./types";
+import type { ConclusionsResultat, DocumentGenere, PlanResultat, RapportCompletResultat, ResumeResultat, SimulateurResultat, StatutDocument, StyleResultat, TraductionResultat } from "./types";
 
 export function analyserConclusions(texte: string, dossierId?: number): Promise<ConclusionsResultat> {
   return apiRequest<ConclusionsResultat>("/api/analyse/conclusions", {
@@ -28,6 +28,14 @@ export function genererPlan(dossierId: number, tempsMinutes: number): Promise<Pl
     method: "POST",
     body: { dossier_id: dossierId, temps_minutes: tempsMinutes },
   });
+}
+
+export function obtenirDocumentGenere(id: number): Promise<DocumentGenere> {
+  return apiRequest<DocumentGenere>(`/api/documents-generes/${id}`);
+}
+
+export function changerStatutDocument(id: number, statut: StatutDocument): Promise<DocumentGenere> {
+  return apiRequest<DocumentGenere>(`/api/documents-generes/${id}/statut`, { method: "PATCH", body: { statut } });
 }
 
 export function simulerObjections(dossierId: number): Promise<SimulateurResultat> {

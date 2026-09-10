@@ -215,6 +215,14 @@ def chat_contextuel(payload: ChatContextuelIn):
     if payload.dossier_id is not None:
         dossier = get_dossier_or_404(payload.dossier_id)
         contexte_dossier = construire_contexte_dossier(dossier)
+    if payload.document_id is not None:
+        document = db.get_document_genere(payload.document_id)
+        if not document or document["dossier_id"] != payload.dossier_id:
+            raise HTTPException(status_code=404, detail=f"Document {payload.document_id} introuvable dans ce dossier.")
+        try:
+            db.verifier_document_modifiable(payload.document_id)
+        except db.DocumentFinalError as e:
+            raise HTTPException(status_code=409, detail=str(e)) from e
 
     historique = [{"role": m.role, "content": m.content} for m in payload.historique]
 
@@ -238,6 +246,8 @@ def chat_contextuel(payload: ChatContextuelIn):
             resultat_modifie = chat_actions.appliquer_patch(
                 payload.resultat_actuel, action["scope"], action["operation"], action["contenu_modifie"]
             )
+            if payload.document_id is not None:
+                db.mettre_a_jour_document_genere(payload.document_id, resultat_modifie)
             # Versioning (§8 de la demande, AUDIT_TASKBAR.md étape 4) : le
             # patch vient d'être validé ET appliqué -- c'est précisément le
             # moment où une nouvelle version du résultat naît. Jamais
@@ -245,7 +255,7 @@ def chat_contextuel(payload: ChatContextuelIn):
             # échouer une édition qui a par ailleurs réussi.
             try:
                 db.enregistrer_version(
-                    payload.dossier_id, payload.feature, resultat_modifie, resume_modification=action["reponse_agent"], auteur="ia"
+                    payload.dossier_id, payload.feature, resultat_modifie, resume_modification=action["reponse_agent"], auteur="ia", document_id=payload.document_id
                 )
             except Exception as e:
                 _log_chat(f"échec de l'enregistrement de la version (non bloquant) : {e}")

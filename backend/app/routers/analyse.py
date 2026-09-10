@@ -104,32 +104,42 @@ def resumer_dossier(payload: ResumeIn):
 def generer_plan(payload: PlanIn):
     dossier = get_dossier_or_404(payload.dossier_id)
     if demo.mode_demo_effectif():
-        return demo_data.PLAN_DEMO
-    contexte = construire_contexte_dossier(dossier)
-    pipeline = quality_pipeline.executer_pipeline_complet(
-        feature="plan",
-        texte_a_screener=contexte,
-        fonction_principale=lambda: legacy_analyse.generer_plan_plaidoirie(contexte, payload.temps_minutes),
-        sources_textes=[contexte],
-        contexte_dossier=contexte,
+        resultat = demo_data.PLAN_DEMO
+    else:
+        contexte = construire_contexte_dossier(dossier)
+        pipeline = quality_pipeline.executer_pipeline_complet(
+            feature="plan",
+            texte_a_screener=contexte,
+            fonction_principale=lambda: legacy_analyse.generer_plan_plaidoirie(contexte, payload.temps_minutes),
+            sources_textes=[contexte],
+            contexte_dossier=contexte,
+        )
+        resultat = {**pipeline.resultat_principal, "verification": pipeline.verification}
+    document = db.creer_document_genere(
+        payload.dossier_id, "plan", f"Plan de plaidoirie — {dossier['nom']}", {"temps_minutes": payload.temps_minutes}, resultat
     )
-    return PlanOut(**pipeline.resultat_principal, verification=pipeline.verification)
+    return PlanOut(**resultat, document_id=document["id"], statut=document["statut"])
 
 
 @router.post("/simulateur", response_model=SimulateurOut)
 def simuler_objections(payload: SimulateurIn):
     dossier = get_dossier_or_404(payload.dossier_id)
     if demo.mode_demo_effectif():
-        return demo_data.SIMULATEUR_DEMO
-    contexte = construire_contexte_dossier(dossier)
-    pipeline = quality_pipeline.executer_pipeline_complet(
-        feature="simulateur",
-        texte_a_screener=contexte,
-        fonction_principale=lambda: legacy_analyse.simuler_objections(contexte),
-        sources_textes=[contexte],
-        contexte_dossier=contexte,
+        resultat = demo_data.SIMULATEUR_DEMO
+    else:
+        contexte = construire_contexte_dossier(dossier)
+        pipeline = quality_pipeline.executer_pipeline_complet(
+            feature="simulateur",
+            texte_a_screener=contexte,
+            fonction_principale=lambda: legacy_analyse.simuler_objections(contexte),
+            sources_textes=[contexte],
+            contexte_dossier=contexte,
+        )
+        resultat = {**pipeline.resultat_principal, "verification": pipeline.verification}
+    document = db.creer_document_genere(
+        payload.dossier_id, "simulateur", f"Simulateur d'objections — {dossier['nom']}", {}, resultat
     )
-    return SimulateurOut(**pipeline.resultat_principal, verification=pipeline.verification)
+    return SimulateurOut(**resultat, document_id=document["id"], statut=document["statut"])
 
 
 @router.post("/simulateur/export")

@@ -20,7 +20,8 @@ from app.schemas.dossiers import (
     FaitsAjout,
     AnalyseHistoriqueOut,
 )
-from fastapi import APIRouter, File, UploadFile
+from app.schemas.documents import DocumentGenereOut, DocumentStatutIn, DocumentStatutOut
+from fastapi import APIRouter, File, HTTPException, Query, UploadFile
 from fastapi.responses import FileResponse
 
 router = APIRouter(prefix="/api/dossiers", tags=["dossiers"])
@@ -48,6 +49,21 @@ def rechercher_dossiers(terme: str):
     """Recherche un mot-clé dans les faits, parties, nom, domaine et
     analyses de tous les dossiers."""
     return db.rechercher_dans_dossiers(terme)
+
+
+@router.get("/{dossier_id}/documents-generes", response_model=list[DocumentGenereOut])
+def lister_documents_generes(dossier_id: int, feature: str | None = Query(None)):
+    get_dossier_or_404(dossier_id)
+    return db.lister_documents_generes(dossier_id, feature)
+
+
+@router.get("/{dossier_id}/documents-generes/{document_id}", response_model=DocumentGenereOut)
+def obtenir_document_genere(dossier_id: int, document_id: int):
+    get_dossier_or_404(dossier_id)
+    document = db.get_document_genere(document_id)
+    if not document or document["dossier_id"] != dossier_id:
+        raise HTTPException(status_code=404, detail=f"Document {document_id} introuvable dans ce dossier.")
+    return document
 
 
 @router.get("/{dossier_id}", response_model=DossierOut)

@@ -131,6 +131,8 @@ export interface PlanResultat {
   conclusion: string;
   points_attention: string[];
   verification?: Verification | null;
+  document_id?: number | null;
+  statut?: StatutDocument;
 }
 
 export interface Objection {
@@ -144,6 +146,8 @@ export interface SimulateurResultat {
   objections: Objection[];
   point_le_plus_faible: string;
   verification?: Verification | null;
+  document_id?: number | null;
+  statut?: StatutDocument;
 }
 
 export interface RapportCompletResultat {
@@ -186,6 +190,20 @@ export interface ConsulterResultat {
   notions: Notions;
   reponse: string;
   verification?: Verification | null;
+  document_id?: number | null;
+  statut?: StatutDocument;
+}
+
+export interface DocumentGenere {
+  id: number;
+  dossier_id: number;
+  feature: "plan" | "simulateur" | "jurisprudence_consultation" | string;
+  titre: string;
+  parametres: Record<string, unknown>;
+  contenu: Record<string, unknown>;
+  statut: StatutDocument;
+  date_creation: string;
+  date_modification: string;
 }
 
 export interface DecisionCollectee {
@@ -398,6 +416,7 @@ export type ChatStreamEvent =
 export interface VersionDocument {
   id: number;
   dossier_id?: number | null;
+  document_id?: number | null;
   feature: string;
   contenu: unknown;
   resume_modification?: string;

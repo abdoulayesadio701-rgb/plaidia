@@ -9,6 +9,7 @@ from app.schemas.verification import VerificationOut
 
 
 class ConsulterIn(BaseModel):
+    dossier_id: int = Field(..., description="Dossier auquel rattacher la consultation")
     question: str = Field(..., min_length=1, max_length=MAX_TEXTE_CARACTERES, description="Situation ou question juridique décrite librement")
     but: str = Field("", max_length=500, description="Ex. « Décisions favorables à mon client », laisser vide pour neutre")
     source: str = Field("Légifrance (France)", description="Juridiction active (Légifrance ou une source de corpus importée)")
@@ -25,6 +26,8 @@ class ConsulterOut(BaseModel):
     notions: NotionsOut
     reponse: str
     verification: Optional[VerificationOut] = None
+    document_id: Optional[int] = None
+    statut: str = "Brouillon"
 
 
 class CollecterIn(BaseModel):

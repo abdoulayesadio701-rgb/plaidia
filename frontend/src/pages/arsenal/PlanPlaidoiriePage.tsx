@@ -11,9 +11,10 @@
  * le récapitulatif envoyé après cette implémentation.
  */
 
-import { useState } from "react";
-import { useLocation } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { useLocation, useSearchParams } from "react-router-dom";
 import { analyse as analyseApi, downloadBlob } from "@/api";
+import type { PlanResultat, StatutDocument } from "@/api";
 import { useAppStore, useDossierActif } from "@/store/useAppStore";
 import { useLazyAction } from "@/hooks/useLazyAction";
 import Button from "@/components/Button";
@@ -24,6 +25,8 @@ import PlanTimeline from "@/components/PlanTimeline";
 import { SkeletonList } from "@/components/Skeleton";
 import ChatContextuelPanel from "@/components/chat/ChatContextuelPanel";
 import VerificationPanel from "@/components/VerificationPanel";
+import StatutDocumentMenu, { StatutDocumentBadge } from "@/components/StatutDocument";
+import { useAsync } from "@/hooks/useAsync";
 
 interface NavigationState {
   dureeMinutesPreremplie?: number;
@@ -33,12 +36,42 @@ export default function PlanPlaidoiriePage() {
   const dossierActif = useDossierActif();
   const pousserToast = useAppStore((s) => s.pousserToast);
   const location = useLocation();
+  const [searchParams] = useSearchParams();
   const dureeInitiale = (location.state as NavigationState | null)?.dureeMinutesPreremplie ?? 15;
 
   const [duree, setDuree] = useState(dureeInitiale);
   const [exportEnCours, setExportEnCours] = useState(false);
+  const [statutEnCours, setStatutEnCours] = useState(false);
+  const documentId = Number(searchParams.get("document_id"));
+  const aDocument = Number.isInteger(documentId) && documentId > 0;
 
   const { data, loading, error, executer, definirDonnees } = useLazyAction((d: number) => analyseApi.genererPlan(dossierActif!.id, d));
+  const { data: document, loading: documentLoading, error: documentError } = useAsync(
+    () => analyseApi.obtenirDocumentGenere(documentId),
+    [documentId, dossierActif?.id],
+    aDocument && dossierActif !== null
+  );
+
+  useEffect(() => {
+    if (!document || document.feature !== "plan" || document.dossier_id !== dossierActif?.id) return;
+    definirDonnees({ ...(document.contenu as unknown as PlanResultat), document_id: document.id, statut: document.statut });
+    const minutes = document.parametres.temps_minutes;
+    if (typeof minutes === "number") setDuree(minutes);
+  }, [document, dossierActif?.id, definirDonnees]);
+
+  const changerStatut = async (statut: StatutDocument) => {
+    if (!data?.document_id) return;
+    setStatutEnCours(true);
+    try {
+      await analyseApi.changerStatutDocument(data.document_id, statut);
+      definirDonnees({ ...data, statut });
+      pousserToast("success", `Document passé au statut « ${statut} ».`);
+    } catch (e) {
+      pousserToast("error", e instanceof Error ? e.message : "Impossible de changer le statut.");
+    } finally {
+      setStatutEnCours(false);
+    }
+  };
 
   const exporter = async () => {
     if (!dossierActif || !data) return;
@@ -74,17 +107,15 @@ export default function PlanPlaidoiriePage() {
         </div>
       </div>
 
-      {loading && <SkeletonList count={2} />}
+      {(loading || documentLoading) && <SkeletonList count={2} />}
 
-      {!loading && error && <ErrorState message={error} onRetry={() => void executer(duree)} />}
+      {!loading && !documentLoading && (error || documentError) && <ErrorState message={error ?? documentError ?? "Erreur de chargement."} onRetry={() => void executer(duree)} />}
 
-      {!loading && !error && data && (
+      {!loading && !documentLoading && !error && !documentError && data && (
         <div className="space-y-6">
           <div className="flex items-center justify-between gap-3">
-            <p className="text-sm text-warmgray">Plan généré pour {duree} min de parole.</p>
-            <Button variant="secondary" loading={exportEnCours} onClick={() => void exporter()}>
-              ⬇ Exporter en Word
-            </Button>
+            <div className="flex items-center gap-2"><p className="text-sm text-warmgray">Plan généré pour {duree} min de parole.</p><StatutDocumentBadge statut={data.statut ?? "Brouillon"} /></div>
+            <div className="flex items-center gap-2"><StatutDocumentMenu statut={data.statut ?? "Brouillon"} loading={statutEnCours} onChange={changerStatut} /><Button variant="secondary" loading={exportEnCours} onClick={() => void exporter()}>⬇ Exporter en Word</Button></div>
           </div>
 
           <PlanTimeline plan={data} />
@@ -96,6 +127,7 @@ export default function PlanPlaidoiriePage() {
             resultatActuel={data}
             onMiseAJour={definirDonnees}
             dossierId={dossierActif.id}
+            documentId={data.document_id}
             placeholder="Ex. « Rends l'accroche plus percutante », « adapte le ton pour une audience pénale »…"
           />
         </div>

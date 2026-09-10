@@ -5,9 +5,12 @@
  * « Paramètres juridiques » de /grimoire/corpus pour la changer).
  */
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { jurisprudence as jurisprudenceApi } from "@/api";
-import { useAppStore } from "@/store/useAppStore";
+import { analyse as analyseApi } from "@/api";
+import type { ConsulterResultat, StatutDocument } from "@/api";
+import { useAppStore, useDossierActif } from "@/store/useAppStore";
 import { useLazyAction } from "@/hooks/useLazyAction";
 import Button from "@/components/Button";
 import EmptyState from "@/components/EmptyState";
@@ -16,17 +19,55 @@ import RichOutput from "@/components/RichOutput";
 import { SkeletonList } from "@/components/Skeleton";
 import ChatContextuelPanel from "@/components/chat/ChatContextuelPanel";
 import VerificationPanel from "@/components/VerificationPanel";
+import StatutDocumentMenu, { StatutDocumentBadge } from "@/components/StatutDocument";
+import { useAsync } from "@/hooks/useAsync";
 
 export default function ConsulterJurisprudencePage() {
   const juridictionActive = useAppStore((s) => s.juridictionActive);
+  const dossierActif = useDossierActif();
+  const pousserToast = useAppStore((s) => s.pousserToast);
+  const [searchParams] = useSearchParams();
   const [question, setQuestion] = useState("");
   const [but, setBut] = useState("");
+  const [statutEnCours, setStatutEnCours] = useState(false);
+  const documentId = Number(searchParams.get("document_id"));
+  const aDocument = Number.isInteger(documentId) && documentId > 0;
 
   const { data, loading, error, executer, definirDonnees } = useLazyAction((q: string, b: string) =>
-    jurisprudenceApi.consulterJurisprudence(q, b, juridictionActive)
+    jurisprudenceApi.consulterJurisprudence(q, b, juridictionActive, dossierActif!.id)
+  );
+  const { data: document, loading: documentLoading, error: documentError } = useAsync(
+    () => analyseApi.obtenirDocumentGenere(documentId),
+    [documentId, dossierActif?.id],
+    aDocument && dossierActif !== null
   );
 
+  useEffect(() => {
+    if (!document || document.feature !== "jurisprudence_consultation" || document.dossier_id !== dossierActif?.id) return;
+    definirDonnees({ ...(document.contenu as unknown as ConsulterResultat), document_id: document.id, statut: document.statut });
+    setQuestion(typeof document.parametres.question === "string" ? document.parametres.question : "");
+    setBut(typeof document.parametres.but === "string" ? document.parametres.but : "");
+  }, [document, dossierActif?.id, definirDonnees]);
+
+  const changerStatut = async (statut: StatutDocument) => {
+    if (!data?.document_id) return;
+    setStatutEnCours(true);
+    try {
+      await analyseApi.changerStatutDocument(data.document_id, statut);
+      definirDonnees({ ...data, statut });
+      pousserToast("success", `Document passé au statut « ${statut} ».`);
+    } catch (e) {
+      pousserToast("error", e instanceof Error ? e.message : "Impossible de changer le statut.");
+    } finally {
+      setStatutEnCours(false);
+    }
+  };
+
   const lancer = () => void executer(question, but);
+
+  if (!dossierActif) {
+    return <EmptyState titre="Aucun dossier sélectionné" description="Sélectionnez ou créez un dossier pour sauvegarder une consultation de jurisprudence." />;
+  }
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
@@ -73,12 +114,13 @@ export default function ConsulterJurisprudencePage() {
         </div>
       </div>
 
-      {loading && <SkeletonList count={2} />}
+      {(loading || documentLoading) && <SkeletonList count={2} />}
 
-      {!loading && error && <ErrorState message={error} onRetry={lancer} />}
+      {!loading && !documentLoading && (error || documentError) && <ErrorState message={error ?? documentError ?? "Erreur de chargement."} onRetry={lancer} />}
 
-      {!loading && !error && data && (
+      {!loading && !documentLoading && !error && !documentError && data && (
         <div className="space-y-5">
+          <div className="flex items-center justify-between gap-3"><span className="text-sm text-warmgray">Consultation sauvegardée</span><div className="flex items-center gap-2"><StatutDocumentBadge statut={data.statut ?? "Brouillon"} /><StatutDocumentMenu statut={data.statut ?? "Brouillon"} loading={statutEnCours} onChange={changerStatut} /></div></div>
           <div className="card space-y-2 border-amethyst-400/30 p-5">
             <p className="text-micro font-medium uppercase tracking-wide text-amethyst-400">Notions identifiées</p>
             <div className="flex flex-wrap gap-2">
@@ -102,6 +144,8 @@ export default function ConsulterJurisprudencePage() {
             feature="jurisprudence_consultation"
             resultatActuel={data}
             onMiseAJour={definirDonnees}
+            dossierId={dossierActif.id}
+            documentId={data.document_id}
             placeholder="Ex. « Explique cette décision plus en détail », « compare-la avec un arrêt plus récent »…"
           />
         </div>

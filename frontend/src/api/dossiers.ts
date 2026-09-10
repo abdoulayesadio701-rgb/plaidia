@@ -4,7 +4,7 @@
 
 import { ApiError, apiRequest, apiRequestBlob, apiUpload, BASE_URL } from "./http";
 import { useActivityStore } from "@/store/useActivityStore";
-import type { AnalyseHistorique, DocumentImporte, Dossier, DossierCreateInput, RechercheDossierResultat } from "./types";
+import type { AnalyseHistorique, DocumentGenere, DocumentImporte, Dossier, DossierCreateInput, RechercheDossierResultat } from "./types";
 
 export function creerDossier(input: DossierCreateInput): Promise<Dossier> {
   return apiRequest<Dossier>("/api/dossiers/", { method: "POST", body: input });
@@ -32,6 +32,14 @@ export function supprimerDossier(dossierId: number): Promise<void> {
 
 export function historiqueAnalyses(dossierId: number): Promise<AnalyseHistorique[]> {
   return apiRequest<AnalyseHistorique[]>(`/api/dossiers/${dossierId}/analyses`);
+}
+
+export function listerDocumentsGeneres(dossierId: number): Promise<DocumentGenere[]> {
+  return apiRequest<DocumentGenere[]>(`/api/dossiers/${dossierId}/documents-generes`);
+}
+
+export function obtenirDocumentGenere(dossierId: number, documentId: number): Promise<DocumentGenere> {
+  return apiRequest<DocumentGenere>(`/api/dossiers/${dossierId}/documents-generes/${documentId}`);
 }
 
 export function ajouterAuxFaits(dossierId: number, texte: string, source = "texte collé"): Promise<{ detail: string }> {

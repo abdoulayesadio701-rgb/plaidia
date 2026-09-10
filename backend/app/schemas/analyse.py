@@ -82,6 +82,8 @@ class PlanOut(BaseModel):
     conclusion: str = ""
     points_attention: list[str] = []
     verification: Optional[VerificationOut] = None
+    document_id: Optional[int] = None
+    statut: str = "Brouillon"
 
 
 class SimulateurIn(BaseModel):
@@ -98,6 +100,8 @@ class ObjectionOut(BaseModel):
 class SimulateurOut(BaseModel):
     objections: list[ObjectionOut] = []
     point_le_plus_faible: str = ""
+    document_id: Optional[int] = None
+    statut: str = "Brouillon"
     verification: Optional[VerificationOut] = None
 
 

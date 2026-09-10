@@ -73,6 +73,7 @@ class ChatContextuelIn(BaseModel):
         ..., description="Identifiant de la fonctionnalité en cours : conclusions, plan, simulateur, note_client, chronologie, coherence, pv_audience, rapport_complet..."
     )
     dossier_id: Optional[int] = Field(None, description="Si fourni, le contexte du dossier est ajouté (mêmes règles que /api/chat/stream)")
+    document_id: Optional[int] = Field(None, description="Document généré à mettre à jour, si le résultat est persistant")
     resultat_actuel: dict = Field(..., description="Le résultat actuellement affiché à l'écran, tel quel")
     message: str = Field(..., min_length=1, max_length=MAX_TEXTE_CARACTERES)
     historique: list[MessageChat] = Field([], description="Échanges précédents de CE fil contextuel (pas celui du Chat juridique général)")

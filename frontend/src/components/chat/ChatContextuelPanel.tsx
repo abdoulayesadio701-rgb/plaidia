@@ -23,6 +23,7 @@ interface ChatContextuelPanelProps<T> {
   resultatActuel: T;
   onMiseAJour: (nouveauResultat: T) => void;
   dossierId?: number | null;
+  documentId?: number | null;
   /** Placeholder de la zone de saisie, adapté au vocabulaire de la page appelante. */
   placeholder?: string;
 }
@@ -32,11 +33,12 @@ export default function ChatContextuelPanel<T>({
   resultatActuel,
   onMiseAJour,
   dossierId,
+  documentId,
   placeholder = "Ex. « Développe le deuxième argument », « rends le ton plus formel »…",
 }: ChatContextuelPanelProps<T>) {
   const [ouvert, setOuvert] = useState(false);
   const [texte, setTexte] = useState("");
-  const { messages, loading, envoyer, reinitialiser } = useChatContextuel(feature, resultatActuel, onMiseAJour, dossierId);
+  const { messages, loading, envoyer, reinitialiser } = useChatContextuel(feature, resultatActuel, onMiseAJour, dossierId, documentId);
   const conteneurRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -74,7 +76,7 @@ export default function ChatContextuelPanel<T>({
       <div className="flex items-center justify-between">
         <p className="text-sm font-semibold text-ivory">Demander à l'agent</p>
         <div className="flex items-center gap-3">
-          <VersionsHistorique feature={feature} dossierId={dossierId} onRestaurer={onMiseAJour} />
+          <VersionsHistorique feature={feature} dossierId={dossierId} documentId={documentId} onRestaurer={onMiseAJour} />
           {messages.length > 0 && (
             <button type="button" onClick={reinitialiser} className="text-xs text-muted hover:text-warmgray">
               Réinitialiser le fil
