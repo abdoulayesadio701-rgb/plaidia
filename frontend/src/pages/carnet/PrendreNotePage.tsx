@@ -9,9 +9,13 @@ import { useState } from "react";
 import { notes as notesApi } from "@/api";
 import { useAppStore, useDossierActif } from "@/store/useAppStore";
 import { useLazyAction } from "@/hooks/useLazyAction";
+import { useImportTexte } from "@/hooks/useImportTexte";
+import { EXTENSIONS_DOCUMENT } from "@/config/fichiers";
 import Button from "@/components/Button";
+import ChoixImportModal from "@/components/ChoixImportModal";
 import EmptyState from "@/components/EmptyState";
 import ErrorState from "@/components/ErrorState";
+import FileDropZone from "@/components/FileDropZone";
 import RichOutput from "@/components/RichOutput";
 import { SkeletonList } from "@/components/Skeleton";
 
@@ -22,6 +26,11 @@ export default function PrendreNotePage() {
   const [actionsCochees, setActionsCochees] = useState<Set<number>>(new Set());
 
   const { data, loading, error, executer } = useLazyAction((t: string) => notesApi.creerNote(dossierActif!.id, t));
+  const { enImport, survole, dragProps, importerFichiers, choixEnAttente, resoudreChoix } = useImportTexte({
+    dossierId: dossierActif?.id ?? null,
+    getTexteActuel: () => texte,
+    onTexteExtrait: setTexte,
+  });
 
   const soumettre = async () => {
     const resultat = await executer(texte);
@@ -54,18 +63,32 @@ export default function PrendreNotePage() {
 
       <div className="card space-y-3 p-6">
         <textarea
-          className="input min-h-[180px] resize-y"
-          placeholder="Notez librement, en vrac -- l'agent structure, extrait les actions à faire et les points à retenir."
+          {...dragProps}
+          className={`input min-h-[180px] resize-y ${survole ? "ring-2 ring-amethyst-400" : ""}`}
+          placeholder="Notez librement, en vrac, ou déposez un fichier -- l'agent structure, extrait les actions à faire et les points à retenir."
           value={texte}
           onChange={(e) => setTexte(e.target.value)}
-          disabled={loading}
+          disabled={loading || enImport}
         />
-        <div className="flex justify-end">
-          <Button variant="primary" loading={loading} disabled={!texte.trim()} onClick={() => void soumettre()}>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-3">
+            <FileDropZone
+              variante="compact"
+              extensions={EXTENSIONS_DOCUMENT}
+              multiple
+              loading={enImport}
+              disabled={loading}
+              onFichiers={importerFichiers}
+            />
+            <span className="text-xs text-muted">Le texte extrait sera aussi ajouté aux faits de « {dossierActif.nom} ».</span>
+          </div>
+          <Button variant="primary" loading={loading} disabled={!texte.trim() || enImport} onClick={() => void soumettre()}>
             Structurer la note
           </Button>
         </div>
       </div>
+
+      {choixEnAttente && <ChoixImportModal noms={choixEnAttente.noms} onChoisir={resoudreChoix} />}
 
       {loading && <SkeletonList count={2} />}
 

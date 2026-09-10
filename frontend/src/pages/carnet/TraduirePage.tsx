@@ -7,11 +7,12 @@
  */
 
 import { useState } from "react";
-import { analyse as analyseApi, dossiers as dossiersApi } from "@/api";
-import { useAppStore } from "@/store/useAppStore";
+import { analyse as analyseApi } from "@/api";
 import { useLazyAction } from "@/hooks/useLazyAction";
+import { useImportTexte } from "@/hooks/useImportTexte";
 import { EXTENSIONS_DOCUMENT } from "@/config/fichiers";
 import Button from "@/components/Button";
+import ChoixImportModal from "@/components/ChoixImportModal";
 import EmptyState from "@/components/EmptyState";
 import ErrorState from "@/components/ErrorState";
 import FileDropZone from "@/components/FileDropZone";
@@ -21,25 +22,15 @@ import { SkeletonBlock } from "@/components/Skeleton";
 const LABEL_LANGUE: Record<string, string> = { fr: "Français", en: "English" };
 
 export default function TraduirePage() {
-  const pousserToast = useAppStore((s) => s.pousserToast);
   const [texte, setTexte] = useState("");
-  const [enImport, setEnImport] = useState(false);
   const { data, loading, error, executer } = useLazyAction((t: string) => analyseApi.traduireTexte(t));
-
-  const importerFichier = async (fichier: File) => {
-    setEnImport(true);
-    try {
-      // Page indépendante de tout dossier (requiresDossier: false) --
-      // extraction seule, rien n'est écrit en base (voir extraireFichier).
-      const resultat = await dossiersApi.extraireFichier(fichier);
-      setTexte((precedent) => (precedent ? `${precedent}\n\n${resultat.texte_extrait}` : resultat.texte_extrait));
-      pousserToast("success", `« ${resultat.nom_fichier} » importé (${resultat.caracteres_extraits.toLocaleString("fr-FR")} caractères).`);
-    } catch (e) {
-      pousserToast("error", e instanceof Error ? e.message : "Échec de l'import du fichier.");
-    } finally {
-      setEnImport(false);
-    }
-  };
+  // Page indépendante de tout dossier (requiresDossier: false) --
+  // extraction seule, rien n'est écrit en base (voir extraireFichier).
+  const { enImport, survole, dragProps, importerFichiers, choixEnAttente, resoudreChoix } = useImportTexte({
+    dossierId: null,
+    getTexteActuel: () => texte,
+    onTexteExtrait: setTexte,
+  });
 
   const copier = async () => {
     if (!data?.texte_traduit) return;
@@ -63,8 +54,9 @@ export default function TraduirePage() {
 
       <div className="card space-y-3 p-6">
         <textarea
-          className="input min-h-[200px] resize-y"
-          placeholder="Collez ici le texte à traduire, en français ou en anglais…"
+          {...dragProps}
+          className={`input min-h-[200px] resize-y ${survole ? "ring-2 ring-amethyst-400" : ""}`}
+          placeholder="Collez ici le texte à traduire, en français ou en anglais, ou déposez un fichier…"
           value={texte}
           onChange={(e) => setTexte(e.target.value)}
           disabled={loading || enImport}
@@ -74,9 +66,10 @@ export default function TraduirePage() {
             <FileDropZone
               variante="compact"
               extensions={EXTENSIONS_DOCUMENT}
+              multiple
               loading={enImport}
               disabled={loading}
-              onFichiers={(fichiers) => void importerFichier(fichiers[0])}
+              onFichiers={importerFichiers}
             />
             <span className="text-xs text-muted">PDF, Word, Excel, image — le texte extrait est injecté ci-dessus.</span>
           </div>
@@ -85,6 +78,8 @@ export default function TraduirePage() {
           </Button>
         </div>
       </div>
+
+      {choixEnAttente && <ChoixImportModal noms={choixEnAttente.noms} onChoisir={resoudreChoix} />}
 
       {loading && (
         <div className="card space-y-2.5 p-6">

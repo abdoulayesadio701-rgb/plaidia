@@ -7,13 +7,15 @@
  */
 
 import { useState } from "react";
-import { analyse as analyseApi, dossiers as dossiersApi } from "@/api";
+import { analyse as analyseApi } from "@/api";
 import type { StatutDocument } from "@/api";
 import { useAppStore, useDossierActif } from "@/store/useAppStore";
 import { useLazyAction } from "@/hooks/useLazyAction";
+import { useImportTexte } from "@/hooks/useImportTexte";
 import { EXTENSIONS_DOCUMENT } from "@/config/fichiers";
 import Button from "@/components/Button";
 import ArgumentCard from "@/components/ArgumentCard";
+import ChoixImportModal from "@/components/ChoixImportModal";
 import EmptyState from "@/components/EmptyState";
 import ErrorState from "@/components/ErrorState";
 import FileDropZone from "@/components/FileDropZone";
@@ -28,10 +30,14 @@ export default function AnalyserConclusionsPage() {
   const dossierActif = useDossierActif();
   const pousserToast = useAppStore((s) => s.pousserToast);
   const [texte, setTexte] = useState("");
-  const [enImport, setEnImport] = useState(false);
   const [changementStatutEnCours, setChangementStatutEnCours] = useState(false);
 
   const { data, loading, error, executer, definirDonnees } = useLazyAction((t: string) => analyseApi.analyserConclusions(t, dossierActif?.id));
+  const { enImport, survole, dragProps, importerFichiers, choixEnAttente, resoudreChoix } = useImportTexte({
+    dossierId: dossierActif?.id ?? null,
+    getTexteActuel: () => texte,
+    onTexteExtrait: setTexte,
+  });
 
   const changerStatut = async (statut: StatutDocument) => {
     if (!data?.analyse_id) return;
@@ -44,23 +50,6 @@ export default function AnalyserConclusionsPage() {
       pousserToast("error", e instanceof Error ? e.message : "Impossible de changer le statut.");
     } finally {
       setChangementStatutEnCours(false);
-    }
-  };
-
-  const importerFichier = async (fichier: File) => {
-    if (!dossierActif) return;
-    setEnImport(true);
-    try {
-      const resultat = await dossiersApi.importerDocument(dossierActif.id, fichier);
-      setTexte((precedent) => (precedent ? `${precedent}\n\n${resultat.texte_extrait}` : resultat.texte_extrait));
-      pousserToast(
-        "success",
-        `« ${resultat.nom_fichier} » importé (${resultat.caracteres_extraits.toLocaleString("fr-FR")} caractères) – également ajouté aux faits du dossier.`
-      );
-    } catch (e) {
-      pousserToast("error", e instanceof Error ? e.message : "Échec de l'import du fichier.");
-    } finally {
-      setEnImport(false);
     }
   };
 
@@ -80,8 +69,9 @@ export default function AnalyserConclusionsPage() {
 
       <div className="card space-y-3 p-6">
         <textarea
-          className="input min-h-[220px] resize-y"
-          placeholder="Collez ici le texte des conclusions adverses…"
+          {...dragProps}
+          className={`input min-h-[220px] resize-y ${survole ? "ring-2 ring-amethyst-400" : ""}`}
+          placeholder="Collez ici le texte des conclusions adverses, ou déposez un fichier…"
           value={texte}
           onChange={(e) => setTexte(e.target.value)}
           disabled={loading || enImport}
@@ -91,9 +81,10 @@ export default function AnalyserConclusionsPage() {
             <FileDropZone
               variante="compact"
               extensions={EXTENSIONS_DOCUMENT}
+              multiple
               loading={enImport}
               disabled={loading}
-              onFichiers={(fichiers) => void importerFichier(fichiers[0])}
+              onFichiers={importerFichiers}
             />
             <span className="text-xs text-muted">PDF, Word, Excel, image — le texte extrait est aussi ajouté aux faits du dossier.</span>
           </div>
@@ -102,6 +93,8 @@ export default function AnalyserConclusionsPage() {
           </Button>
         </div>
       </div>
+
+      {choixEnAttente && <ChoixImportModal noms={choixEnAttente.noms} onChoisir={resoudreChoix} />}
 
       {loading && <SkeletonList count={3} />}
 
@@ -126,6 +119,8 @@ export default function AnalyserConclusionsPage() {
               </div>
             </div>
           )}
+          {data.diagnostic && <div className="card"><h2 className="mb-2 font-serif text-h4 text-gold-500">Diagnostic</h2><p className="whitespace-pre-wrap text-sm text-warmgray">{data.diagnostic}</p></div>}
+          {data.strategie && <div className="card"><h2 className="mb-2 font-serif text-h4 text-gold-500">Stratégie pour la partie représentée</h2><p className="whitespace-pre-wrap text-sm text-ivory">{data.strategie}</p></div>}
 
           {data.statut === "Final" && (
             <div className="rounded-md border border-gold-500/30 bg-gold-500/10 p-4 text-sm text-gold-500">

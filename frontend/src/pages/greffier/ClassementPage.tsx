@@ -2,17 +2,19 @@
  * ClassementPage — /greffier/classement. Classe un document selon sa
  * nature (assignation, jugement, ordonnance, conclusions, pièce, requête,
  * citation, procès-verbal, autre), avec une jauge de confiance et une
- * justification. Mêmes modalités de saisie (collage + upload conditionnel
- * au dossier actif) que ExtractionPage -- voir son en-tête pour le détail
- * de la contrainte backend.
+ * justification. Collage ou import de fichier (voir useImportTexte),
+ * indépendant de tout dossier (requiresDossier: false) -- un dossier actif
+ * reste optionnel, seulement pour aussi ajouter le texte à ses faits.
  */
 
 import { useState } from "react";
-import { dossiers as dossiersApi, greffier as greffierApi } from "@/api";
-import { useAppStore, useDossierActif } from "@/store/useAppStore";
+import { greffier as greffierApi } from "@/api";
+import { useDossierActif } from "@/store/useAppStore";
 import { useLazyAction } from "@/hooks/useLazyAction";
+import { useImportTexte } from "@/hooks/useImportTexte";
 import { EXTENSIONS_DOCUMENT } from "@/config/fichiers";
 import Button from "@/components/Button";
+import ChoixImportModal from "@/components/ChoixImportModal";
 import EmptyState from "@/components/EmptyState";
 import ErrorState from "@/components/ErrorState";
 import FileDropZone from "@/components/FileDropZone";
@@ -22,28 +24,16 @@ import { SkeletonList } from "@/components/Skeleton";
 
 export default function ClassementPage() {
   const dossierActif = useDossierActif();
-  const pousserToast = useAppStore((s) => s.pousserToast);
   const [texte, setTexte] = useState("");
-  const [enImport, setEnImport] = useState(false);
 
   const { data, loading, error, executer } = useLazyAction((t: string) => greffierApi.classement(t));
-
-  const importerFichier = async (fichier: File) => {
-    if (!dossierActif) return;
-    setEnImport(true);
-    try {
-      const resultat = await dossiersApi.importerDocument(dossierActif.id, fichier);
-      setTexte((precedent) => (precedent ? `${precedent}\n\n${resultat.texte_extrait}` : resultat.texte_extrait));
-      pousserToast(
-        "success",
-        `« ${resultat.nom_fichier} » importé (${resultat.caracteres_extraits.toLocaleString("fr-FR")} caractères) – également ajouté aux faits de « ${dossierActif.nom} ».`
-      );
-    } catch (e) {
-      pousserToast("error", e instanceof Error ? e.message : "Échec de l'import du fichier.");
-    } finally {
-      setEnImport(false);
-    }
-  };
+  // Page indépendante de tout dossier (requiresDossier: false) -- voir
+  // useImportTexte : dossier actif optionnel, extraireFichier sinon.
+  const { enImport, survole, dragProps, importerFichiers, choixEnAttente, resoudreChoix } = useImportTexte({
+    dossierId: dossierActif?.id ?? null,
+    getTexteActuel: () => texte,
+    onTexteExtrait: setTexte,
+  });
 
   const lancer = () => void executer(texte);
 
@@ -57,34 +47,36 @@ export default function ClassementPage() {
 
       <div className="card space-y-3 p-6">
         <textarea
-          className="input min-h-[220px] resize-y"
-          placeholder="Collez ici le texte du document à classer…"
+          {...dragProps}
+          className={`input min-h-[220px] resize-y ${survole ? "ring-2 ring-amethyst-400" : ""}`}
+          placeholder="Collez ici le texte du document à classer, ou déposez un fichier…"
           value={texte}
           onChange={(e) => setTexte(e.target.value)}
           disabled={loading || enImport}
         />
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-3">
-            {dossierActif ? (
-              <>
-                <FileDropZone
-                  variante="compact"
-                  extensions={EXTENSIONS_DOCUMENT}
-                  loading={enImport}
-                  disabled={loading}
-                  onFichiers={(fichiers) => void importerFichier(fichiers[0])}
-                />
-                <span className="text-xs text-muted">Le texte extrait sera aussi ajouté aux faits de « {dossierActif.nom} ».</span>
-              </>
-            ) : (
-              <span className="text-xs text-muted">Sélectionnez un dossier dans le bandeau du haut pour aussi pouvoir importer un fichier.</span>
-            )}
+            <FileDropZone
+              variante="compact"
+              extensions={EXTENSIONS_DOCUMENT}
+              multiple
+              loading={enImport}
+              disabled={loading}
+              onFichiers={importerFichiers}
+            />
+            <span className="text-xs text-muted">
+              {dossierActif
+                ? `Le texte extrait sera aussi ajouté aux faits de « ${dossierActif.nom} ».`
+                : "PDF, Word, Excel, image — le texte extrait est injecté ci-dessus."}
+            </span>
           </div>
           <Button variant="primary" loading={loading} disabled={!texte.trim() || enImport} onClick={lancer}>
             Classer
           </Button>
         </div>
       </div>
+
+      {choixEnAttente && <ChoixImportModal noms={choixEnAttente.noms} onChoisir={resoudreChoix} />}
 
       {loading && <SkeletonList count={1} />}
 

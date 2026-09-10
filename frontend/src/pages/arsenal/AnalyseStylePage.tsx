@@ -5,12 +5,14 @@
  */
 
 import { useState } from "react";
-import { analyse as analyseApi, dossiers as dossiersApi } from "@/api";
+import { analyse as analyseApi } from "@/api";
 import type { StyleResultat } from "@/api";
-import { useAppStore, useDossierActif } from "@/store/useAppStore";
+import { useDossierActif } from "@/store/useAppStore";
 import { useLazyAction } from "@/hooks/useLazyAction";
+import { useImportTexte } from "@/hooks/useImportTexte";
 import { EXTENSIONS_DOCUMENT } from "@/config/fichiers";
 import Button from "@/components/Button";
+import ChoixImportModal from "@/components/ChoixImportModal";
 import EmptyState from "@/components/EmptyState";
 import ErrorState from "@/components/ErrorState";
 import FileDropZone from "@/components/FileDropZone";
@@ -29,34 +31,18 @@ const SECTIONS: { key: CleSection; label: string; icone: string }[] = [
 
 export default function AnalyseStylePage() {
   const dossierActif = useDossierActif();
-  const pousserToast = useAppStore((s) => s.pousserToast);
   const [texte, setTexte] = useState("");
-  const [enImport, setEnImport] = useState(false);
 
   const { data, loading, error, executer, definirDonnees } = useLazyAction((t: string) => analyseApi.analyserStyle(t));
-
-  const importerFichier = async (fichier: File) => {
-    setEnImport(true);
-    try {
-      // Page indépendante de tout dossier (requiresDossier: false) -- un
-      // dossier actif reste optionnel : quand il y en a un, le texte extrait
-      // est aussi ajouté à ses faits (importerDocument) ; sinon, extraction
-      // seule (extraireFichier), sans rien écrire en base.
-      const resultat = dossierActif
-        ? await dossiersApi.importerDocument(dossierActif.id, fichier)
-        : await dossiersApi.extraireFichier(fichier);
-      setTexte((precedent) => (precedent ? `${precedent}\n\n${resultat.texte_extrait}` : resultat.texte_extrait));
-      const suffixe = dossierActif ? ` – également ajouté aux faits de « ${dossierActif.nom} ».` : "";
-      pousserToast(
-        "success",
-        `« ${resultat.nom_fichier} » importé (${resultat.caracteres_extraits.toLocaleString("fr-FR")} caractères)${suffixe}`
-      );
-    } catch (e) {
-      pousserToast("error", e instanceof Error ? e.message : "Échec de l'import du fichier.");
-    } finally {
-      setEnImport(false);
-    }
-  };
+  // Page indépendante de tout dossier (requiresDossier: false) -- un dossier
+  // actif reste optionnel : quand il y en a un, le texte extrait est aussi
+  // ajouté à ses faits (importerDocument) ; sinon, extraction seule
+  // (extraireFichier), sans rien écrire en base -- voir useImportTexte.
+  const { enImport, survole, dragProps, importerFichiers, choixEnAttente, resoudreChoix } = useImportTexte({
+    dossierId: dossierActif?.id ?? null,
+    getTexteActuel: () => texte,
+    onTexteExtrait: setTexte,
+  });
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
@@ -68,8 +54,9 @@ export default function AnalyseStylePage() {
 
       <div className="card space-y-3 p-6">
         <textarea
-          className="input min-h-[220px] resize-y"
-          placeholder="Collez ici le texte des conclusions adverses à analyser…"
+          {...dragProps}
+          className={`input min-h-[220px] resize-y ${survole ? "ring-2 ring-amethyst-400" : ""}`}
+          placeholder="Collez ici le texte des conclusions adverses à analyser, ou déposez un fichier…"
           value={texte}
           onChange={(e) => setTexte(e.target.value)}
           disabled={loading || enImport}
@@ -79,9 +66,10 @@ export default function AnalyseStylePage() {
             <FileDropZone
               variante="compact"
               extensions={EXTENSIONS_DOCUMENT}
+              multiple
               loading={enImport}
               disabled={loading}
-              onFichiers={(fichiers) => void importerFichier(fichiers[0])}
+              onFichiers={importerFichiers}
             />
             <span className="text-xs text-muted">
               {dossierActif
@@ -94,6 +82,8 @@ export default function AnalyseStylePage() {
           </Button>
         </div>
       </div>
+
+      {choixEnAttente && <ChoixImportModal noms={choixEnAttente.noms} onChoisir={resoudreChoix} />}
 
       {loading && <SkeletonList count={4} />}
 

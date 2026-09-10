@@ -12,15 +12,18 @@ import { analyse as analyseApi } from "@/api";
 import type { ConsulterResultat, StatutDocument } from "@/api";
 import { useAppStore, useDossierActif } from "@/store/useAppStore";
 import { useLazyAction } from "@/hooks/useLazyAction";
+import { useImportTexte } from "@/hooks/useImportTexte";
+import { EXTENSIONS_DOCUMENT } from "@/config/fichiers";
 import Button from "@/components/Button";
+import ChoixImportModal from "@/components/ChoixImportModal";
 import EmptyState from "@/components/EmptyState";
 import ErrorState from "@/components/ErrorState";
+import FileDropZone from "@/components/FileDropZone";
 import RichOutput from "@/components/RichOutput";
 import { SkeletonList } from "@/components/Skeleton";
 import ChatContextuelPanel from "@/components/chat/ChatContextuelPanel";
 import VerificationPanel from "@/components/VerificationPanel";
 import StatutDocumentMenu, { StatutDocumentBadge } from "@/components/StatutDocument";
-import PinButton from "@/components/PinButton";
 import { useAsync } from "@/hooks/useAsync";
 
 export default function ConsulterJurisprudencePage() {
@@ -42,6 +45,11 @@ export default function ConsulterJurisprudencePage() {
     [documentId, dossierActif?.id],
     aDocument && dossierActif !== null
   );
+  const { enImport, survole, dragProps, importerFichiers, choixEnAttente, resoudreChoix } = useImportTexte({
+    dossierId: dossierActif?.id ?? null,
+    getTexteActuel: () => question,
+    onTexteExtrait: setQuestion,
+  });
 
   useEffect(() => {
     if (!document || document.feature !== "jurisprudence_consultation" || document.dossier_id !== dossierActif?.id) return;
@@ -87,14 +95,28 @@ export default function ConsulterJurisprudencePage() {
             Situation ou question juridique
           </label>
           <textarea
+            {...dragProps}
             id="cj-question"
-            className="input min-h-[140px] resize-y"
-            placeholder="Ex. Un salarié peut-il être licencié pour avoir refusé une modification de son contrat de travail ?"
+            className={`input min-h-[140px] resize-y ${survole ? "ring-2 ring-amethyst-400" : ""}`}
+            placeholder="Ex. Un salarié peut-il être licencié pour avoir refusé une modification de son contrat de travail ? Ou déposez un fichier."
             value={question}
             onChange={(e) => setQuestion(e.target.value)}
-            disabled={loading}
+            disabled={loading || enImport}
           />
+          <div className="mt-2 flex flex-wrap items-center gap-3">
+            <FileDropZone
+              variante="compact"
+              extensions={EXTENSIONS_DOCUMENT}
+              multiple
+              loading={enImport}
+              disabled={loading}
+              onFichiers={importerFichiers}
+            />
+            <span className="text-xs text-muted">Le texte extrait sera aussi ajouté aux faits de « {dossierActif.nom} ».</span>
+          </div>
         </div>
+
+        {choixEnAttente && <ChoixImportModal noms={choixEnAttente.noms} onChoisir={resoudreChoix} />}
         <div>
           <label htmlFor="cj-but" className="mb-1.5 block text-sm text-warmgray">
             But de la recherche (optionnel)
@@ -121,7 +143,7 @@ export default function ConsulterJurisprudencePage() {
 
       {!loading && !documentLoading && !error && !documentError && data && (
         <div className="space-y-5">
-          <div className="flex items-center justify-between gap-3"><span className="text-sm text-warmgray">Consultation sauvegardée</span><div className="flex items-center gap-2"><StatutDocumentBadge statut={data.statut ?? "Brouillon"} /><StatutDocumentMenu statut={data.statut ?? "Brouillon"} loading={statutEnCours} onChange={changerStatut} /><PinButton type="document_genere" referenceId={data.document_id!} dossierId={dossierActif.id} libelle={`Consultation — ${dossierActif.nom}`} /></div></div>
+          <div className="flex items-center justify-between gap-3"><span className="text-sm text-warmgray">Consultation sauvegardée</span><div className="flex items-center gap-2"><StatutDocumentBadge statut={data.statut ?? "Brouillon"} /><StatutDocumentMenu statut={data.statut ?? "Brouillon"} loading={statutEnCours} onChange={changerStatut} /></div></div>
           <div className="card space-y-2 border-amethyst-400/30 p-5">
             <p className="text-micro font-medium uppercase tracking-wide text-amethyst-400">Notions identifiées</p>
             <div className="flex flex-wrap gap-2">
@@ -138,6 +160,9 @@ export default function ConsulterJurisprudencePage() {
           <div className="card p-6">
             <RichOutput texte={data.reponse} />
           </div>
+
+          {data.diagnostic && <div className="card"><h2 className="mb-2 font-serif text-h4 text-gold-500">Diagnostic</h2><p className="whitespace-pre-wrap text-sm text-warmgray">{data.diagnostic}</p></div>}
+          {data.strategie && <div className="card"><h2 className="mb-2 font-serif text-h4 text-gold-500">Stratégie pour la partie représentée</h2><p className="whitespace-pre-wrap text-sm text-ivory">{data.strategie}</p></div>}
 
           <VerificationPanel verification={data.verification} />
 

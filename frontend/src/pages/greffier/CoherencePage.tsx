@@ -6,12 +6,13 @@
  */
 
 import { useState } from "react";
-import { dossiers as dossiersApi, greffier as greffierApi } from "@/api";
+import { greffier as greffierApi } from "@/api";
 import type { Contradiction } from "@/api";
-import { useAppStore } from "@/store/useAppStore";
 import { useLazyAction } from "@/hooks/useLazyAction";
+import { useImportTexte } from "@/hooks/useImportTexte";
 import { EXTENSIONS_DOCUMENT } from "@/config/fichiers";
 import Button from "@/components/Button";
+import ChoixImportModal from "@/components/ChoixImportModal";
 import EmptyState from "@/components/EmptyState";
 import ErrorState from "@/components/ErrorState";
 import FileDropZone from "@/components/FileDropZone";
@@ -32,14 +33,69 @@ const CLASSE_GRAVITE: Record<string, string> = {
 };
 const ORDRE_GRAVITE: Record<string, number> = { Élevée: 0, Moyenne: 1, Faible: 2 };
 
+interface DocumentBrouillonCardProps {
+  doc: DocumentBrouillon;
+  index: number;
+  loading: boolean;
+  peutRetirer: boolean;
+  onChange: (patch: Partial<DocumentBrouillon>) => void;
+  onRetirer: () => void;
+}
+
+/** Une carte par document -- chacune gère son propre import (extraction
+ * seule, cette page ne dépend d'aucun dossier) pour ne pas bloquer les
+ * autres cartes pendant un import en cours. */
+function DocumentBrouillonCard({ doc, index, loading, peutRetirer, onChange, onRetirer }: DocumentBrouillonCardProps) {
+  const { enImport, survole, dragProps, importerFichiers, choixEnAttente, resoudreChoix } = useImportTexte({
+    dossierId: null,
+    getTexteActuel: () => doc.texte,
+    onTexteExtrait: (texte) => onChange({ texte }),
+  });
+
+  return (
+    <div className="card space-y-3 p-5">
+      <div className="flex items-center justify-between gap-3">
+        <input
+          className="input max-w-xs font-medium"
+          value={doc.nomDocument}
+          onChange={(e) => onChange({ nomDocument: e.target.value })}
+          placeholder={`Document ${index + 1}`}
+          disabled={loading}
+        />
+        {peutRetirer && (
+          <button onClick={onRetirer} className="text-xs text-muted hover:text-risk-high" disabled={loading}>
+            ✕ Retirer
+          </button>
+        )}
+      </div>
+      <textarea
+        {...dragProps}
+        className={`input min-h-[140px] resize-y ${survole ? "ring-2 ring-amethyst-400" : ""}`}
+        placeholder="Collez ici le texte de ce document, ou déposez un fichier…"
+        value={doc.texte}
+        onChange={(e) => onChange({ texte: e.target.value })}
+        disabled={loading || enImport}
+      />
+      <FileDropZone
+        variante="compact"
+        extensions={EXTENSIONS_DOCUMENT}
+        multiple
+        loading={enImport}
+        disabled={loading}
+        className="text-xs"
+        onFichiers={importerFichiers}
+      />
+      {choixEnAttente && <ChoixImportModal noms={choixEnAttente.noms} onChoisir={resoudreChoix} />}
+    </div>
+  );
+}
+
 function nouveauDocument(numero: number): DocumentBrouillon {
   return { id: `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`, nomDocument: `Document ${numero}`, texte: "" };
 }
 
 export default function CoherencePage() {
-  const pousserToast = useAppStore((s) => s.pousserToast);
   const [documents, setDocuments] = useState<DocumentBrouillon[]>([nouveauDocument(1), nouveauDocument(2)]);
-  const [idEnImport, setIdEnImport] = useState<string | null>(null);
 
   const { data, loading, error, executer, definirDonnees } = useLazyAction((docs: { nom_document: string; texte: string }[]) =>
     greffierApi.controleCoherence(docs)
@@ -47,19 +103,6 @@ export default function CoherencePage() {
 
   const majDocument = (id: string, patch: Partial<DocumentBrouillon>) =>
     setDocuments((liste) => liste.map((d) => (d.id === id ? { ...d, ...patch } : d)));
-
-  const importerFichier = async (id: string, fichier: File) => {
-    setIdEnImport(id);
-    try {
-      const resultat = await dossiersApi.extraireFichier(fichier);
-      majDocument(id, { texte: resultat.texte_extrait });
-      pousserToast("success", `« ${resultat.nom_fichier} » importé (${resultat.caracteres_extraits.toLocaleString("fr-FR")} caractères).`);
-    } catch (e) {
-      pousserToast("error", e instanceof Error ? e.message : "Échec de l'import du fichier.");
-    } finally {
-      setIdEnImport(null);
-    }
-  };
 
   const ajouterDocument = () => setDocuments((liste) => [...liste, nouveauDocument(liste.length + 1)]);
 
@@ -85,37 +128,15 @@ export default function CoherencePage() {
 
       <div className="space-y-4">
         {documents.map((doc, i) => (
-          <div key={doc.id} className="card space-y-3 p-5">
-            <div className="flex items-center justify-between gap-3">
-              <input
-                className="input max-w-xs font-medium"
-                value={doc.nomDocument}
-                onChange={(e) => majDocument(doc.id, { nomDocument: e.target.value })}
-                placeholder={`Document ${i + 1}`}
-                disabled={loading}
-              />
-              {documents.length > 2 && (
-                <button onClick={() => retirerDocument(doc.id)} className="text-xs text-muted hover:text-risk-high" disabled={loading}>
-                  ✕ Retirer
-                </button>
-              )}
-            </div>
-            <textarea
-              className="input min-h-[140px] resize-y"
-              placeholder="Collez ici le texte de ce document…"
-              value={doc.texte}
-              onChange={(e) => majDocument(doc.id, { texte: e.target.value })}
-              disabled={loading || idEnImport === doc.id}
-            />
-            <FileDropZone
-              variante="compact"
-              extensions={EXTENSIONS_DOCUMENT}
-              loading={idEnImport === doc.id}
-              disabled={loading || (idEnImport !== null && idEnImport !== doc.id)}
-              className="text-xs"
-              onFichiers={(fichiers) => void importerFichier(doc.id, fichiers[0])}
-            />
-          </div>
+          <DocumentBrouillonCard
+            key={doc.id}
+            doc={doc}
+            index={i}
+            loading={loading}
+            peutRetirer={documents.length > 2}
+            onChange={(patch) => majDocument(doc.id, patch)}
+            onRetirer={() => retirerDocument(doc.id)}
+          />
         ))}
 
         <div className="flex flex-wrap items-center justify-between gap-3">
