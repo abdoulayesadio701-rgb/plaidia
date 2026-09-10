@@ -16,6 +16,9 @@ export interface Dossier {
   domaine?: string;
   parties?: string;
   faits?: string;
+  partie_representee?: string;
+  stade_procedure?: string;
+  objectif?: string;
   statut: string;
   date_creation: string;
 }
@@ -26,6 +29,9 @@ export interface DossierCreateInput {
   domaine?: string;
   parties?: string;
   faits?: string;
+  partie_representee?: string;
+  stade_procedure?: string;
+  objectif?: string;
 }
 
 export interface DocumentImporte {
@@ -107,6 +113,8 @@ export interface ConclusionsResultat {
   points_attention: string[];
   analyse_id?: number | null;
   verification?: Verification | null;
+  diagnostic?: string;
+  strategie?: string;
   statut: StatutDocument;
 }
 
@@ -131,6 +139,8 @@ export interface PlanResultat {
   conclusion: string;
   points_attention: string[];
   verification?: Verification | null;
+  diagnostic?: string;
+  strategie?: string;
   document_id?: number | null;
   statut?: StatutDocument;
 }
@@ -146,6 +156,8 @@ export interface SimulateurResultat {
   objections: Objection[];
   point_le_plus_faible: string;
   verification?: Verification | null;
+  diagnostic?: string;
+  strategie?: string;
   document_id?: number | null;
   statut?: StatutDocument;
 }
@@ -190,6 +202,8 @@ export interface ConsulterResultat {
   notions: Notions;
   reponse: string;
   verification?: Verification | null;
+  diagnostic?: string;
+  strategie?: string;
   document_id?: number | null;
   statut?: StatutDocument;
 }
