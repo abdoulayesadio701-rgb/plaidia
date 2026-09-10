@@ -224,6 +224,10 @@
     @apply relative h-[clamp(260px,38vw,420px)] overflow-hidden p-5;
   }
 
+  .window-content > .card {
+    @apply m-0 w-full;
+  }
+
   .window-content-fade {
     @apply pointer-events-none absolute inset-x-0 bottom-0 h-20;
     background: linear-gradient(to top, rgb(var(--color-surface)) 0%, rgb(var(--color-surface) / 0.92) 30%, transparent 100%);

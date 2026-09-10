@@ -158,7 +158,7 @@ export default function LandingPage() {
           </h1>
           <p className="max-w-prose text-base leading-relaxed text-warmgray sm:text-lg">
             Plaid'IA analyse des conclusions adverses, chronomètre un plan de plaidoirie, simule les objections du
-            magistrat et vérifie la procédure — avec, sur les analyses les plus sensibles, plusieurs contrôles
+            magistrat et vérifie la procédure, avec, sur les analyses les plus sensibles, plusieurs contrôles
             indépendants qui vérifient chaque réponse avant qu'elle ne s'affiche.
           </p>
           <div className="flex flex-wrap items-center gap-4 pt-2">
@@ -178,7 +178,7 @@ export default function LandingPage() {
         </div>
 
         {/* Fenêtre produit -- la thèse visuelle, pas un fond abstrait (DESIGN.md §4) */}
-        <div className="relative z-10 lg:rotate-1">
+        <div className="relative z-10">
           <div className="window">
             <div className="window-bar">
               <span className="window-dot" />
@@ -187,7 +187,7 @@ export default function LandingPage() {
               <span className="ml-2 text-xs text-warmgray">Analyser des conclusions adverses</span>
             </div>
                 <div className="window-content">
-              <ArgumentCard argument={ARGUMENT_VITRINE} index={0} />
+                  <ArgumentCard argument={ARGUMENT_VITRINE} index={0} />
                   <div className="window-content-fade" aria-hidden="true" />
             </div>
           </div>
