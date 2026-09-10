@@ -23,6 +23,7 @@ export default function AppLayout() {
   const chargerSourcesJuridictions = useAppStore((s) => s.chargerSourcesJuridictions);
   const chargerCompteursAttente = useAppStore((s) => s.chargerCompteursAttente);
   const chargerConfiguration = useAppStore((s) => s.chargerConfiguration);
+  const chargerEpingles = useAppStore((s) => s.chargerEpingles);
   const definirSidebarRepliee = useAppStore((s) => s.definirSidebarRepliee);
 
   useSuivreRecents();
@@ -33,6 +34,7 @@ export default function AppLayout() {
     void chargerSourcesJuridictions();
     void chargerCompteursAttente();
     void chargerConfiguration();
+    void chargerEpingles();
     // Repli par défaut sur petit écran (< 768px) : une barre latérale de
     // 288px fixe ne laisserait presque rien au contenu sur un téléphone --
     // un simple réglage initial, pas un comportement forcé (l'avocat peut

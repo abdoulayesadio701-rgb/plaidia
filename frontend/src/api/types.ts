@@ -387,6 +387,21 @@ export type ChatStreamEvent =
   | { event: "error"; data: { detail: string } };
 
 // ---------------------------------------------------------------------
+// Épinglage (backend/app/schemas/epingles.py)
+// ---------------------------------------------------------------------
+
+export type TypeEpingle = "dossier" | "analyse";
+
+export interface ElementEpingle {
+  id: number;
+  type: TypeEpingle;
+  reference_id: number;
+  dossier_id?: number | null;
+  libelle: string;
+  date_creation: string;
+}
+
+// ---------------------------------------------------------------------
 // Intention (backend/app/schemas/intention.py)
 // ---------------------------------------------------------------------
 

@@ -9,6 +9,7 @@ export * as notes from "./notes";
 export * as greffier from "./greffier";
 export * as chat from "./chat";
 export * as intention from "./intention";
+export * as epingles from "./epingles";
 export * as config from "./config";
 
 export { ApiError, downloadBlob } from "./http";

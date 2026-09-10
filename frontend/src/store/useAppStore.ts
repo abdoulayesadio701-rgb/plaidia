@@ -11,11 +11,12 @@ import { create } from "zustand";
 import {
   config as configApi,
   dossiers as dossiersApi,
+  epingles as epinglesApi,
   jurisprudence as jurisprudenceApi,
   definirClePersonnelle as ecrireClePersonnelle,
   obtenirClePersonnelle,
 } from "@/api";
-import type { Dossier, MessageChat } from "@/api";
+import type { Dossier, ElementEpingle, MessageChat, TypeEpingle } from "@/api";
 import type { Espace } from "@/config/navigation";
 
 export type ToastType = "info" | "success" | "error";
@@ -88,6 +89,13 @@ interface AppState {
   toasts: Toast[];
   pousserToast: (type: ToastType, message: string) => void;
   retirerToast: (id: string) => void;
+
+  // --- Épinglage (voir AUDIT_TASKBAR.md, étape 2) -----------------------
+  epingles: ElementEpingle[];
+  epinglesCharges: boolean;
+  chargerEpingles: () => Promise<void>;
+  epinglerElement: (type: TypeEpingle, referenceId: number, libelle: string, dossierId?: number | null) => Promise<void>;
+  desepinglerElement: (pinId: number) => Promise<void>;
 }
 
 const JURIDICTION_PAR_DEFAUT = "Légifrance (France)";
@@ -245,7 +253,47 @@ export const useAppStore = create<AppState>((set, get) => ({
     }
   },
   retirerToast: (id) => set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })),
+
+  epingles: [],
+  epinglesCharges: false,
+
+  chargerEpingles: async () => {
+    try {
+      const liste = await epinglesApi.listerEpingles();
+      set({ epingles: liste, epinglesCharges: true });
+    } catch {
+      // Le panneau "Épinglés" reste simplement vide si le backend n'est pas
+      // joignable -- jamais bloquant pour le reste de l'app.
+      set({ epinglesCharges: true });
+    }
+  },
+
+  epinglerElement: async (type, referenceId, libelle, dossierId) => {
+    try {
+      const pin = await epinglesApi.epingler(type, referenceId, libelle, dossierId);
+      set((s) => (s.epingles.some((e) => e.id === pin.id) ? s : { epingles: [pin, ...s.epingles] }));
+    } catch (e) {
+      get().pousserToast("error", e instanceof Error ? e.message : "Impossible d'épingler cet élément.");
+    }
+  },
+
+  desepinglerElement: async (pinId) => {
+    const avant = get().epingles;
+    set({ epingles: avant.filter((e) => e.id !== pinId) }); // optimiste
+    try {
+      await epinglesApi.desepingler(pinId);
+    } catch (e) {
+      set({ epingles: avant }); // annule l'optimisme si l'appel échoue réellement
+      get().pousserToast("error", e instanceof Error ? e.message : "Impossible de désépingler cet élément.");
+    }
+  },
 }));
+
+/** L'id du pin existant pour cet élément, ou null -- pour que PinButton
+ * sache s'il faut afficher 📌 (épingler) ou 📍 (désépingler). */
+export function useIdEpingle(type: TypeEpingle, referenceId: number): number | null {
+  return useAppStore((s) => s.epingles.find((e) => e.type === type && e.reference_id === referenceId)?.id ?? null);
+}
 
 /** Le dossier actif complet (ou null), dérivé de dossierActifId + dossiers. */
 export function useDossierActif(): Dossier | null {

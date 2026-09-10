@@ -16,6 +16,7 @@ import ArgumentCard from "@/components/ArgumentCard";
 import EmptyState from "@/components/EmptyState";
 import ErrorState from "@/components/ErrorState";
 import FileDropZone from "@/components/FileDropZone";
+import PinButton from "@/components/PinButton";
 import RichOutput from "@/components/RichOutput";
 import { SkeletonList } from "@/components/Skeleton";
 import ChatContextuelPanel from "@/components/chat/ChatContextuelPanel";
@@ -91,7 +92,17 @@ export default function AnalyserConclusionsPage() {
 
       {!loading && !error && data && (
         <div className="space-y-5">
-          {data.analyse_id != null && <p className="text-xs text-warmgray">✓ Enregistré dans l'historique de ce dossier.</p>}
+          {data.analyse_id != null && (
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-warmgray">✓ Enregistré dans l'historique de ce dossier.</p>
+              <PinButton
+                type="analyse"
+                referenceId={data.analyse_id}
+                dossierId={dossierActif.id}
+                libelle={`Analyse — ${dossierActif.nom}`}
+              />
+            </div>
+          )}
 
           {data.arguments.length === 0 ? (
             <EmptyState

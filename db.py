@@ -97,6 +97,16 @@ CREATE TABLE IF NOT EXISTS parametres (
     cle TEXT PRIMARY KEY,
     valeur TEXT
 );
+
+CREATE TABLE IF NOT EXISTS elements_epingles (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    type TEXT NOT NULL,            -- "dossier" | "analyse" (voir app/schemas/epingles.py pour la liste à jour)
+    reference_id INTEGER NOT NULL, -- id du dossier ou de l'analyse épinglé
+    dossier_id INTEGER,            -- dossier associé, pour le nettoyage en cascade et l'affichage groupé
+    libelle TEXT NOT NULL,         -- capturé au moment de l'épinglage -- jamais recalculé depuis l'original,
+                                    -- l'épinglage est un raccourci, pas une copie du contenu
+    date_creation TEXT NOT NULL
+);
 """
 
 
@@ -128,6 +138,7 @@ def _migrer_colonnes_manquantes(conn):
 
 
 TABLES = (
+    "elements_epingles",
     "parametres",
     "conversations_chat",
     "corpus_juridique",
@@ -202,8 +213,16 @@ def update_statut(dossier_id, statut):
 
 def delete_dossier(dossier_id):
     """Supprime un dossier et, grâce à ON DELETE CASCADE, toutes ses
-    analyses liées. Irréversible."""
+    analyses liées. Irréversible.
+
+    elements_epingles n'a pas de contrainte FK déclarée (son "type" pointe
+    vers l'une ou l'autre table selon le cas, une seule FK ne conviendrait
+    pas) -- son nettoyage est donc fait explicitement ici plutôt que par
+    SQLite : tout pin (dossier ou analyse) rattaché à ce dossier_id doit
+    disparaître avec lui, jamais l'inverse (désépingler ne supprime jamais
+    l'original -- voir epingler() ci-dessous)."""
     conn = get_connection()
+    conn.execute("DELETE FROM elements_epingles WHERE dossier_id = ?", (dossier_id,))
     conn.execute("DELETE FROM dossiers WHERE id = ?", (dossier_id,))
     conn.commit()
     conn.close()
@@ -634,6 +653,50 @@ def set_parametre(cle, valeur):
     )
     conn.commit()
     conn.close()
+
+
+# --- Épinglage ----------------------------------------------------------
+# Un pin est un simple pointeur (type + reference_id), jamais une copie du
+# contenu épinglé -- désépingler (supprimer_epingle) ne touche jamais
+# l'original, et supprimer l'original (voir delete_dossier ci-dessus)
+# nettoie le(s) pin(s) qui le référençaient.
+
+def epingler(type_element: str, reference_id: int, dossier_id: int | None, libelle: str) -> int:
+    conn = get_connection()
+    cur = conn.execute(
+        "INSERT INTO elements_epingles (type, reference_id, dossier_id, libelle, date_creation) VALUES (?, ?, ?, ?, ?)",
+        (type_element, reference_id, dossier_id, libelle, datetime.now().isoformat(timespec="seconds")),
+    )
+    conn.commit()
+    pin_id = cur.lastrowid
+    conn.close()
+    return pin_id
+
+
+def desepingler(pin_id: int) -> None:
+    conn = get_connection()
+    conn.execute("DELETE FROM elements_epingles WHERE id = ?", (pin_id,))
+    conn.commit()
+    conn.close()
+
+
+def lister_epingles() -> list:
+    conn = get_connection()
+    rows = conn.execute("SELECT * FROM elements_epingles ORDER BY date_creation DESC").fetchall()
+    conn.close()
+    return rows
+
+
+def deja_epingle(type_element: str, reference_id: int):
+    """Retourne la ligne du pin existant pour cet élément, ou None -- pour
+    que le front sache s'il faut afficher 📌 (épingler) ou 📍 (désépingler)
+    sans avoir à charger toute la liste à chaque bouton."""
+    conn = get_connection()
+    row = conn.execute(
+        "SELECT * FROM elements_epingles WHERE type = ? AND reference_id = ?", (type_element, reference_id)
+    ).fetchone()
+    conn.close()
+    return row
 
 
 if __name__ == "__main__":

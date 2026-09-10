@@ -17,6 +17,7 @@ import ErrorState from "@/components/ErrorState";
 import NouveauDossierModal from "@/components/NouveauDossierModal";
 import ModifierDomaineModal from "@/components/ModifierDomaineModal";
 import ConfirmerSuppressionModal from "@/components/ConfirmerSuppressionModal";
+import PinButton from "@/components/PinButton";
 import RechercheDossierResultats from "@/components/RechercheDossierResultats";
 import { SkeletonBlock } from "@/components/Skeleton";
 import justitiaPortrait from "@/assets/justitia-banniere.jpg";
@@ -243,6 +244,7 @@ function CarteDossier({ dossier, onOuvrir, onModifierDomaine, onSupprimer }: Car
       <div className="flex items-center justify-between gap-3 pt-1">
         <span className="text-xs text-warmgray">{formaterDate(dossier.date_creation)}</span>
         <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
+          <PinButton type="dossier" referenceId={dossier.id} libelle={dossier.nom} />
           <button
             onClick={onModifierDomaine}
             className="rounded-md px-2 py-1 text-xs text-gold-500 transition-colors hover:bg-surface-2"
