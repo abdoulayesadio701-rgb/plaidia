@@ -18,7 +18,7 @@ Start-Process powershell.exe -WorkingDirectory $frontend -ArgumentList @(
 ) -WindowStyle Normal
 
 function Wait-ForUrl([string]$url, [string]$name) {
-    for ($attempt = 1; $attempt -le 60; $attempt++) {
+    for ($attempt = 1; $attempt -le 180; $attempt++) {
         try {
             $response = Invoke-WebRequest -Uri $url -UseBasicParsing -TimeoutSec 2
             if ($response.StatusCode -ge 200 -and $response.StatusCode -lt 500) {
@@ -28,9 +28,12 @@ function Wait-ForUrl([string]$url, [string]$name) {
         } catch {
             # Le serveur est encore en démarrage.
         }
+        if ($attempt % 15 -eq 0) {
+            Write-Host "$name démarre toujours... ($attempt/180 secondes)"
+        }
         Start-Sleep -Seconds 1
     }
-    throw "$name n'est pas devenu disponible après 60 secondes : $url"
+    throw "$name n'est pas devenu disponible après 180 secondes : $url"
 }
 
 Wait-ForUrl $backendUrl "Backend FastAPI"
