@@ -15,6 +15,10 @@ import Button from "@/components/Button";
 import ArgumentCard from "@/components/ArgumentCard";
 import type { Argument } from "@/api";
 import justitiaBanniere from "@/assets/justitia-banniere.jpg";
+import gardeFouSecurite from "@/assets/garde-fou-securite.jpg";
+import gardeFouIntention from "@/assets/garde-fou-intention.jpg";
+import gardeFouVerification from "@/assets/garde-fou-verification.jpg";
+import gardeFouCritique from "@/assets/garde-fou-critique.jpg";
 import {
   IllustrationAnalyser,
   IllustrationChat,
@@ -263,14 +267,60 @@ export default function LandingPage() {
 
         <div className="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
           {[
-            { icone: "🛡", titre: "Sécurité", texte: "Contrôle la demande — hors-sujet, ambiguë ou manipulatrice — avant qu'elle n'atteigne un agent d'analyse." },
-            { icone: "🎯", titre: "Intention", texte: "Comprend ce qui est réellement demandé, et détermine si la question appelle une vérification approfondie." },
-            { icone: "📚", titre: "Vérification juridique", texte: "Confronte chaque référence citée aux sources réellement disponibles — jamais une confirmation de complaisance." },
-            { icone: "⚖", titre: "Critique", texte: "Joue le contradicteur : cherche activement les faiblesses du raisonnement, comme le ferait la partie adverse." },
-            { icone: "✓", titre: "Validation", texte: "Consolide les deux contrôles précédents en un statut clair — sans jamais inventer une source pour combler un doute." },
+            {
+              icone: "🛡",
+              titre: "Sécurité",
+              texte: "Contrôle la demande — hors-sujet, ambiguë ou manipulatrice — avant qu'elle n'atteigne un agent d'analyse.",
+              photo: gardeFouSecurite,
+              photoAlt: "Armure métallique ancienne, faiblement éclairée dans la pénombre",
+            },
+            {
+              icone: "🎯",
+              titre: "Intention",
+              texte: "Comprend ce qui est réellement demandé, et détermine si la question appelle une vérification approfondie.",
+              photo: gardeFouIntention,
+              photoAlt: "Fléchette plantée au centre d'une cible, sur fond sombre",
+            },
+            {
+              icone: "📚",
+              titre: "Vérification juridique",
+              texte: "Confronte chaque référence citée aux sources réellement disponibles — jamais une confirmation de complaisance.",
+              photo: gardeFouVerification,
+              photoAlt: "Statuette de la Justice, un marteau de juge et un livre de droit ouvert",
+            },
+            {
+              icone: "⚖",
+              titre: "Critique",
+              texte: "Joue le contradicteur : cherche activement les faiblesses du raisonnement, comme le ferait la partie adverse.",
+              photo: gardeFouCritique,
+              photoAlt: "Deux pièces d'échecs, roi et reine, face à face sur un échiquier",
+            },
+            {
+              icone: "✓",
+              titre: "Validation",
+              texte: "Consolide les deux contrôles précédents en un statut clair — sans jamais inventer une source pour combler un doute.",
+              photo: null,
+              photoAlt: "",
+            },
           ].map((etape) => (
-            <div key={etape.titre} className="card space-y-2 p-5 text-center">
-              <p className="text-2xl" aria-hidden="true">{etape.icone}</p>
+            <div
+              key={etape.titre}
+              className={`card overflow-hidden space-y-2 p-5 text-center ${!etape.photo ? "flex h-full flex-col justify-center" : ""}`}
+            >
+              {etape.photo && (
+                <div className="relative -mx-5 -mt-5 mb-1 aspect-[4/3] overflow-hidden">
+                  <img src={etape.photo} alt={etape.photoAlt} className="h-full w-full object-cover" loading="lazy" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-amethyst-700/80 via-amethyst-700/10 to-transparent" aria-hidden="true" />
+                  <p className="absolute bottom-2 left-1/2 -translate-x-1/2 text-2xl" aria-hidden="true">
+                    {etape.icone}
+                  </p>
+                </div>
+              )}
+              {!etape.photo && (
+                <p className="text-2xl" aria-hidden="true">
+                  {etape.icone}
+                </p>
+              )}
               <p className="text-sm font-semibold text-ivory">{etape.titre}</p>
               <p className="text-xs leading-relaxed text-warmgray">{etape.texte}</p>
             </div>
