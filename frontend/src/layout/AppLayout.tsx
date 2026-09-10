@@ -8,7 +8,9 @@
 import { useEffect } from "react";
 import { Outlet } from "react-router-dom";
 import { useAppStore } from "@/store/useAppStore";
+import { useSuivreRecents } from "@/hooks/useSuivreRecents";
 import TopBar from "./TopBar";
+import TaskBar from "./TaskBar";
 import CommandBar from "./CommandBar";
 import Sidebar from "./Sidebar";
 import StatusBar from "./StatusBar";
@@ -22,6 +24,8 @@ export default function AppLayout() {
   const chargerCompteursAttente = useAppStore((s) => s.chargerCompteursAttente);
   const chargerConfiguration = useAppStore((s) => s.chargerConfiguration);
   const definirSidebarRepliee = useAppStore((s) => s.definirSidebarRepliee);
+
+  useSuivreRecents();
 
   useEffect(() => {
     void chargerDossiers();
@@ -45,6 +49,7 @@ export default function AppLayout() {
     <div className="flex h-screen flex-col overflow-hidden bg-void text-ivory">
       <DemoBanner />
       <TopBar />
+      <TaskBar />
       <CommandBar />
       <div className="flex flex-1 overflow-hidden">
         <Sidebar />
