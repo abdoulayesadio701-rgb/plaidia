@@ -230,6 +230,11 @@ def chat_contextuel(payload: ChatContextuelIn):
     if action["intent"] in ("modify", "add", "delete"):
         try:
             chat_actions.valider_action(payload.feature, action["scope"], action["operation"], payload.resultat_actuel)
+            if payload.feature == "conclusions" and payload.resultat_actuel.get("analyse_id") is not None:
+                try:
+                    db.verifier_analyse_modifiable(payload.resultat_actuel["analyse_id"])
+                except db.DocumentFinalError as e:
+                    raise HTTPException(status_code=409, detail=str(e)) from e
             resultat_modifie = chat_actions.appliquer_patch(
                 payload.resultat_actuel, action["scope"], action["operation"], action["contenu_modifie"]
             )

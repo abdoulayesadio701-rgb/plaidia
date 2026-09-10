@@ -5,9 +5,11 @@
  * GET /api/dossiers/{id}/analyses).
  */
 
-import { dossiers as dossiersApi } from "@/api";
+import { useEffect, useState } from "react";
+import { analyse as analyseApi, dossiers as dossiersApi } from "@/api";
+import type { StatutDocument } from "@/api";
 import { chat as chatApi } from "@/api";
-import { useDossierActif } from "@/store/useAppStore";
+import { useAppStore, useDossierActif } from "@/store/useAppStore";
 import { useAsync } from "@/hooks/useAsync";
 import { Link } from "react-router-dom";
 import ArgumentCard from "@/components/ArgumentCard";
@@ -15,6 +17,7 @@ import Accordion from "@/components/Accordion";
 import EmptyState from "@/components/EmptyState";
 import ErrorState from "@/components/ErrorState";
 import { SkeletonList } from "@/components/Skeleton";
+import StatutDocumentMenu, { StatutDocumentBadge } from "@/components/StatutDocument";
 
 function formaterDate(iso: string): string {
   try {
@@ -26,6 +29,9 @@ function formaterDate(iso: string): string {
 
 export default function HistoriqueDossierPage() {
   const dossierActif = useDossierActif();
+  const pousserToast = useAppStore((s) => s.pousserToast);
+  const [statuts, setStatuts] = useState<Record<number, StatutDocument>>({});
+  const [statutEnCours, setStatutEnCours] = useState<number | null>(null);
 
   const { data: analyses, loading, error, reload } = useAsync(
     () => dossiersApi.historiqueAnalyses(dossierActif!.id),
@@ -43,6 +49,23 @@ export default function HistoriqueDossierPage() {
     [dossierActif?.id],
     dossierActif !== null
   );
+
+  useEffect(() => {
+    if (analyses) setStatuts(Object.fromEntries(analyses.map((analyse) => [analyse.id, analyse.statut])));
+  }, [analyses]);
+
+  const changerStatut = async (analyseId: number, statut: StatutDocument) => {
+    setStatutEnCours(analyseId);
+    try {
+      await analyseApi.changerStatutConclusion(analyseId, statut);
+      setStatuts((precedents) => ({ ...precedents, [analyseId]: statut }));
+      pousserToast("success", `Document passé au statut « ${statut} ».`);
+    } catch (e) {
+      pousserToast("error", e instanceof Error ? e.message : "Impossible de changer le statut.");
+    } finally {
+      setStatutEnCours(null);
+    }
+  };
 
   if (!dossierActif) {
     return <EmptyState titre="Aucun dossier sélectionné" description="Sélectionnez ou créez un dossier pour consulter sa fiche et son historique." />;
@@ -133,19 +156,28 @@ export default function HistoriqueDossierPage() {
             ouvertParDefaut={analyses[0].id}
             items={analyses.map((a) => ({
               id: a.id,
-              header: (
-                <div className="flex flex-wrap items-center gap-3">
-                  <span className="text-sm font-medium text-ivory">{formaterDate(a.date)}</span>
-                  <span className="text-xs text-warmgray">
-                    {a.arguments.length} argument{a.arguments.length > 1 ? "s" : ""}
-                  </span>
-                  {a.points_attention.length > 0 && (
-                    <span className="badge border-risk-high/30 bg-risk-high/10 text-risk-high">{a.points_attention.length} point(s) d'attention</span>
-                  )}
-                </div>
-              ),
+              header: (() => {
+                const statut = statuts[a.id] ?? a.statut;
+                return (
+                  <div className="flex flex-wrap items-center gap-3">
+                    <span className="text-sm font-medium text-ivory">{formaterDate(a.date)}</span>
+                    <StatutDocumentBadge statut={statut} />
+                    <span className="text-xs text-warmgray">
+                      {a.arguments.length} argument{a.arguments.length > 1 ? "s" : ""}
+                    </span>
+                    {a.points_attention.length > 0 && (
+                      <span className="badge border-risk-high/30 bg-risk-high/10 text-risk-high">{a.points_attention.length} point(s) d'attention</span>
+                    )}
+                  </div>
+                );
+              })(),
               content: (
                 <div className="space-y-4">
+                  <StatutDocumentMenu
+                    statut={statuts[a.id] ?? a.statut}
+                    loading={statutEnCours === a.id}
+                    onChange={(statut) => changerStatut(a.id, statut)}
+                  />
                   {a.arguments.map((arg, i) => (
                     <ArgumentCard key={i} argument={arg} index={i} />
                   ))}

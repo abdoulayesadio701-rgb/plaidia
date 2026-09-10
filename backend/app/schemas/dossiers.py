@@ -51,3 +51,4 @@ class AnalyseHistoriqueOut(BaseModel):
     date: str
     arguments: list[dict]
     points_attention: list[str]
+    statut: str = "Brouillon"

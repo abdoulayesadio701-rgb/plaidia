@@ -41,6 +41,7 @@ CREATE TABLE IF NOT EXISTS analyses (
     date TEXT NOT NULL,
     arguments_json TEXT NOT NULL,
     points_attention_json TEXT,
+    statut TEXT NOT NULL DEFAULT 'Brouillon',
     FOREIGN KEY (dossier_id) REFERENCES dossiers(id) ON DELETE CASCADE
 );
 
@@ -146,6 +147,12 @@ def _migrer_colonnes_manquantes(conn):
     colonnes_existantes = {row["name"] for row in cur.fetchall()}
     if "numero_dossier" not in colonnes_existantes:
         conn.execute("ALTER TABLE dossiers ADD COLUMN numero_dossier TEXT")
+        conn.commit()
+
+    cur = conn.execute("PRAGMA table_info(analyses)")
+    colonnes_existantes = {row["name"] for row in cur.fetchall()}
+    if "statut" not in colonnes_existantes:
+        conn.execute("ALTER TABLE analyses ADD COLUMN statut TEXT NOT NULL DEFAULT 'Brouillon'")
         conn.commit()
 
     cur = conn.execute("PRAGMA table_info(conversations_chat)")
@@ -347,8 +354,84 @@ def get_analyses_for_dossier(dossier_id):
             "date": r["date"],
             "arguments": json.loads(r["arguments_json"]),
             "points_attention": json.loads(r["points_attention_json"] or "[]"),
+            "statut": r["statut"],
         })
     return result
+
+
+# --- Cycle de vie des documents ----------------------------------------
+
+STATUTS_DOCUMENT = ("Brouillon", "En cours", "En révision", "Validé", "Final")
+_TRANSITIONS_DOCUMENT = {
+    statut: (
+        {statut}
+        if statut == "Final"
+        else {statut}
+        | ({STATUTS_DOCUMENT[index - 1]} if index > 0 else set())
+        | ({STATUTS_DOCUMENT[index + 1]} if index < len(STATUTS_DOCUMENT) - 1 else set())
+    )
+    for index, statut in enumerate(STATUTS_DOCUMENT)
+}
+
+
+class TransitionStatutInvalide(ValueError):
+    """Transition de cycle de vie non autorisée."""
+
+
+class DocumentFinalError(ValueError):
+    """Modification refusée sur un document finalisé."""
+
+
+def valider_transition_statut(statut_actuel: str, nouveau_statut: str) -> str:
+    """Valide une transition adjacente, partagée par tous les documents."""
+    if statut_actuel not in STATUTS_DOCUMENT:
+        raise TransitionStatutInvalide(f"Statut actuel inconnu : {statut_actuel}.")
+    if nouveau_statut not in STATUTS_DOCUMENT:
+        raise TransitionStatutInvalide(f"Statut cible inconnu : {nouveau_statut}.")
+    if nouveau_statut not in _TRANSITIONS_DOCUMENT[statut_actuel]:
+        raise TransitionStatutInvalide(
+            f"Transition impossible : {statut_actuel} -> {nouveau_statut}. "
+            "Les transitions se font étape par étape et un document Final est définitif."
+        )
+    return nouveau_statut
+
+
+def get_analyse(analyse_id):
+    _assurer_migration()
+    conn = get_connection()
+    row = conn.execute("SELECT * FROM analyses WHERE id = ?", (analyse_id,)).fetchone()
+    conn.close()
+    return row
+
+
+def changer_statut_analyse(analyse_id, nouveau_statut):
+    """Change le statut d'une analyse et trace ce changement dans l'historique."""
+    analyse = get_analyse(analyse_id)
+    if not analyse:
+        return None
+    statut = valider_transition_statut(analyse["statut"], nouveau_statut)
+    if statut == analyse["statut"]:
+        return dict(analyse)
+    conn = get_connection()
+    conn.execute("UPDATE analyses SET statut = ? WHERE id = ?", (statut, analyse_id))
+    conn.commit()
+    conn.close()
+    enregistrer_version(
+        analyse["dossier_id"],
+        "conclusions",
+        {"analyse_id": analyse_id, "statut": statut},
+        resume_modification=f"Statut changé : {analyse['statut']} -> {statut}",
+        auteur="utilisateur",
+    )
+    return dict(get_analyse(analyse_id))
+
+
+def verifier_analyse_modifiable(analyse_id):
+    """Refuse toute édition d'une analyse dont le cycle est arrivé à Final."""
+    analyse = get_analyse(analyse_id)
+    if analyse and analyse["statut"] == "Final":
+        raise DocumentFinalError(f"L'analyse {analyse_id} est Final et ne peut plus être modifiée.")
+    return analyse
 
 
 # --- Trames ---------------------------------------------------------------

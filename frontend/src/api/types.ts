@@ -44,6 +44,7 @@ export interface AnalyseHistorique {
   date: string;
   arguments: Argument[];
   points_attention: string[];
+  statut: StatutDocument;
 }
 
 // ---------------------------------------------------------------------
@@ -106,7 +107,10 @@ export interface ConclusionsResultat {
   points_attention: string[];
   analyse_id?: number | null;
   verification?: Verification | null;
+  statut: StatutDocument;
 }
+
+export type StatutDocument = "Brouillon" | "En cours" | "En révision" | "Validé" | "Final";
 
 export interface ResumeResultat {
   resume_court: string;

@@ -8,6 +8,7 @@
 
 import { useState } from "react";
 import { analyse as analyseApi, dossiers as dossiersApi } from "@/api";
+import type { StatutDocument } from "@/api";
 import { useAppStore, useDossierActif } from "@/store/useAppStore";
 import { useLazyAction } from "@/hooks/useLazyAction";
 import { EXTENSIONS_DOCUMENT } from "@/config/fichiers";
@@ -21,14 +22,30 @@ import RichOutput from "@/components/RichOutput";
 import { SkeletonList } from "@/components/Skeleton";
 import ChatContextuelPanel from "@/components/chat/ChatContextuelPanel";
 import VerificationPanel from "@/components/VerificationPanel";
+import StatutDocumentMenu, { StatutDocumentBadge } from "@/components/StatutDocument";
 
 export default function AnalyserConclusionsPage() {
   const dossierActif = useDossierActif();
   const pousserToast = useAppStore((s) => s.pousserToast);
   const [texte, setTexte] = useState("");
   const [enImport, setEnImport] = useState(false);
+  const [changementStatutEnCours, setChangementStatutEnCours] = useState(false);
 
   const { data, loading, error, executer, definirDonnees } = useLazyAction((t: string) => analyseApi.analyserConclusions(t, dossierActif?.id));
+
+  const changerStatut = async (statut: StatutDocument) => {
+    if (!data?.analyse_id) return;
+    setChangementStatutEnCours(true);
+    try {
+      await analyseApi.changerStatutConclusion(data.analyse_id, statut);
+      definirDonnees({ ...data, statut });
+      pousserToast("success", `Document passé au statut « ${statut} ».`);
+    } catch (e) {
+      pousserToast("error", e instanceof Error ? e.message : "Impossible de changer le statut.");
+    } finally {
+      setChangementStatutEnCours(false);
+    }
+  };
 
   const importerFichier = async (fichier: File) => {
     if (!dossierActif) return;
@@ -93,14 +110,26 @@ export default function AnalyserConclusionsPage() {
       {!loading && !error && data && (
         <div className="space-y-5">
           {data.analyse_id != null && (
-            <div className="flex items-center justify-between">
-              <p className="text-xs text-warmgray">✓ Enregistré dans l'historique de ce dossier.</p>
-              <PinButton
-                type="analyse"
-                referenceId={data.analyse_id}
-                dossierId={dossierActif.id}
-                libelle={`Analyse — ${dossierActif.nom}`}
-              />
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <p className="text-xs text-warmgray">✓ Enregistré dans l'historique de ce dossier.</p>
+                <StatutDocumentBadge statut={data.statut} />
+              </div>
+              <div className="flex items-center gap-2">
+                <StatutDocumentMenu statut={data.statut} loading={changementStatutEnCours} onChange={changerStatut} />
+                <PinButton
+                  type="analyse"
+                  referenceId={data.analyse_id}
+                  dossierId={dossierActif.id}
+                  libelle={`Analyse — ${dossierActif.nom}`}
+                />
+              </div>
+            </div>
+          )}
+
+          {data.statut === "Final" && (
+            <div className="rounded-md border border-gold-500/30 bg-gold-500/10 p-4 text-sm text-gold-500">
+              Ce document est Final et peut uniquement être consulté.
             </div>
           )}
 
@@ -129,7 +158,9 @@ export default function AnalyserConclusionsPage() {
 
           <VerificationPanel verification={data.verification} />
 
-          <ChatContextuelPanel feature="conclusions" resultatActuel={data} onMiseAJour={definirDonnees} dossierId={dossierActif.id} />
+          {data.statut !== "Final" && (
+            <ChatContextuelPanel feature="conclusions" resultatActuel={data} onMiseAJour={definirDonnees} dossierId={dossierActif.id} />
+          )}
         </div>
       )}
 

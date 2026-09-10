@@ -30,12 +30,14 @@ from app.schemas.analyse import (
     ResumeOut,
     SimulateurIn,
     SimulateurOut,
+    StatutDocumentIn,
+    StatutDocumentOut,
     StyleIn,
     StyleOut,
     TraductionIn,
     TraductionOut,
 )
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import FileResponse
 from typing import Literal
 
@@ -76,6 +78,17 @@ def analyser_conclusions(payload: ConclusionsIn):
         analyse_id=analyse_id,
         verification=pipeline.verification,
     )
+
+
+@router.patch("/conclusions/{analyse_id}/statut", response_model=StatutDocumentOut)
+def changer_statut_conclusions(analyse_id: int, payload: StatutDocumentIn):
+    try:
+        analyse = db.changer_statut_analyse(analyse_id, payload.statut)
+    except db.TransitionStatutInvalide as e:
+        raise HTTPException(status_code=409, detail=str(e)) from e
+    if not analyse:
+        raise HTTPException(status_code=404, detail=f"Analyse {analyse_id} introuvable.")
+    return {"analyse_id": analyse_id, "statut": analyse["statut"]}
 
 
 @router.post("/resume", response_model=ResumeOut)

@@ -39,9 +39,19 @@ class ConclusionsOut(BaseModel):
     arguments: list[ArgumentOut]
     points_attention: list[str] = []
     analyse_id: Optional[int] = Field(None, description="Id de l'analyse enregistrée en base, si dossier_id était fourni")
+    statut: str = "Brouillon"
     verification: Optional[VerificationOut] = Field(
         None, description="Contrôle multi-agents additif (vérificateur juridique, critique, validation finale) — absent en mode démo, voir ARCHITECTURE_MULTI_AGENTS.md"
     )
+
+
+class StatutDocumentIn(BaseModel):
+    statut: str = Field(..., description="Nouveau statut du document")
+
+
+class StatutDocumentOut(BaseModel):
+    analyse_id: int
+    statut: str
 
 
 class ResumeIn(BaseModel):

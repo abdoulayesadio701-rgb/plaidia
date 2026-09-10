@@ -3,12 +3,19 @@
  */
 
 import { apiRequest, apiRequestBlob } from "./http";
-import type { ConclusionsResultat, PlanResultat, RapportCompletResultat, ResumeResultat, SimulateurResultat, StyleResultat, TraductionResultat } from "./types";
+import type { ConclusionsResultat, PlanResultat, RapportCompletResultat, ResumeResultat, SimulateurResultat, StatutDocument, StyleResultat, TraductionResultat } from "./types";
 
 export function analyserConclusions(texte: string, dossierId?: number): Promise<ConclusionsResultat> {
   return apiRequest<ConclusionsResultat>("/api/analyse/conclusions", {
     method: "POST",
     body: { texte, dossier_id: dossierId ?? null },
+  });
+}
+
+export function changerStatutConclusion(analyseId: number, statut: StatutDocument): Promise<{ analyse_id: number; statut: StatutDocument }> {
+  return apiRequest<{ analyse_id: number; statut: StatutDocument }>(`/api/analyse/conclusions/${analyseId}/statut`, {
+    method: "PATCH",
+    body: { statut },
   });
 }
 
