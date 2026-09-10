@@ -186,9 +186,9 @@ export default function LandingPage() {
               <span className="window-dot" />
               <span className="ml-2 text-xs text-warmgray">Analyser des conclusions adverses</span>
             </div>
-            <div className="relative max-h-[420px] overflow-hidden p-5">
+                <div className="window-content">
               <ArgumentCard argument={ARGUMENT_VITRINE} index={0} />
-              <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-surface to-transparent" aria-hidden="true" />
+                  <div className="window-content-fade" aria-hidden="true" />
             </div>
           </div>
         </div>

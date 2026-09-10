@@ -220,6 +220,15 @@
     @apply h-2 w-2 rounded-pill bg-gold-600/40;
   }
 
+  .window-content {
+    @apply relative h-[clamp(260px,38vw,420px)] overflow-hidden p-5;
+  }
+
+  .window-content-fade {
+    @apply pointer-events-none absolute inset-x-0 bottom-0 h-20;
+    background: linear-gradient(to top, rgb(var(--color-surface)) 0%, rgb(var(--color-surface) / 0.92) 30%, transparent 100%);
+  }
+
   /* ---------- Depot de piece -- sceau de cire + parchemin ----------
      Traitement bespoke pour "coller un texte long" (TexteLongModal) et
      tout futur formulaire de depot de document long (ex. Analyser des
