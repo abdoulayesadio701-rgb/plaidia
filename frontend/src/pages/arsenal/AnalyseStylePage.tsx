@@ -36,14 +36,20 @@ export default function AnalyseStylePage() {
   const { data, loading, error, executer, definirDonnees } = useLazyAction((t: string) => analyseApi.analyserStyle(t));
 
   const importerFichier = async (fichier: File) => {
-    if (!dossierActif) return;
     setEnImport(true);
     try {
-      const resultat = await dossiersApi.importerDocument(dossierActif.id, fichier);
+      // Page indépendante de tout dossier (requiresDossier: false) -- un
+      // dossier actif reste optionnel : quand il y en a un, le texte extrait
+      // est aussi ajouté à ses faits (importerDocument) ; sinon, extraction
+      // seule (extraireFichier), sans rien écrire en base.
+      const resultat = dossierActif
+        ? await dossiersApi.importerDocument(dossierActif.id, fichier)
+        : await dossiersApi.extraireFichier(fichier);
       setTexte((precedent) => (precedent ? `${precedent}\n\n${resultat.texte_extrait}` : resultat.texte_extrait));
+      const suffixe = dossierActif ? ` – également ajouté aux faits de « ${dossierActif.nom} ».` : "";
       pousserToast(
         "success",
-        `« ${resultat.nom_fichier} » importé (${resultat.caracteres_extraits.toLocaleString("fr-FR")} caractères) – également ajouté aux faits de « ${dossierActif.nom} ».`
+        `« ${resultat.nom_fichier} » importé (${resultat.caracteres_extraits.toLocaleString("fr-FR")} caractères)${suffixe}`
       );
     } catch (e) {
       pousserToast("error", e instanceof Error ? e.message : "Échec de l'import du fichier.");
@@ -70,20 +76,18 @@ export default function AnalyseStylePage() {
         />
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-3">
-            {dossierActif ? (
-              <>
-                <FileDropZone
-                  variante="compact"
-                  extensions={EXTENSIONS_DOCUMENT}
-                  loading={enImport}
-                  disabled={loading}
-                  onFichiers={(fichiers) => void importerFichier(fichiers[0])}
-                />
-                <span className="text-xs text-muted">Le texte extrait sera aussi ajouté aux faits de « {dossierActif.nom} ».</span>
-              </>
-            ) : (
-              <span className="text-xs text-muted">Sélectionnez un dossier dans le bandeau du haut pour aussi pouvoir importer un fichier.</span>
-            )}
+            <FileDropZone
+              variante="compact"
+              extensions={EXTENSIONS_DOCUMENT}
+              loading={enImport}
+              disabled={loading}
+              onFichiers={(fichiers) => void importerFichier(fichiers[0])}
+            />
+            <span className="text-xs text-muted">
+              {dossierActif
+                ? `Le texte extrait sera aussi ajouté aux faits de « ${dossierActif.nom} ».`
+                : "PDF, Word, Excel, image — le texte extrait est injecté ci-dessus."}
+            </span>
           </div>
           <Button variant="primary" loading={loading} disabled={!texte.trim() || enImport} onClick={() => void executer(texte)}>
             Analyser le style
@@ -110,7 +114,7 @@ export default function AnalyseStylePage() {
       {!loading && !error && !data && (
         <EmptyState
           titre="Prêt à analyser"
-          description="Collez le texte des conclusions adverses ci-dessus pour repérer les fragilités de leur rédaction."
+          description="Collez le texte des conclusions adverses ci-dessus, ou importez un fichier, pour repérer les fragilités de leur rédaction."
         />
       )}
     </div>

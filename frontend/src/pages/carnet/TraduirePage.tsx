@@ -7,19 +7,39 @@
  */
 
 import { useState } from "react";
-import { analyse as analyseApi } from "@/api";
+import { analyse as analyseApi, dossiers as dossiersApi } from "@/api";
+import { useAppStore } from "@/store/useAppStore";
 import { useLazyAction } from "@/hooks/useLazyAction";
+import { EXTENSIONS_DOCUMENT } from "@/config/fichiers";
 import Button from "@/components/Button";
 import EmptyState from "@/components/EmptyState";
 import ErrorState from "@/components/ErrorState";
+import FileDropZone from "@/components/FileDropZone";
 import RichOutput from "@/components/RichOutput";
 import { SkeletonBlock } from "@/components/Skeleton";
 
 const LABEL_LANGUE: Record<string, string> = { fr: "Français", en: "English" };
 
 export default function TraduirePage() {
+  const pousserToast = useAppStore((s) => s.pousserToast);
   const [texte, setTexte] = useState("");
+  const [enImport, setEnImport] = useState(false);
   const { data, loading, error, executer } = useLazyAction((t: string) => analyseApi.traduireTexte(t));
+
+  const importerFichier = async (fichier: File) => {
+    setEnImport(true);
+    try {
+      // Page indépendante de tout dossier (requiresDossier: false) --
+      // extraction seule, rien n'est écrit en base (voir extraireFichier).
+      const resultat = await dossiersApi.extraireFichier(fichier);
+      setTexte((precedent) => (precedent ? `${precedent}\n\n${resultat.texte_extrait}` : resultat.texte_extrait));
+      pousserToast("success", `« ${resultat.nom_fichier} » importé (${resultat.caracteres_extraits.toLocaleString("fr-FR")} caractères).`);
+    } catch (e) {
+      pousserToast("error", e instanceof Error ? e.message : "Échec de l'import du fichier.");
+    } finally {
+      setEnImport(false);
+    }
+  };
 
   const copier = async () => {
     if (!data?.texte_traduit) return;
@@ -47,10 +67,20 @@ export default function TraduirePage() {
           placeholder="Collez ici le texte à traduire, en français ou en anglais…"
           value={texte}
           onChange={(e) => setTexte(e.target.value)}
-          disabled={loading}
+          disabled={loading || enImport}
         />
-        <div className="flex justify-end">
-          <Button variant="primary" loading={loading} disabled={!texte.trim()} onClick={() => void executer(texte)}>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-3">
+            <FileDropZone
+              variante="compact"
+              extensions={EXTENSIONS_DOCUMENT}
+              loading={enImport}
+              disabled={loading}
+              onFichiers={(fichiers) => void importerFichier(fichiers[0])}
+            />
+            <span className="text-xs text-muted">PDF, Word, Excel, image — le texte extrait est injecté ci-dessus.</span>
+          </div>
+          <Button variant="primary" loading={loading} disabled={!texte.trim() || enImport} onClick={() => void executer(texte)}>
             Traduire
           </Button>
         </div>
@@ -82,7 +112,7 @@ export default function TraduirePage() {
       )}
 
       {!loading && !error && !data && (
-        <EmptyState titre="Prêt à traduire" description="Collez un texte ci-dessus — la langue source est détectée automatiquement." />
+        <EmptyState titre="Prêt à traduire" description="Collez un texte ci-dessus, ou importez un fichier — la langue source est détectée automatiquement." />
       )}
     </div>
   );
