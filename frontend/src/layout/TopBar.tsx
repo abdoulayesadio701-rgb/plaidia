@@ -6,6 +6,7 @@
 
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { useAppStore } from "@/store/useAppStore";
 import Logo from "@/components/Logo";
 import Button from "@/components/Button";
@@ -14,6 +15,7 @@ import NouveauDossierModal from "@/components/NouveauDossierModal";
 import DossierSelector from "./DossierSelector";
 
 export default function TopBar() {
+  const { t } = useTranslation();
   const [modalOuvert, setModalOuvert] = useState(false);
   const [nomPrerempli, setNomPrerempli] = useState<string | undefined>(undefined);
 
@@ -36,16 +38,16 @@ export default function TopBar() {
         <DossierSelector onDemanderCreation={ouvrirCreation} />
 
         <Button variant="primary" onClick={() => ouvrirCreation()}>
-          ＋ Nouveau dossier
+          {t("topBar.nouveauDossier")}
         </Button>
 
         <div className="ml-auto flex items-center gap-2">
-          <span className="text-micro uppercase tracking-wide text-warmgray">Droit</span>
+          <span className="text-micro uppercase tracking-wide text-warmgray">{t("topBar.droit")}</span>
           <select
             className="input w-auto py-2 text-sm"
             value={juridictionActive}
             onChange={(e) => void definirJuridictionActive(e.target.value)}
-            aria-label="Juridiction active"
+            aria-label={t("topBar.juridictionActiveAria")}
           >
             {sources.map((s) => (
               <option key={s} value={s}>
@@ -57,8 +59,8 @@ export default function TopBar() {
           <Link
             to="/app/parametres"
             className="rounded-md p-1.5 text-warmgray transition-colors hover:bg-surface-2 hover:text-ivory"
-            aria-label="Paramètres"
-            title="Paramètres"
+            aria-label={t("topBar.parametres")}
+            title={t("topBar.parametres")}
           >
             <svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <circle cx="10" cy="10" r="2.6" />

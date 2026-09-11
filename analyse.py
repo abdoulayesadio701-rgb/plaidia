@@ -20,6 +20,51 @@ KEY_FILE = paths.base_dir() / "apikey.txt"
 # une réécriture bien plus large que ce module reçoit d'ordinaire.
 _cle_api_requete = contextvars.ContextVar("cle_api_requete", default=None)
 
+# Langue de sortie pour la requête HTTP en cours (voir backend/app/main.py --
+# middleware qui lit l'en-tête X-Langue, envoyé automatiquement par le front
+# avec chaque appel, voir frontend/src/api/http.ts). Même idiome que
+# _cle_api_requete ci-dessus, pour la même raison : des dizaines de fonctions
+# construisent un `system` prompt, leur ajouter à toutes un paramètre
+# `langue` aurait été une réécriture bien plus large que ce module reçoit
+# d'ordinaire -- un ContextVar lu par _directive_langue() suffit.
+LANGUES_SUPPORTEES = {"fr", "en"}
+_langue_requete = contextvars.ContextVar("langue_requete", default="fr")
+
+
+def definir_langue_requete(langue: str | None):
+    valeur = langue if langue in LANGUES_SUPPORTEES else "fr"
+    return _langue_requete.set(valeur)
+
+
+def reinitialiser_langue_requete(jeton):
+    _langue_requete.reset(jeton)
+
+
+def langue_requete() -> str:
+    return _langue_requete.get()
+
+
+# Une seule langue étrangère supportée pour l'instant (en) -- le français
+# est déjà la langue native de tous les prompts de ce fichier, rien à
+# ajouter dans ce cas (chaîne vide).
+_DIRECTIVES_LANGUE = {
+    "en": (
+        "\n\nLANGUAGE: write your entire response in English -- every field, "
+        "heading and explanation. Exception: legal citations, case law "
+        "references and statutory articles stay in their original language "
+        "exactly as written in the source -- never translate a citation or "
+        "a quoted legal text, even when everything around it is in English."
+    ),
+}
+
+
+def _directive_langue() -> str:
+    """Instruction de langue à ajouter en fin de tout system prompt qui
+    produit du texte destiné à l'utilisateur final (jamais aux agents de
+    classification interne comme analyser_intention_juridique, qui ne
+    renvoient que des métadonnées non affichées telles quelles)."""
+    return _DIRECTIVES_LANGUE.get(_langue_requete.get(), "")
+
 
 def definir_cle_api_requete(cle: str | None):
     """Pose la clé API à utiliser par _client() pour la suite du contexte
@@ -170,7 +215,7 @@ def repondre_conversation(messages: list[dict], contexte_recherche: str | None =
     l'agent de comprendre les références ("elle", "ce point", "et sinon ?")
     sans que l'avocat ait à tout reformuler à chaque fois.
     """
-    system = QUESTION_SYSTEM_PROMPT
+    system = QUESTION_SYSTEM_PROMPT + _directive_langue()
     if contexte_recherche:
         system += contexte_recherche
 
@@ -197,7 +242,7 @@ def repondre_conversation_stream(messages: list[dict], contexte_recherche: str |
         for fragment in repondre_conversation_stream(messages):
             afficher(fragment)
     """
-    system = QUESTION_SYSTEM_PROMPT
+    system = QUESTION_SYSTEM_PROMPT + _directive_langue()
     if contexte_recherche:
         system += contexte_recherche
 
@@ -263,7 +308,7 @@ Règles impératives :
 
 def simuler_objections(contexte_dossier: str, contexte_recherche: str | None = None) -> dict:
     """Génère des questions/objections probables pour préparer l'oral."""
-    system = SIMULATEUR_SYSTEM_PROMPT
+    system = SIMULATEUR_SYSTEM_PROMPT + _directive_langue()
     if contexte_recherche:
         system += contexte_recherche
 
@@ -343,7 +388,7 @@ def construire_chronologie(contexte_affaire: str) -> dict:
     response = client.messages.create(
         model=MODEL_ACTIF,
         max_tokens=1800,
-        system=CHRONOLOGIE_SYSTEM_PROMPT,
+        system=CHRONOLOGIE_SYSTEM_PROMPT + _directive_langue(),
         messages=[{"role": "user", "content": f"Contenu de l'affaire :\n{contexte_affaire}"}],
     )
     raw = response.content[0].text.strip().replace("```json", "").replace("```", "").strip()
@@ -382,7 +427,7 @@ def extraire_elements_cles(texte_document: str) -> dict:
     response = client.messages.create(
         model=MODEL_ACTIF,
         max_tokens=1500,
-        system=EXTRACTION_SYSTEM_PROMPT,
+        system=EXTRACTION_SYSTEM_PROMPT + _directive_langue(),
         messages=[{"role": "user", "content": f"Document :\n{texte_document}"}],
     )
     raw = response.content[0].text.strip().replace("```json", "").replace("```", "").strip()
@@ -419,7 +464,7 @@ def classifier_document(texte_document: str) -> dict:
     response = client.messages.create(
         model=MODEL_ACTIF,
         max_tokens=500,
-        system=CLASSEMENT_SYSTEM_PROMPT,
+        system=CLASSEMENT_SYSTEM_PROMPT + _directive_langue(),
         messages=[{"role": "user", "content": f"Document :\n{texte_document[:4000]}"}],
     )
     raw = response.content[0].text.strip().replace("```json", "").replace("```", "").strip()
@@ -472,7 +517,7 @@ def rediger_pv(notes_audience: str) -> str:
     response = client.messages.create(
         model=MODEL_ACTIF,
         max_tokens=2000,
-        system=PV_SYSTEM_PROMPT,
+        system=PV_SYSTEM_PROMPT + _directive_langue(),
         messages=[{"role": "user", "content": f"Notes prises pendant l'audience :\n{notes_audience}"}],
     )
     return response.content[0].text.strip()
@@ -507,7 +552,7 @@ def analyser_requisitoire(texte_requisitoire: str) -> dict:
     response = client.messages.create(
         model=MODEL_ACTIF,
         max_tokens=1800,
-        system=REQUISITOIRE_SYSTEM_PROMPT,
+        system=REQUISITOIRE_SYSTEM_PROMPT + _directive_langue(),
         messages=[{"role": "user", "content": f"Texte du réquisitoire :\n{texte_requisitoire}"}],
     )
     raw = response.content[0].text.strip().replace("```json", "").replace("```", "").strip()
@@ -551,7 +596,7 @@ def analyser_rapport_instruction(texte_rapport: str) -> dict:
     response = client.messages.create(
         model=MODEL_ACTIF,
         max_tokens=1800,
-        system=RAPPORT_INSTRUCTION_SYSTEM_PROMPT,
+        system=RAPPORT_INSTRUCTION_SYSTEM_PROMPT + _directive_langue(),
         messages=[{"role": "user", "content": f"Texte du rapport d'instruction :\n{texte_rapport}"}],
     )
     raw = response.content[0].text.strip().replace("```json", "").replace("```", "").strip()
@@ -604,7 +649,7 @@ def resumer_dossier(contexte_dossier: str) -> dict:
 
 def generer_plan_plaidoirie(contexte_dossier: str, temps_minutes: int, contexte_recherche: str | None = None) -> dict:
     """Génère un plan de plaidoirie structuré à partir du contexte d'un dossier."""
-    system = PLAN_SYSTEM_PROMPT
+    system = PLAN_SYSTEM_PROMPT + _directive_langue()
     if contexte_recherche:
         system += contexte_recherche
 
@@ -643,7 +688,7 @@ def analyser_conclusions(texte: str, contexte_recherche: str | None = None, juri
     issus de la base locale, pour des références que vous avez déjà validées
     manuellement (voir db.py) — plus fiable qu'un résultat live non relu.
     """
-    system = SYSTEM_PROMPT
+    system = SYSTEM_PROMPT + _directive_langue()
     if jurisprudence_validee:
         refs = "\n".join(
             f"- {j['reference']} : {j.get('resume', '')}" for j in jurisprudence_validee
@@ -850,7 +895,7 @@ def verifier_procedure(contexte_affaire: str) -> dict:
     response = client.messages.create(
         model=MODEL_ACTIF,
         max_tokens=1800,
-        system=VERIFICATION_PROCEDURALE_SYSTEM_PROMPT,
+        system=VERIFICATION_PROCEDURALE_SYSTEM_PROMPT + _directive_langue(),
         messages=[{"role": "user", "content": f"Contenu de l'affaire :\n{contexte_affaire}"}],
     )
     raw = response.content[0].text.strip().replace("```json", "").replace("```", "").strip()
@@ -911,7 +956,7 @@ def controler_coherence(elements_par_document: list) -> dict:
     response = client.messages.create(
         model=MODEL_ACTIF,
         max_tokens=1800,
-        system=COHERENCE_SYSTEM_PROMPT,
+        system=COHERENCE_SYSTEM_PROMPT + _directive_langue(),
         messages=[{"role": "user", "content": f"Éléments extraits des documents :\n{contenu}"}],
     )
     raw = response.content[0].text.strip().replace("```json", "").replace("```", "").strip()
@@ -1076,7 +1121,7 @@ def consulter_jurisprudence(question: str, contexte_recherche: str, qualificatio
     solution, principe, pertinence, étiquette favorable/défavorable/neutre
     selon l'objectif de recherche, source vérifiable) plutôt qu'une simple
     synthèse en prose."""
-    system = JURISPRUDENCE_CONSULT_SYSTEM_PROMPT
+    system = JURISPRUDENCE_CONSULT_SYSTEM_PROMPT + _directive_langue()
     if contexte_recherche:
         system += "\n\n" + contexte_recherche
     else:
@@ -1308,7 +1353,7 @@ def evaluer_garde_fou_entree(texte: str) -> dict:
     response = client.messages.create(
         model=MODEL_ACTIF,
         max_tokens=300,
-        system=GARDE_FOU_SYSTEM_PROMPT,
+        system=GARDE_FOU_SYSTEM_PROMPT + _directive_langue(),
         # Les premiers ~6000 caractères suffisent à classifier une demande
         # -- pas besoin du texte intégral (parfois jusqu'à 50 000
         # caractères, voir demo.MAX_TEXTE_CARACTERES) pour ce filtre rapide.
@@ -1426,7 +1471,7 @@ def verifier_juridiquement(contenu_a_verifier: str, citations_evaluees: list[dic
     response = client.messages.create(
         model=MODEL_ACTIF,
         max_tokens=1500,
-        system=VERIFICATEUR_SYSTEM_PROMPT,
+        system=VERIFICATEUR_SYSTEM_PROMPT + _directive_langue(),
         messages=[{"role": "user", "content": contenu}],
     )
     raw = response.content[0].text.strip().replace("```json", "").replace("```", "").strip()
@@ -1480,7 +1525,7 @@ def critiquer_reponse(contenu_a_critiquer: str, contexte_dossier: str = "") -> d
     response = client.messages.create(
         model=MODEL_ACTIF,
         max_tokens=1500,
-        system=CRITIQUE_SYSTEM_PROMPT,
+        system=CRITIQUE_SYSTEM_PROMPT + _directive_langue(),
         messages=[{"role": "user", "content": contenu}],
     )
     raw = response.content[0].text.strip().replace("```json", "").replace("```", "").strip()
@@ -1526,7 +1571,7 @@ def valider_finalement(resultat_verification: dict, resultat_critique: dict) -> 
     response = client.messages.create(
         model=MODEL_ACTIF,
         max_tokens=1200,
-        system=VALIDATION_FINALE_SYSTEM_PROMPT,
+        system=VALIDATION_FINALE_SYSTEM_PROMPT + _directive_langue(),
         messages=[{"role": "user", "content": contenu}],
     )
     raw = response.content[0].text.strip().replace("```json", "").replace("```", "").strip()
@@ -1607,7 +1652,7 @@ def generer_strategie_combative(
     response = client.messages.create(
         model=MODEL_ACTIF,
         max_tokens=3200,
-        system=STRATEGIE_COMBATIVE_SYSTEM_PROMPT,
+        system=STRATEGIE_COMBATIVE_SYSTEM_PROMPT + _directive_langue(),
         messages=[{"role": "user", "content": message}],
     )
     raw = response.content[0].text.strip().replace("```json", "").replace("```", "").strip()

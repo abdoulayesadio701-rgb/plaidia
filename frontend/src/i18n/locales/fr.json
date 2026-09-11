@@ -1,0 +1,50 @@
+{
+  "commun": {
+    "annuler": "Annuler",
+    "fermer": "Fermer",
+    "enregistrer": "Enregistrer",
+    "creer": "Créer",
+    "chargement": "Chargement…",
+    "reessayer": "Réessayer"
+  },
+  "langue": {
+    "selecteurAria": "Choisir la langue de l'interface",
+    "fr": "FR",
+    "en": "EN"
+  },
+  "statutDocument": {
+    "Brouillon": "Brouillon",
+    "En cours": "En cours",
+    "En révision": "En révision",
+    "Validé": "Validé",
+    "Final": "Final",
+    "changerAria": "Changer le statut actuel {{statut}}",
+    "changerPlaceholder": "Changer le statut…"
+  },
+  "taskBar": {
+    "accueil": "Accueil",
+    "mesDossiers": "Mes dossiers",
+    "assistant": "Assistant",
+    "rechercheGlobale": "Recherche globale (Ctrl/Cmd+K)",
+    "recherche": "Recherche",
+    "epingles": "Épinglés",
+    "recents": "Récents"
+  },
+  "topBar": {
+    "nouveauDossier": "＋ Nouveau dossier",
+    "droit": "Droit",
+    "juridictionActiveAria": "Juridiction active",
+    "parametres": "Paramètres"
+  },
+  "landing": {
+    "kicker": "Assistant IA de préparation de plaidoirie — France & espace OHADA",
+    "titre1": "Préparez vos dossiers,",
+    "titre2": "pas vos angoisses de dernière minute.",
+    "description": "Plaid'IA analyse des conclusions adverses, chronomètre un plan de plaidoirie, simule les objections du magistrat et vérifie la procédure, avec, sur les analyses les plus sensibles, plusieurs contrôles indépendants qui vérifient chaque réponse avant qu'elle ne s'affiche.",
+    "essayerDemo": "Essayer la démo →",
+    "voirCodeGithub": "Voir le code sur GitHub",
+    "navFonctionnalites": "Fonctionnalités",
+    "navCommentCaMarche": "Comment ça marche",
+    "navVerification": "Vérification multi-agents"
+  }
+}

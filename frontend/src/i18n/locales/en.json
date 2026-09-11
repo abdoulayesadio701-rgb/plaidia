@@ -1,0 +1,50 @@
+{
+  "commun": {
+    "annuler": "Cancel",
+    "fermer": "Close",
+    "enregistrer": "Save",
+    "creer": "Create",
+    "chargement": "Loading…",
+    "reessayer": "Retry"
+  },
+  "langue": {
+    "selecteurAria": "Choose the interface language",
+    "fr": "FR",
+    "en": "EN"
+  },
+  "statutDocument": {
+    "Brouillon": "Draft",
+    "En cours": "In progress",
+    "En révision": "Under review",
+    "Validé": "Approved",
+    "Final": "Final",
+    "changerAria": "Change the current status {{statut}}",
+    "changerPlaceholder": "Change status…"
+  },
+  "taskBar": {
+    "accueil": "Home",
+    "mesDossiers": "My cases",
+    "assistant": "Assistant",
+    "rechercheGlobale": "Global search (Ctrl/Cmd+K)",
+    "recherche": "Search",
+    "epingles": "Pinned",
+    "recents": "Recent"
+  },
+  "topBar": {
+    "nouveauDossier": "＋ New case",
+    "droit": "Law",
+    "juridictionActiveAria": "Active jurisdiction",
+    "parametres": "Settings"
+  },
+  "landing": {
+    "kicker": "AI assistant for pleading preparation — France & the OHADA area",
+    "titre1": "Prepare your cases,",
+    "titre2": "not your last-minute nerves.",
+    "description": "Plaid'IA analyses opposing submissions, times a pleading plan, simulates the judge's objections and checks procedure, with, on the most sensitive analyses, several independent checks that verify each answer before it is displayed.",
+    "essayerDemo": "Try the demo →",
+    "voirCodeGithub": "View the code on GitHub",
+    "navFonctionnalites": "Features",
+    "navCommentCaMarche": "How it works",
+    "navVerification": "Multi-agent verification"
+  }
+}

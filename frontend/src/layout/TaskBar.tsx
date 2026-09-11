@@ -12,22 +12,25 @@
 
 import { useState } from "react";
 import { NavLink } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { useAppStore } from "@/store/useAppStore";
 import RecentsPanel from "./RecentsPanel";
 import EpinglesPanel from "./EpinglesPanel";
-
-const RACCOURCIS = [
-  { path: "/app", icone: "🏠", label: "Accueil", fin: true },
-  { path: "/app/chemise/dossiers", icone: "📁", label: "Mes dossiers", fin: false },
-  { path: "/app/chat", icone: "🤖", label: "Assistant", fin: false },
-];
+import SelecteurLangue from "@/components/SelecteurLangue";
 
 type PanneauOuvert = "recents" | "epingles" | null;
 
 export default function TaskBar() {
+  const { t } = useTranslation();
   const [panneauOuvert, setPanneauOuvert] = useState<PanneauOuvert>(null);
   const nombreEpingles = useAppStore((s) => s.epingles.length);
   const ouvrirRechercheGlobale = useAppStore((s) => s.ouvrirRechercheGlobale);
+
+  const RACCOURCIS = [
+    { path: "/app", icone: "🏠", label: t("taskBar.accueil"), fin: true },
+    { path: "/app/chemise/dossiers", icone: "📁", label: t("taskBar.mesDossiers"), fin: false },
+    { path: "/app/chat", icone: "🤖", label: t("taskBar.assistant"), fin: false },
+  ];
 
   const basculer = (panneau: PanneauOuvert) => setPanneauOuvert((actuel) => (actuel === panneau ? null : panneau));
 
@@ -58,9 +61,9 @@ export default function TaskBar() {
         <button
           onClick={ouvrirRechercheGlobale}
           className="whitespace-nowrap rounded-md px-2.5 py-1 text-xs font-medium text-warmgray transition-colors hover:bg-surface-2 hover:text-ivory"
-          title="Recherche globale (Ctrl/Cmd+K)"
+          title={t("taskBar.rechercheGlobale")}
         >
-          🔍 Recherche <span className="text-muted">Ctrl K</span>
+          🔍 {t("taskBar.recherche")} <span className="text-muted">Ctrl K</span>
         </button>
 
         <div className="relative">
@@ -72,7 +75,7 @@ export default function TaskBar() {
             aria-haspopup="true"
             aria-expanded={panneauOuvert === "epingles"}
           >
-            📌 Épinglés{nombreEpingles > 0 && ` (${nombreEpingles})`}
+            📌 {t("taskBar.epingles")}{nombreEpingles > 0 && ` (${nombreEpingles})`}
           </button>
           {panneauOuvert === "epingles" && <EpinglesPanel onFermer={() => setPanneauOuvert(null)} />}
         </div>
@@ -86,10 +89,12 @@ export default function TaskBar() {
             aria-haspopup="true"
             aria-expanded={panneauOuvert === "recents"}
           >
-            🕘 Récents
+            🕘 {t("taskBar.recents")}
           </button>
           {panneauOuvert === "recents" && <RecentsPanel onFermer={() => setPanneauOuvert(null)} />}
         </div>
+
+        <SelecteurLangue />
       </div>
     </div>
   );

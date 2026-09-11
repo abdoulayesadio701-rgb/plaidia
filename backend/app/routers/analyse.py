@@ -98,7 +98,7 @@ def analyser_conclusions(payload: ConclusionsIn):
     analyse_id = None
     if payload.dossier_id is not None:
         analyse_id = db.save_analyse(
-            payload.dossier_id, resultat.get("arguments", []), resultat.get("points_attention", [])
+            payload.dossier_id, resultat.get("arguments", []), resultat.get("points_attention", []), langue=legacy_analyse.langue_requete()
         )
     strategie_combative = _strategie_combative_si_pertinente(dossier, contexte_dossier, resultat.get("arguments", []))
     sections = structurer_sortie_strategique(
@@ -156,7 +156,8 @@ def generer_plan(payload: PlanIn):
             {**pipeline.resultat_principal, "verification": pipeline.verification}, dossier, "plan", strategie_combative=strategie_combative
         )
     document = db.creer_document_genere(
-        payload.dossier_id, "plan", f"Plan de plaidoirie — {dossier['nom']}", {"temps_minutes": payload.temps_minutes}, resultat
+        payload.dossier_id, "plan", f"Plan de plaidoirie — {dossier['nom']}", {"temps_minutes": payload.temps_minutes}, resultat,
+        langue=legacy_analyse.langue_requete(),
     )
     return PlanOut(**resultat, document_id=document["id"], statut=document["statut"])
 
@@ -180,7 +181,8 @@ def simuler_objections(payload: SimulateurIn):
             {**pipeline.resultat_principal, "verification": pipeline.verification}, dossier, "simulateur", strategie_combative=strategie_combative
         )
     document = db.creer_document_genere(
-        payload.dossier_id, "simulateur", f"Simulateur d'objections — {dossier['nom']}", {}, resultat
+        payload.dossier_id, "simulateur", f"Simulateur d'objections — {dossier['nom']}", {}, resultat,
+        langue=legacy_analyse.langue_requete(),
     )
     return SimulateurOut(**resultat, document_id=document["id"], statut=document["statut"])
 

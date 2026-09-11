@@ -45,6 +45,7 @@ CREATE TABLE IF NOT EXISTS analyses (
     arguments_json TEXT NOT NULL,
     points_attention_json TEXT,
     statut TEXT NOT NULL DEFAULT 'Brouillon',
+    langue TEXT NOT NULL DEFAULT 'fr',
     FOREIGN KEY (dossier_id) REFERENCES dossiers(id) ON DELETE CASCADE
 );
 
@@ -123,6 +124,7 @@ CREATE TABLE IF NOT EXISTS documents_generes (
     parametres_json TEXT NOT NULL DEFAULT '{}',
     contenu_json TEXT NOT NULL,
     statut TEXT NOT NULL DEFAULT 'Brouillon',
+    langue TEXT NOT NULL DEFAULT 'fr',
     date_creation TEXT NOT NULL,
     date_modification TEXT NOT NULL,
     FOREIGN KEY (dossier_id) REFERENCES dossiers(id) ON DELETE CASCADE
@@ -175,6 +177,15 @@ def _migrer_colonnes_manquantes(conn):
     colonnes_existantes = {row["name"] for row in cur.fetchall()}
     if "statut" not in colonnes_existantes:
         conn.execute("ALTER TABLE analyses ADD COLUMN statut TEXT NOT NULL DEFAULT 'Brouillon'")
+        conn.commit()
+    if "langue" not in colonnes_existantes:
+        conn.execute("ALTER TABLE analyses ADD COLUMN langue TEXT NOT NULL DEFAULT 'fr'")
+        conn.commit()
+
+    cur = conn.execute("PRAGMA table_info(documents_generes)")
+    colonnes_existantes = {row["name"] for row in cur.fetchall()}
+    if "langue" not in colonnes_existantes:
+        conn.execute("ALTER TABLE documents_generes ADD COLUMN langue TEXT NOT NULL DEFAULT 'fr'")
         conn.commit()
 
     cur = conn.execute("PRAGMA table_info(conversations_chat)")
@@ -363,16 +374,17 @@ def rechercher_dans_dossiers(mot_cle: str) -> list:
 
 # --- Analyses -----------------------------------------------------------
 
-def save_analyse(dossier_id, arguments, points_attention):
+def save_analyse(dossier_id, arguments, points_attention, langue="fr"):
     conn = get_connection()
     cur = conn.execute(
-        "INSERT INTO analyses (dossier_id, date, arguments_json, points_attention_json) "
-        "VALUES (?, ?, ?, ?)",
+        "INSERT INTO analyses (dossier_id, date, arguments_json, points_attention_json, langue) "
+        "VALUES (?, ?, ?, ?, ?)",
         (
             dossier_id,
             datetime.now().isoformat(timespec="seconds"),
             json.dumps(arguments, ensure_ascii=False),
             json.dumps(points_attention, ensure_ascii=False),
+            langue,
         ),
     )
     conn.commit()
@@ -395,6 +407,7 @@ def get_analyses_for_dossier(dossier_id):
             "arguments": json.loads(r["arguments_json"]),
             "points_attention": json.loads(r["points_attention_json"] or "[]"),
             "statut": r["statut"],
+            "langue": r["langue"],
         })
     return result
 
@@ -890,14 +903,14 @@ def restaurer_version(version_id: int):
 
 # --- Documents générés --------------------------------------------------
 
-def creer_document_genere(dossier_id, feature, titre, parametres, contenu):
+def creer_document_genere(dossier_id, feature, titre, parametres, contenu, langue="fr"):
     _assurer_migration()
     maintenant = datetime.now().isoformat(timespec="seconds")
     conn = get_connection()
     cur = conn.execute(
-        "INSERT INTO documents_generes (dossier_id, feature, titre, parametres_json, contenu_json, statut, date_creation, date_modification) "
-        "VALUES (?, ?, ?, ?, ?, 'Brouillon', ?, ?)",
-        (dossier_id, feature, titre, json.dumps(parametres, ensure_ascii=False), json.dumps(contenu, ensure_ascii=False), maintenant, maintenant),
+        "INSERT INTO documents_generes (dossier_id, feature, titre, parametres_json, contenu_json, statut, langue, date_creation, date_modification) "
+        "VALUES (?, ?, ?, ?, ?, 'Brouillon', ?, ?, ?)",
+        (dossier_id, feature, titre, json.dumps(parametres, ensure_ascii=False), json.dumps(contenu, ensure_ascii=False), langue, maintenant, maintenant),
     )
     conn.commit()
     document_id = cur.lastrowid

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import type { StatutDocument } from "@/api";
 
 const STATUTS: StatutDocument[] = ["Brouillon", "En cours", "En révision", "Validé", "Final"];
@@ -14,6 +15,7 @@ interface StatutDocumentBadgeProps {
 }
 
 export function StatutDocumentBadge({ statut }: StatutDocumentBadgeProps) {
+  const { t } = useTranslation();
   const couleurs: Record<StatutDocument, string> = {
     Brouillon: "border-surface-3 bg-surface-2 text-warmgray",
     "En cours": "border-amethyst-400/30 bg-amethyst-400/10 text-amethyst-400",
@@ -21,7 +23,9 @@ export function StatutDocumentBadge({ statut }: StatutDocumentBadgeProps) {
     Validé: "border-risk-low/30 bg-risk-low/10 text-risk-low",
     Final: "border-gold-500/50 bg-gold-500/15 text-gold-500",
   };
-  return <span className={`badge ${couleurs[statut]}`}>{statut}</span>;
+  // Le statut reste stocké en base en français (clé stable, voir db.py) --
+  // seule sa traduction à l'affichage change avec la langue.
+  return <span className={`badge ${couleurs[statut]}`}>{t(`statutDocument.${statut}`)}</span>;
 }
 
 interface StatutDocumentMenuProps {
@@ -31,6 +35,7 @@ interface StatutDocumentMenuProps {
 }
 
 export default function StatutDocumentMenu({ statut, loading = false, onChange }: StatutDocumentMenuProps) {
+  const { t } = useTranslation();
   const [valeur, setValeur] = useState("");
   const options = statutsAutorises(statut);
 
@@ -39,7 +44,7 @@ export default function StatutDocumentMenu({ statut, loading = false, onChange }
   return (
     <select
       className="input h-9 w-auto min-w-40 py-1 text-xs"
-      aria-label={`Changer le statut actuel ${statut}`}
+      aria-label={t("statutDocument.changerAria", { statut: t(`statutDocument.${statut}`) })}
       value={valeur}
       disabled={loading}
       onChange={(event) => {
@@ -48,10 +53,10 @@ export default function StatutDocumentMenu({ statut, loading = false, onChange }
         void onChange(nouveauStatut);
       }}
     >
-      <option value="">Changer le statut…</option>
+      <option value="">{t("statutDocument.changerPlaceholder")}</option>
       {options.map((option) => (
         <option key={option} value={option}>
-          {option}
+          {t(`statutDocument.${option}`)}
         </option>
       ))}
     </select>

@@ -8,6 +8,7 @@
 
 import { useActivityStore } from "@/store/useActivityStore";
 import { obtenirClePersonnelle } from "./cleApiPersonnelle";
+import i18nInstance from "@/i18n";
 
 const BASE_URL = (import.meta.env.VITE_API_URL ?? "http://localhost:8000").replace(/\/$/, "");
 
@@ -93,6 +94,13 @@ async function doFetch(path: string, options: RequestOptions, extraHeaders?: Hea
   // jamais sur disque (voir backend/app/main.py).
   const clePersonnelle = obtenirClePersonnelle();
   if (clePersonnelle) (headers as Record<string, string>)["X-Anthropic-Api-Key"] = clePersonnelle;
+  // Internationalisation FR/EN -- la langue choisie dans la barre de tâches
+  // (voir frontend/src/i18n) est envoyée avec CHAQUE appel, lue par le
+  // backend via le même idiome de ContextVar que la clé API personnelle
+  // (voir backend/app/main.py::langue_requete_middleware). i18nInstance
+  // n'est importé qu'ici, jamais dans les composants, pour éviter toute
+  // dépendance circulaire entre l'init i18next et le client HTTP.
+  (headers as Record<string, string>)["X-Langue"] = i18nInstance.language || "fr";
   try {
     return await fetch(url, { method, headers, body: finalBody, signal });
   } catch {

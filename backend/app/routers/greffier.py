@@ -59,7 +59,11 @@ def exporter_chronologie(payload: ExportChronologieIn):
     Word pour la retrier/filtrer ensuite (voir AUDIT_IMPORT_EXPORT.md §6)."""
     dossier = get_dossier_or_404(payload.dossier_id)
     lignes = [[e.date, e.evenement] for e in payload.evenements]
-    chemin = legacy_export.exporter_csv(f"{dossier['nom']} — Chronologie", ["Date", "Événement"], lignes)
+    chemin = legacy_export.exporter_csv(
+        f"{dossier['nom']} — {legacy_export._l('chronologie_titre')}",
+        [legacy_export._l("date"), legacy_export._l("evenement")],
+        lignes,
+    )
     return FileResponse(chemin, filename=os.path.basename(chemin), media_type="text/csv")
 
 

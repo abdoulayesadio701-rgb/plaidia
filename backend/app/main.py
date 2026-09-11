@@ -135,6 +135,25 @@ async def cle_api_personnelle_middleware(request: Request, call_next):
         legacy_analyse.reinitialiser_cle_api_requete(jeton)
 
 
+# --- Langue de sortie (internationalisation FR/EN) --------------------------
+# Le sélecteur de langue de la barre de tâches (frontend/src/i18n) envoie
+# l'en-tête X-Langue avec CHAQUE appel (voir frontend/src/api/http.ts) --
+# posée pour la durée de la requête via le même idiome de ContextVar que la
+# clé API personnelle ci-dessus, lue par analyse._directive_langue() dans
+# tous les prompts système qui produisent du texte pour l'utilisateur final.
+EN_TETE_LANGUE = "x-langue"
+
+
+@app.middleware("http")
+async def langue_requete_middleware(request: Request, call_next):
+    langue = request.headers.get(EN_TETE_LANGUE)
+    jeton = legacy_analyse.definir_langue_requete(langue.strip() if langue else None)
+    try:
+        return await call_next(request)
+    finally:
+        legacy_analyse.reinitialiser_langue_requete(jeton)
+
+
 # --- Gestion d'erreurs uniforme -----------------------------------------
 # Toutes les fonctions métier réutilisées (analyse.py, judilibre.py,
 # legifrance.py, extract.py...) lèvent des exceptions Python standard —

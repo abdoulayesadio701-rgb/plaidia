@@ -84,6 +84,7 @@ def consulter(payload: ConsulterIn):
         f"Consultation — {payload.question[:60]}",
         {"question": payload.question, "but": payload.but, "source": payload.source},
         resultat,
+        langue=legacy_analyse.langue_requete(),
     )
     return ConsulterOut(**resultat, document_id=document["id"], statut=document["statut"])
 
