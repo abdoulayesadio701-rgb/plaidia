@@ -8,9 +8,12 @@ import json
 import os
 import re
 import contextvars
+from enum import Enum
 from pathlib import Path
 import anthropic
+import openai
 import paths
+import usage_log
 
 KEY_FILE = paths.base_dir() / "apikey.txt"
 
@@ -85,10 +88,36 @@ def obtenir_cle_api_requete() -> str | None:
 
 
 def cle_api_configuree() -> bool:
-    """True si le serveur dispose d'une clé API par défaut (variable
-    d'environnement ou fichier local) -- indépendamment de toute surcharge
-    par requête. Utilisé pour déterminer si le mode démo doit s'activer."""
+    """True si le serveur dispose d'une clé API Anthropic par défaut
+    (variable d'environnement ou fichier local) -- indépendamment de toute
+    surcharge par requête. Utilisé pour déterminer si le mode démo doit
+    s'activer -- ne couvre que Claude/MODEL_ACTIF et MODEL_LEGER ; voir
+    cle_api_deepseek_configuree() pour le fournisseur DeepSeek."""
     return bool(os.environ.get("ANTHROPIC_API_KEY")) or KEY_FILE.exists()
+
+
+# Chantier "optimisation des coûts API" : DeepSeek comme second fournisseur,
+# réservé aux tâches d'extraction/résumé (voir TypeTache et _appeler_modele
+# ci-dessous) -- jamais à l'analyse d'arguments juridiques ni à la
+# génération de plaidoirie, qui restent exclusivement sur MODEL_ACTIF/Claude,
+# sans exception. Hébergé via NVIDIA NIM (build.nvidia.com), pas l'API
+# officielle platform.deepseek.com -- la clé qui protège cet accès est donc
+# une clé NVIDIA, distincte de toute clé DeepSeek propre.
+NVIDIA_KEY_FILE = paths.base_dir() / "nvidia_apikey.txt"
+NVIDIA_NIM_BASE_URL = "https://integrate.api.nvidia.com/v1"
+MODEL_DEEPSEEK = "deepseek-ai/deepseek-v4-pro-0813"
+
+
+def cle_api_deepseek_configuree() -> bool:
+    """True si le serveur dispose d'une clé NVIDIA NIM par défaut (variable
+    d'environnement NVIDIA_API_KEY ou fichier nvidia_apikey.txt) --
+    condition pour que les tâches routées vers DeepSeek (extraction, résumé)
+    fonctionnent réellement. N'affecte PAS le mode démo global
+    (app/demo.py::mode_demo_serveur) : seules les deux fonctionnalités qui
+    utilisent réellement ce fournisseur en dépendent, via
+    app/demo.py::exiger_cle_api_deepseek -- l'absence de cette clé ne doit
+    jamais bloquer les fonctionnalités qui n'utilisent que Claude."""
+    return bool(os.environ.get("NVIDIA_API_KEY")) or NVIDIA_KEY_FILE.exists()
 
 # Modèle utilisé pour toutes les analyses — centralisé ici pour pouvoir
 # basculer facilement entre rapidité (Haiku) et profondeur (Sonnet).
@@ -158,6 +187,96 @@ def _client():
             "apikey.txt dans ce dossier contenant uniquement votre clé."
         )
     return anthropic.Anthropic(api_key=api_key)
+
+
+def _cle_api_nvidia() -> str:
+    cle = os.environ.get("NVIDIA_API_KEY")
+    if not cle and NVIDIA_KEY_FILE.exists():
+        cle = NVIDIA_KEY_FILE.read_text(encoding="utf-8").strip()
+    if not cle:
+        raise EnvironmentError(
+            "Clé API NVIDIA introuvable. Soit définissez la variable "
+            "d'environnement NVIDIA_API_KEY, soit créez un fichier "
+            "nvidia_apikey.txt dans ce dossier contenant uniquement votre clé."
+        )
+    return cle
+
+
+def _client_deepseek():
+    return openai.OpenAI(api_key=_cle_api_nvidia(), base_url=NVIDIA_NIM_BASE_URL)
+
+
+class TypeTache(str, Enum):
+    """Catégorie de tâche d'un appel modèle -- détermine le fournisseur dans
+    _TACHES_VERS_FOURNISSEUR ci-dessous. EXTRACTION/RESUME/INDEXATION vont
+    vers DeepSeek ; ANALYSE/GENERATION restent sur Claude, sans exception
+    (voir le commentaire au-dessus de MODEL_ACTIF). INDEXATION n'a aucun
+    site d'appel aujourd'hui -- aucune fonctionnalité n'indexe encore de
+    jurisprudence par LLM (judilibre.collecter_jurisprudence est un pur
+    appel REST) -- elle existe pour que ce choix soit déjà pris le jour où
+    cette fonctionnalité sera ajoutée."""
+
+    EXTRACTION = "extraction"
+    RESUME = "resume"
+    INDEXATION = "indexation"
+    ANALYSE = "analyse"
+    GENERATION = "generation"
+
+
+# Table de routage fournisseur -- volontairement un dict figé plutôt qu'un
+# if/else dispersé : un test dédié (voir backend/tests/test_model_router.py)
+# verrouille que ANALYSE et GENERATION valent toujours "claude", pour qu'un
+# futur ajout dans ce dict ne puisse pas silencieusement faire glisser une
+# tâche de raisonnement juridique vers DeepSeek.
+_TACHES_VERS_FOURNISSEUR: dict[TypeTache, str] = {
+    TypeTache.EXTRACTION: "deepseek",
+    TypeTache.RESUME: "deepseek",
+    TypeTache.INDEXATION: "deepseek",
+    TypeTache.ANALYSE: "claude",
+    TypeTache.GENERATION: "claude",
+}
+
+
+def _appeler_modele(type_tache: TypeTache, system: str, messages: list[dict], max_tokens: int) -> str:
+    """Point d'entrée unique pour les fonctions qui veulent router leur
+    appel selon la tâche plutôt que d'appeler _client() directement --
+    aujourd'hui utilisé seulement par extraire_elements_cles et
+    resumer_dossier (voir _TACHES_VERS_FOURNISSEUR). Les fonctions
+    d'analyse/génération existantes ne passent PAS par ici : elles
+    continuent d'appeler _client() directement avec MODEL_ACTIF, inchangées
+    -- ce routeur n'est pas dans leur chemin d'exécution."""
+    fournisseur = _TACHES_VERS_FOURNISSEUR[type_tache]
+
+    if fournisseur == "deepseek":
+        client = _client_deepseek()
+        response = client.chat.completions.create(
+            model=MODEL_DEEPSEEK,
+            max_tokens=max_tokens,
+            temperature=0.2,
+            seed=42,
+            extra_body={"chat_template_kwargs": {"thinking": False}},
+            messages=[{"role": "system", "content": system}, *messages],
+        )
+        texte = response.choices[0].message.content.strip()
+        usage_log.journaliser_usage(
+            "deepseek", type_tache.value, MODEL_DEEPSEEK,
+            response.usage.prompt_tokens, response.usage.completion_tokens,
+        )
+        return texte
+
+    client = _client()
+    response = client.messages.create(
+        model=MODEL_ACTIF,
+        max_tokens=max_tokens,
+        system=system,
+        messages=messages,
+    )
+    texte = response.content[0].text.strip()
+    usage_log.journaliser_usage(
+        "claude", type_tache.value, MODEL_ACTIF,
+        response.usage.input_tokens, response.usage.output_tokens,
+    )
+    return texte
 
 
 QUESTION_SYSTEM_PROMPT = """Tu es un assistant juridique pour avocat francophone (France, espace OHADA...). Un avocat te pose une question précise sur un cas qu'il prépare (stratégie, argument, point de procédure, jurisprudence applicable, prédiction ou analyse d'un réquisitoire...).
@@ -436,15 +555,17 @@ Règles impératives :
 
 def extraire_elements_cles(texte_document: str) -> dict:
     """Extrait automatiquement dates, noms, références, demandes et
-    décisions d'un document juridique."""
-    client = _client()
-    response = client.messages.create(
-        model=MODEL_ACTIF,
-        max_tokens=1500,
-        system=EXTRACTION_SYSTEM_PROMPT + _directive_langue(),
-        messages=[{"role": "user", "content": f"Document :\n{texte_document}"}],
+    décisions d'un document juridique. Routée vers DeepSeek (chantier
+    "optimisation des coûts API") -- tâche d'extraction structurée, jamais
+    de contenu juridique final destiné à l'utilisateur sans repasser par un
+    autre agent."""
+    raw = _appeler_modele(
+        TypeTache.EXTRACTION,
+        EXTRACTION_SYSTEM_PROMPT + _directive_langue(),
+        [{"role": "user", "content": f"Document :\n{texte_document}"}],
+        1500,
     )
-    raw = response.content[0].text.strip().replace("```json", "").replace("```", "").strip()
+    raw = raw.replace("```json", "").replace("```", "").strip()
     try:
         parsed = json.loads(raw)
     except json.JSONDecodeError as e:
@@ -639,16 +760,15 @@ def rediger_note_client(contexte_dossier: str) -> str:
 
 def resumer_dossier(contexte_dossier: str) -> dict:
     """Produit un résumé synthétique d'un dossier, utile après plusieurs
-    imports de documents pour retrouver rapidement l'essentiel."""
-    client = _client()
-    response = client.messages.create(
-        model=MODEL_ACTIF,
-        max_tokens=2200,
-        system=RESUME_SYSTEM_PROMPT,
-        messages=[{"role": "user", "content": f"Contenu du dossier :\n{contexte_dossier}"}],
+    imports de documents pour retrouver rapidement l'essentiel. Routée vers
+    DeepSeek (chantier "optimisation des coûts API") -- tâche de résumé,
+    jamais d'analyse d'arguments ni de génération de plaidoirie."""
+    raw = _appeler_modele(
+        TypeTache.RESUME,
+        RESUME_SYSTEM_PROMPT,
+        [{"role": "user", "content": f"Contenu du dossier :\n{contexte_dossier}"}],
+        2200,
     )
-
-    raw = response.content[0].text.strip()
     raw = raw.replace("```json", "").replace("```", "").strip()
 
     try:

@@ -75,3 +75,23 @@ def exiger_cle_api():
                 "en pied de page."
             ),
         )
+
+
+def exiger_cle_api_deepseek():
+    """À appeler en tête des deux seules routes qui utilisent le fournisseur
+    DeepSeek (extraction, résumé -- voir analyse.TypeTache) : /api/greffier/
+    extraction et /api/analyse/resume. Volontairement séparée de
+    exiger_cle_api() -- l'absence de clé NVIDIA (qui héberge DeepSeek, voir
+    analyse.py::NVIDIA_NIM_BASE_URL) ne doit affecter QUE ces deux routes,
+    jamais le reste du serveur qui n'utilise que Claude. Ne dépend pas de
+    mode_demo_effectif() : même un visiteur avec sa propre clé Anthropic
+    personnelle reste bloqué ici si le serveur n'a pas de clé NVIDIA -- ce
+    n'est pas un mode démo, c'est un fournisseur absent."""
+    if not legacy_analyse.cle_api_deepseek_configuree():
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "Cette fonctionnalité nécessite une clé API NVIDIA (fournisseur DeepSeek, "
+                "voir NVIDIA_API_KEY) qui n'est pas configurée sur ce serveur."
+            ),
+        )

@@ -121,6 +121,18 @@ def _verifier_citations(texte: str, sources_textes: list[str]) -> list[dict]:
     return resultats
 
 
+def verifier_citations_deterministe(texte: str, sources_textes: list[str]) -> list[dict]:
+    """Wrapper public de _verifier_citations -- même contrôle déterministe
+    (agnostique au modèle qui a produit `texte`, voir _verifier_citations),
+    exposé pour les routes qui n'ont pas de couche LLM vérificatrice dédiée
+    (extraction, résumé -- voir app/routers/greffier.py et
+    app/routers/analyse.py). Ne fait AUCUN appel réseau : ne remplace pas le
+    trio qualité (verifier_juridiquement/critiquer_reponse/valider_finalement,
+    réservé aux fonctions d'analyse/génération sur Claude), juste le filtre
+    de premier niveau qui existait déjà pour elles."""
+    return _verifier_citations(texte, sources_textes)
+
+
 def _statut_deterministe_global(citations: list[dict]) -> str:
     statuts = [c["statut_deterministe"] for c in citations]
     if any(s == "NON_VERIFIE" for s in statuts):

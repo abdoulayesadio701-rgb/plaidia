@@ -14,8 +14,9 @@ import os
 import analyse as legacy_analyse
 import db
 import export as legacy_export
-from app import demo, demo_data
+from app import demo, demo_data, quality_pipeline
 from app.deps import construire_contexte_dossier, get_dossier_or_404
+from app.security_guard import executer_garde_fou
 from app.schemas.greffier import (
     ChronologieIn,
     ChronologieOut,
@@ -69,8 +70,21 @@ def exporter_chronologie(payload: ExportChronologieIn):
 
 @router.post("/extraction", response_model=ExtractionOut)
 def extraction(payload: ExtractionIn):
+    """Route vers DeepSeek (voir analyse.TypeTache.EXTRACTION) -- garde-fou
+    d'entrée et contrôle déterministe des citations ajoutés ici en même
+    temps que le changement de fournisseur : ils manquaient déjà sous
+    Claude sur cette route (contrairement à /api/analyse/conclusions), ce
+    n'est pas spécifique à DeepSeek."""
     demo.exiger_cle_api()
-    return legacy_analyse.extraire_elements_cles(payload.texte)
+    demo.exiger_cle_api_deepseek()
+    executer_garde_fou(payload.texte)
+    elements = legacy_analyse.extraire_elements_cles(payload.texte)
+    for ref in elements.get("references", []):
+        citations = quality_pipeline.verifier_citations_deterministe(str(ref), [payload.texte])
+        for c in citations:
+            if c["statut_deterministe"] != "VERIFIE":
+                print(f"[greffier] citation non vérifiée dans une extraction DeepSeek : {c}", flush=True)
+    return elements
 
 
 @router.post("/classement", response_model=ClassementOut)

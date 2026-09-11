@@ -211,11 +211,22 @@ def changer_statut_conclusions(analyse_id: int, payload: StatutDocumentIn):
 
 @router.post("/resume", response_model=ResumeOut)
 def resumer_dossier(payload: ResumeIn):
+    """Route vers DeepSeek (voir analyse.TypeTache.RESUME) -- garde-fou
+    d'entrée et contrôle déterministe des citations ajoutés ici en même
+    temps que le changement de fournisseur : ils manquaient déjà sous
+    Claude sur cette route, ce n'est pas spécifique à DeepSeek."""
     dossier = get_dossier_or_404(payload.dossier_id)
     if demo.mode_demo_effectif():
         return demo_data.RESUME_DEMO
+    demo.exiger_cle_api_deepseek()
     contexte = construire_contexte_dossier(dossier)
-    return legacy_analyse.resumer_dossier(contexte)
+    quality_pipeline.executer_garde_fou(contexte)
+    resume = legacy_analyse.resumer_dossier(contexte)
+    for point in resume.get("points_cles", []):
+        for c in quality_pipeline.verifier_citations_deterministe(str(point), [contexte]):
+            if c["statut_deterministe"] != "VERIFIE":
+                print(f"[analyse] citation non vérifiée dans un résumé DeepSeek : {c}", flush=True)
+    return resume
 
 
 @router.post("/plan", response_model=PlanOut)

@@ -46,6 +46,20 @@ dépendent renverront une erreur 500 explicite
 (`{"detail": "Erreur de configuration serveur : ..."}`) plutôt que de
 planter silencieusement.
 
+`NVIDIA_API_KEY` est optionnelle : elle héberge le second fournisseur de
+modèle, DeepSeek (chantier "optimisation des coûts API"), utilisé
+uniquement pour l'extraction d'éléments clés (`POST /api/greffier/
+extraction`) et le résumé de dossier (`POST /api/analyse/resume`) — voir
+`analyse.TypeTache`. **Tout le reste de l'application (analyse d'arguments
+juridiques, génération de plaidoirie, chat, vérificateur, critique...)
+reste exclusivement sur Claude, sans exception**, absence de
+`NVIDIA_API_KEY` ou pas. Sans elle (et sans `nvidia_apikey.txt`), ces deux
+seules routes renvoient une 503 explicite
+(`app/demo.py::exiger_cle_api_deepseek`) — le reste du serveur fonctionne
+normalement. Un journal simple de l'usage par fournisseur/tâche/tokens est
+tenu dans `logs/usage_api.jsonl` (voir `usage_log.py`), pour suivre la
+répartition des coûts après coup.
+
 `backend/.env` n'est jamais lu par erreur par `gui.py`/`cli.py` (qui
 utilisent `.env` à la racine ou les fichiers `.txt`) — les deux
 configurations sont indépendantes, même si elles peuvent contenir les

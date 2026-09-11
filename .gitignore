@@ -5,6 +5,7 @@
 
 # API Keys and credentials
 apikey.txt
+nvidia_apikey.txt
 judilibre_key.txt
 legifrance_creds.txt
 *.key
