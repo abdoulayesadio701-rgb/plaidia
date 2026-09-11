@@ -26,6 +26,13 @@ export function modifierDomaine(dossierId: number, domaine: string): Promise<Dos
   return apiRequest<Dossier>(`/api/dossiers/${dossierId}/domaine`, { method: "PATCH", body: { domaine } });
 }
 
+export function modifierPosture(dossierId: number, partieRepresentee: string, stadeProcedure: string, objectif: string): Promise<Dossier> {
+  return apiRequest<Dossier>(`/api/dossiers/${dossierId}/posture`, {
+    method: "PATCH",
+    body: { partie_representee: partieRepresentee, stade_procedure: stadeProcedure, objectif },
+  });
+}
+
 export function supprimerDossier(dossierId: number): Promise<void> {
   return apiRequest<void>(`/api/dossiers/${dossierId}`, { method: "DELETE" });
 }

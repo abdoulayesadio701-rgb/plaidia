@@ -39,6 +39,15 @@ import analyse as legacy_analyse
 from app.security_guard import DemandeRefusee, executer_garde_fou  # noqa: F401  (DemandeRefusee ré-exportée pour les routers/tests)
 
 _TIMEOUT_AGENT_QUALITE = 45  # secondes -- par agent (vérificateur, critique, validateur), indépendamment les uns des autres.
+
+REGLE_POSTURE_STRATEGIQUE = (
+    "Règle posture stratégique obligatoire : signale toute recommandation qui minimise un fait défavorable au client, "
+    "déforme une source ou promet un résultat. Fais apparaître clairement les points faibles du client et distingue "
+    "toujours le diagnostic neutre de la stratégie pour la partie représentée. Limite absolue, non négociable : "
+    "aucune suggestion d'altérer, cacher ou fabriquer un fait ou une pièce, de tromper le tribunal ou de citer une "
+    "source déformée -- une telle suggestion doit toujours être signalée comme franchissant cette ligne (critique "
+    "de type 'limite_deontologique_franchie', gravité 'Élevée'), jamais laissée passer silencieusement."
+)
 # 20s (valeur initiale) s'est révélé trop court à l'usage réel : sur une
 # analyse de conclusions substantielle (constaté avec un vrai appel API),
 # le vérificateur et le critique tombaient systématiquement en dégradation
@@ -250,7 +259,7 @@ def _executer_trio_qualite(texte: str, sources_textes: list[str], contexte_dossi
     d'un agent ne bloque jamais les suivants, il dégrade seulement la
     précision du résultat."""
     citations = _verifier_citations(texte, sources_textes)
-    contexte_sources = "\n\n".join(t for t in sources_textes if t)[:8000]
+    contexte_sources = ("\n\n".join(t for t in sources_textes if t)[:8000] + "\n\n" + REGLE_POSTURE_STRATEGIQUE)
 
     repli_verif = {
         "statut_global": _statut_deterministe_global(citations),
@@ -282,7 +291,7 @@ def _executer_trio_qualite(texte: str, sources_textes: list[str], contexte_dossi
 
     t0 = time.monotonic()
     repli_critique = {"critiques": [], "synthese": ""}
-    resultat_critique = _appel_protege(lambda: legacy_analyse.critiquer_reponse(texte, contexte_dossier), repli_critique)
+    resultat_critique = _appel_protege(lambda: legacy_analyse.critiquer_reponse(texte, f"{contexte_dossier}\n\n{REGLE_POSTURE_STRATEGIQUE}"), repli_critique)
     trace.append(EtapeTrace("critic_agent", "ok" if resultat_critique is not repli_critique else "degrade", _ms(t0)))
 
     t0 = time.monotonic()
@@ -338,6 +347,16 @@ def executer_pipeline_complet(
 
     _log(f"pipeline complet ({feature}) terminé -- statut global : {verification.get('statut_global')}.")
     return ResultatPipeline(resultat_principal=resultat_principal, verification=verification, trace=trace)
+
+
+def executer_strategie_combative(fonction_strategie: Callable[[], dict]) -> dict:
+    """Protège l'appel à l'agent de stratégie combative (complément
+    posture/stratégie -- voir analyse.generer_strategie_combative) avec le
+    même idiome que le trio qualité (_appel_protege) : un agent lent ou en
+    échec ne casse jamais l'endpoint. La stratégie retombe alors sur le
+    texte générique construit par app.deps.structurer_sortie_strategique,
+    jamais sur une erreur 500."""
+    return _appel_protege(fonction_strategie, {"moyens": [], "reponses_arguments_adverses": []})
 
 
 def executer_garde_fou_et_intention(message: str, historique: list[dict] | None = None) -> tuple[dict, dict]:

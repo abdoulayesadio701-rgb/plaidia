@@ -15,7 +15,7 @@ import analyse as legacy_analyse
 import db
 import export as legacy_export
 from app import demo, demo_data, quality_pipeline
-from app.deps import construire_contexte_dossier, get_dossier_or_404
+from app.deps import construire_contexte_dossier, get_dossier_or_404, structurer_sortie_strategique
 from app.schemas.analyse import (
     ConclusionsIn,
     ConclusionsOut,
@@ -44,39 +44,76 @@ from typing import Literal
 router = APIRouter(prefix="/api/analyse", tags=["analyse"])
 
 
+def _strategie_combative_si_pertinente(
+    dossier: dict | None, contexte_dossier: str, arguments_adverses: list[dict] | None = None
+) -> dict | None:
+    """Complément posture/stratégie : n'appelle l'agent de stratégie
+    combative (analyse.generer_strategie_combative) que lorsqu'une partie
+    représentée est renseignée -- sinon la stratégie reste générique (voir
+    structurer_sortie_strategique), inutile d'appeler le modèle pour un
+    résultat qui ne serait pas orienté. Jamais appelé en mode démo (les
+    branches démo des endpoints ci-dessous ne l'invoquent pas)."""
+    if not dossier:
+        return None
+    posture = (dossier.get("partie_representee") or "").strip()
+    if not posture:
+        return None
+    return quality_pipeline.executer_strategie_combative(
+        lambda: legacy_analyse.generer_strategie_combative(
+            contexte_dossier, posture, dossier.get("objectif") or "", arguments_adverses
+        )
+    )
+
+
 @router.post("/conclusions", response_model=ConclusionsOut)
 def analyser_conclusions(payload: ConclusionsIn):
+    dossier = get_dossier_or_404(payload.dossier_id) if payload.dossier_id is not None else None
     if demo.mode_demo_effectif():
         # Réponse préenregistrée, quel que soit le texte fourni -- jamais
         # persistée (voir le bandeau "Mode démo" : données non conservées).
         resultat = demo_data.CONCLUSIONS_DEMO
-        if payload.dossier_id is not None:
-            get_dossier_or_404(payload.dossier_id)
-        return ConclusionsOut(arguments=resultat["arguments"], points_attention=resultat["points_attention"], analyse_id=None)
+        sections = structurer_sortie_strategique(resultat, dossier or {"id": 0, "nom": "", "faits": "", "parties": ""}, "conclusions")
+        return ConclusionsOut(
+            arguments=resultat["arguments"],
+            points_attention=resultat["points_attention"],
+            analyse_id=None,
+            diagnostic=sections["diagnostic"],
+            strategie=sections["strategie"],
+        )
 
     # Pipeline complet (§9 ARCHITECTURE_MULTI_AGENTS.md) : garde-fou d'entrée
     # -> agent principal (inchangé) -> vérificateur juridique -> critique ->
     # validation finale. Le texte source lui-même sert de référence au
     # contrôle déterministe des citations (analyser_conclusions ne cite
     # normalement que ce qui figure dans les conclusions adverses fournies).
+    contexte_dossier = construire_contexte_dossier(dossier) if dossier else ""
     pipeline = quality_pipeline.executer_pipeline_complet(
         feature="conclusions",
         texte_a_screener=payload.texte,
         fonction_principale=lambda: legacy_analyse.analyser_conclusions(payload.texte),
         sources_textes=[payload.texte],
+        contexte_dossier=contexte_dossier,
     )
     resultat = pipeline.resultat_principal
     analyse_id = None
     if payload.dossier_id is not None:
-        get_dossier_or_404(payload.dossier_id)
         analyse_id = db.save_analyse(
             payload.dossier_id, resultat.get("arguments", []), resultat.get("points_attention", [])
         )
+    strategie_combative = _strategie_combative_si_pertinente(dossier, contexte_dossier, resultat.get("arguments", []))
+    sections = structurer_sortie_strategique(
+        {"arguments": resultat.get("arguments", []), "points_attention": resultat.get("points_attention", [])},
+        dossier or {"id": 0, "nom": "", "faits": "", "parties": ""},
+        "conclusions",
+        strategie_combative=strategie_combative,
+    )
     return ConclusionsOut(
         arguments=resultat.get("arguments", []),
         points_attention=resultat.get("points_attention", []),
         analyse_id=analyse_id,
         verification=pipeline.verification,
+        diagnostic=sections["diagnostic"],
+        strategie=sections["strategie"],
     )
 
 
@@ -104,7 +141,7 @@ def resumer_dossier(payload: ResumeIn):
 def generer_plan(payload: PlanIn):
     dossier = get_dossier_or_404(payload.dossier_id)
     if demo.mode_demo_effectif():
-        resultat = demo_data.PLAN_DEMO
+        resultat = structurer_sortie_strategique(demo_data.PLAN_DEMO, dossier, "plan")
     else:
         contexte = construire_contexte_dossier(dossier)
         pipeline = quality_pipeline.executer_pipeline_complet(
@@ -114,7 +151,10 @@ def generer_plan(payload: PlanIn):
             sources_textes=[contexte],
             contexte_dossier=contexte,
         )
-        resultat = {**pipeline.resultat_principal, "verification": pipeline.verification}
+        strategie_combative = _strategie_combative_si_pertinente(dossier, contexte)
+        resultat = structurer_sortie_strategique(
+            {**pipeline.resultat_principal, "verification": pipeline.verification}, dossier, "plan", strategie_combative=strategie_combative
+        )
     document = db.creer_document_genere(
         payload.dossier_id, "plan", f"Plan de plaidoirie — {dossier['nom']}", {"temps_minutes": payload.temps_minutes}, resultat
     )
@@ -125,7 +165,7 @@ def generer_plan(payload: PlanIn):
 def simuler_objections(payload: SimulateurIn):
     dossier = get_dossier_or_404(payload.dossier_id)
     if demo.mode_demo_effectif():
-        resultat = demo_data.SIMULATEUR_DEMO
+        resultat = structurer_sortie_strategique(demo_data.SIMULATEUR_DEMO, dossier, "simulateur")
     else:
         contexte = construire_contexte_dossier(dossier)
         pipeline = quality_pipeline.executer_pipeline_complet(
@@ -135,7 +175,10 @@ def simuler_objections(payload: SimulateurIn):
             sources_textes=[contexte],
             contexte_dossier=contexte,
         )
-        resultat = {**pipeline.resultat_principal, "verification": pipeline.verification}
+        strategie_combative = _strategie_combative_si_pertinente(dossier, contexte)
+        resultat = structurer_sortie_strategique(
+            {**pipeline.resultat_principal, "verification": pipeline.verification}, dossier, "simulateur", strategie_combative=strategie_combative
+        )
     document = db.creer_document_genere(
         payload.dossier_id, "simulateur", f"Simulateur d'objections — {dossier['nom']}", {}, resultat
     )

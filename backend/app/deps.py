@@ -96,6 +96,12 @@ def construire_contexte_dossier(dossier: dict) -> str:
         parts.append(f"Faits : {dossier['faits']}")
     if dossier.get("parties"):
         parts.append(f"Parties : {dossier['parties']}")
+    if dossier.get("partie_representee"):
+        parts.append(f"Partie représentée : {dossier['partie_representee']}")
+    if dossier.get("stade_procedure"):
+        parts.append(f"Stade de la procédure : {dossier['stade_procedure']}")
+    if dossier.get("objectif"):
+        parts.append(f"Objectif du client : {dossier['objectif']}")
 
     analyses = db.get_analyses_for_dossier(dossier["id"])
     if analyses:
@@ -105,3 +111,85 @@ def construire_contexte_dossier(dossier: dict) -> str:
             parts.append(f"- [{arg.get('risque', '?')}] {arg.get('resume', '')}")
 
     return "\n".join(parts) if parts else f"Dossier « {dossier['nom']} », domaine : {dossier.get('domaine', '')}."
+
+
+_AXES_STRATEGIQUES = ["Procédure", "Preuve", "Fond", "Quantum"]
+
+
+def _formater_moyen(moyen: dict, *, avec_axe: bool = False) -> str:
+    prefixe = f"{moyen.get('axe', '?')} — " if avec_axe else ""
+    entete = f"- {prefixe}{moyen.get('moyen', '')} (probabilité de succès : {moyen.get('probabilite_succes', '?')} — coût/risque : {moyen.get('cout_risque', '?')})"
+    developpement = (moyen.get("developpement") or "").strip()
+    return f"{entete}\n  {developpement}" if developpement else entete
+
+
+def _formater_strategie_combative(strategie_combative: dict, posture: str, objectif_texte: str) -> str:
+    """Construit le texte combatif et exhaustif de la stratégie -- voir le
+    complément posture/stratégie : balayage systématique des quatre axes
+    (procédure, preuve, fond, quantum), moyens jamais supprimés (les
+    improbables sont listés à part), et une réponse proposée pour chaque
+    argument adverse identifié."""
+    moyens = strategie_combative.get("moyens") or []
+    reponses = strategie_combative.get("reponses_arguments_adverses") or []
+
+    parties = [
+        f"Stratégie combative pour {posture}\nBalayage systématique des moyens disponibles, sans en écarter aucun a priori.{objectif_texte}"
+    ]
+
+    for axe in _AXES_STRATEGIQUES:
+        moyens_axe = [m for m in moyens if m.get("axe") == axe and m.get("probabilite_succes") != "Improbable"]
+        if moyens_axe:
+            bloc = "\n".join(_formater_moyen(m) for m in moyens_axe)
+            parties.append(f"{axe}\n{bloc}")
+        else:
+            parties.append(f"{axe}\nAucun moyen exploitable identifié sur cet axe pour ce dossier.")
+
+    moyens_improbables = [m for m in moyens if m.get("probabilite_succes") == "Improbable"]
+    if moyens_improbables:
+        bloc = "\n".join(_formater_moyen(m, avec_axe=True) for m in moyens_improbables)
+        parties.append(
+            "Moyens improbables (non écartés -- à l'avocat seul de décider de les soulever)\n" + bloc
+        )
+
+    if reponses:
+        bloc = "\n".join(
+            f"- {r.get('argument_adverse', '')} → {r.get('reponse', '')}" for r in reponses
+        )
+        parties.append("Réponses aux arguments adverses\n" + bloc)
+
+    return "\n\n".join(parties)
+
+
+def structurer_sortie_strategique(
+    resultat: dict, dossier: dict, feature: str, strategie_combative: dict | None = None
+) -> dict:
+    """Ajoute deux sections stables sans orienter le diagnostic par défaut.
+
+    `strategie_combative` : résultat optionnel de
+    analyse.generer_strategie_combative() (voir les routers de
+    /api/analyse) -- balayage combatif et exhaustif procédure/preuve/fond/
+    quantum pour la partie représentée. Absent en mode démo et quand aucune
+    partie n'est renseignée : la stratégie retombe alors sur un texte
+    générique, jamais sur un appel réseau depuis cette fonction pure."""
+    diagnostic_parts = ["Diagnostic\nFaits et éléments disponibles :", construire_contexte_dossier(dossier)]
+    if resultat.get("arguments"):
+        diagnostic_parts.append("Forces, faiblesses et risques : les arguments et leurs niveaux de risque sont listés ci-dessus.")
+    if resultat.get("objections"):
+        diagnostic_parts.append("Objections identifiées : chaque objection et sa piste de réponse doivent être examinées contradictoirement.")
+    if resultat.get("reponse"):
+        diagnostic_parts.append("Réponse juridique produite : elle doit être confrontée aux sources et aux faits du dossier.")
+
+    posture = (dossier.get("partie_representee") or "").strip()
+    if posture:
+        objectif = (dossier.get("objectif") or "").strip()
+        objectif_texte = f" Objectif déclaré : {objectif}." if objectif else ""
+        if strategie_combative and (strategie_combative.get("moyens") or strategie_combative.get("reponses_arguments_adverses")):
+            strategie = _formater_strategie_combative(strategie_combative, posture, objectif_texte)
+        else:
+            strategie = (
+                f"Stratégie pour {posture}\nMoyens à soulever en priorité, pièces à produire, objections à anticiper "
+                f"et arguments adverses à neutraliser.{objectif_texte}"
+            )
+    else:
+        strategie = "Stratégie\nAucune partie n'est renseignée : la stratégie n'est pas orientée et le résultat reste présenté de manière générale."
+    return {**resultat, "diagnostic": "\n\n".join(diagnostic_parts), "strategie": strategie}

@@ -15,7 +15,7 @@ import db
 import judilibre as legacy_judilibre
 import recherche_juridique as legacy_rj
 from app import demo, quality_pipeline
-from app.deps import extraire_texte_upload
+from app.deps import construire_contexte_dossier, extraire_texte_upload, structurer_sortie_strategique
 from app.schemas.jurisprudence import (
     CollecterIn,
     CollecterOut,
@@ -39,7 +39,8 @@ JURIDICTION_PAR_DEFAUT = "Légifrance (France)"
 @router.post("/consulter", response_model=ConsulterOut)
 def consulter(payload: ConsulterIn):
     demo.exiger_cle_api()
-    dossier = db.get_dossier(payload.dossier_id)
+    dossier_row = db.get_dossier(payload.dossier_id)
+    dossier = dict(dossier_row) if dossier_row else None
     if not dossier:
         raise HTTPException(status_code=404, detail=f"Dossier {payload.dossier_id} introuvable.")
     notions = legacy_analyse.identifier_notions_juridiques(payload.question, payload.but)
@@ -72,8 +73,11 @@ def consulter(payload: ConsulterIn):
             but=notions.get("but", payload.but),
         ),
         sources_textes=[contexte_recherche] if contexte_recherche else [],
+        contexte_dossier=construire_contexte_dossier(dossier),
     )
-    resultat = {"notions": notions, "reponse": pipeline.resultat_principal, "verification": pipeline.verification}
+    resultat = structurer_sortie_strategique(
+        {"notions": notions, "reponse": pipeline.resultat_principal, "verification": pipeline.verification}, dossier, "jurisprudence_consultation"
+    )
     document = db.creer_document_genere(
         payload.dossier_id,
         "jurisprudence_consultation",

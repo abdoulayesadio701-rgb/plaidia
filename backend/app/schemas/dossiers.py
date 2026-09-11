@@ -13,10 +13,19 @@ class DossierCreate(BaseModel):
     domaine: str = Field("", max_length=200, description="Domaine (Prud'hommes, Pénal, Civil...)")
     parties: str = Field("", max_length=MAX_TEXTE_CARACTERES, description="Parties au dossier (optionnel)")
     faits: str = Field("", max_length=MAX_TEXTE_CARACTERES, description="Faits connus au moment de la création (optionnel)")
+    partie_representee: str = Field("", max_length=100)
+    stade_procedure: str = Field("", max_length=50)
+    objectif: str = Field("", max_length=MAX_TEXTE_CARACTERES)
 
 
 class DossierDomaineUpdate(BaseModel):
     domaine: str = Field(..., description="Nouveau domaine du dossier")
+
+
+class DossierPostureUpdate(BaseModel):
+    partie_representee: str = Field("", max_length=100)
+    stade_procedure: str = Field("", max_length=50)
+    objectif: str = Field("", max_length=MAX_TEXTE_CARACTERES)
 
 
 class DossierOut(BaseModel):
@@ -26,6 +35,9 @@ class DossierOut(BaseModel):
     domaine: Optional[str] = ""
     parties: Optional[str] = ""
     faits: Optional[str] = ""
+    partie_representee: Optional[str] = ""
+    stade_procedure: Optional[str] = ""
+    objectif: Optional[str] = ""
     statut: str
     date_creation: str
 

@@ -43,6 +43,8 @@ class ConclusionsOut(BaseModel):
     verification: Optional[VerificationOut] = Field(
         None, description="Contrôle multi-agents additif (vérificateur juridique, critique, validation finale) — absent en mode démo, voir ARCHITECTURE_MULTI_AGENTS.md"
     )
+    diagnostic: str = ""
+    strategie: str = ""
 
 
 class StatutDocumentIn(BaseModel):
@@ -84,6 +86,8 @@ class PlanOut(BaseModel):
     verification: Optional[VerificationOut] = None
     document_id: Optional[int] = None
     statut: str = "Brouillon"
+    diagnostic: str = ""
+    strategie: str = ""
 
 
 class SimulateurIn(BaseModel):
@@ -102,6 +106,8 @@ class SimulateurOut(BaseModel):
     point_le_plus_faible: str = ""
     document_id: Optional[int] = None
     statut: str = "Brouillon"
+    diagnostic: str = ""
+    strategie: str = ""
     verification: Optional[VerificationOut] = None
 
 

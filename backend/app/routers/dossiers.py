@@ -19,6 +19,7 @@ from app.schemas.dossiers import (
     DocumentImporteOut,
     FaitsAjout,
     AnalyseHistoriqueOut,
+    DossierPostureUpdate,
 )
 from app.schemas.documents import DocumentGenereOut, DocumentStatutIn, DocumentStatutOut
 from fastapi import APIRouter, File, HTTPException, Query, UploadFile
@@ -35,6 +36,9 @@ def creer_dossier(payload: DossierCreate):
         parties=payload.parties,
         faits=payload.faits,
         numero_dossier=payload.numero_dossier,
+        partie_representee=payload.partie_representee,
+        stade_procedure=payload.stade_procedure,
+        objectif=payload.objectif,
     )
     return get_dossier_or_404(dossier_id)
 
@@ -82,6 +86,13 @@ def modifier_domaine(dossier_id: int, payload: DossierDomaineUpdate):
 def supprimer_dossier(dossier_id: int):
     get_dossier_or_404(dossier_id)
     db.delete_dossier(dossier_id)
+
+
+@router.patch("/{dossier_id}/posture", response_model=DossierOut)
+def modifier_posture(dossier_id: int, payload: DossierPostureUpdate):
+    get_dossier_or_404(dossier_id)
+    db.update_posture(dossier_id, payload.partie_representee, payload.stade_procedure, payload.objectif)
+    return get_dossier_or_404(dossier_id)
 
 
 @router.get("/{dossier_id}/analyses", response_model=list[AnalyseHistoriqueOut])

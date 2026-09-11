@@ -28,6 +28,8 @@ class ConsulterOut(BaseModel):
     verification: Optional[VerificationOut] = None
     document_id: Optional[int] = None
     statut: str = "Brouillon"
+    diagnostic: str = ""
+    strategie: str = ""
 
 
 class CollecterIn(BaseModel):
