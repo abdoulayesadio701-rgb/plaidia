@@ -8,11 +8,28 @@ C'est le point d'entrée principal pour la recherche juridique en ligne.
 """
 
 import concurrent.futures
+import re
+import time
 
 import legifrance
 import judilibre
 
 TIMEOUT_DUR_PAR_SOURCE = 12  # secondes — limite absolue, indépendante des timeouts internes
+
+# Chantier "temps de traitement des générations", §2f : deux requêtes
+# identiques pendant une même session ne doivent pas réinterroger
+# Légifrance/Judilibre en direct — cache en mémoire du process, borné dans
+# le temps pour ne jamais servir un résultat trop daté. Un simple dict au
+# niveau module suffit : chaque instance backend a sa propre session de
+# travail, pas de partage entre requêtes d'utilisateurs différents à
+# distinguer ici (la requête elle-même, normalisée, est la clé).
+_CACHE_RECHERCHE: dict[str, tuple[float, dict]] = {}
+_CACHE_TTL_SECONDES = 30 * 60  # 30 minutes — couvre une session de travail typique sans risquer un résultat trop daté.
+
+
+def _cle_cache(query: str, max_par_source: int) -> str:
+    normalisee = re.sub(r"\s+", " ", query or "").strip().lower()
+    return f"{max_par_source}:{normalisee}"
 
 
 def _appel_avec_timeout(fonction, *args, **kwargs):
@@ -42,7 +59,19 @@ def rechercher_contexte_juridique(query: str, max_par_source: int = 5) -> dict:
     stricte de 12 secondes : si l'une échoue, est trop lente, ou reste
     bloquée (réseau filtré, DNS muet...), l'autre continue de fonctionner
     et la fonction se termine toujours.
+
+    Mise en cache (§2f) : une requête identique (même texte normalisé, même
+    max_par_source) dans les 30 dernières minutes renvoie le résultat déjà
+    obtenu sans réinterroger Légifrance/Judilibre.
     """
+    cle = _cle_cache(query, max_par_source)
+    entree = _CACHE_RECHERCHE.get(cle)
+    if entree is not None:
+        horodatage, resultat_cache = entree
+        if time.monotonic() - horodatage < _CACHE_TTL_SECONDES:
+            print(f"[recherche_juridique] cache : résultat réutilisé pour {query!r} (recherche live évitée).")
+            return resultat_cache
+
     articles_loi = []
     jurisprudence_resultats = []
 
@@ -67,7 +96,15 @@ def rechercher_contexte_juridique(query: str, max_par_source: int = 5) -> dict:
     finally:
         executor.shutdown(wait=False)
 
-    return {"articles_loi": articles_loi, "jurisprudence": jurisprudence_resultats}
+    resultat = {"articles_loi": articles_loi, "jurisprudence": jurisprudence_resultats}
+    # Un résultat entièrement vide est le plus souvent le signe d'une panne
+    # transitoire (réseau filtré, timeout...) plutôt qu'une absence réelle de
+    # résultat -- ne pas le mettre en cache, pour laisser une chance à la
+    # prochaine requête identique de réessayer plutôt que de rester bloquée
+    # sur "aucun résultat" pendant 30 minutes.
+    if articles_loi or jurisprudence_resultats:
+        _CACHE_RECHERCHE[cle] = (time.monotonic(), resultat)
+    return resultat
 
 
 def formater_contexte_pour_prompt(contexte: dict) -> str:

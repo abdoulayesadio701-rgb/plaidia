@@ -101,7 +101,11 @@ def test_pipeline_complet_execute_agent_principal_et_renvoie_verification(monkey
     )
     assert resultat.resultat_principal == {"arguments": [], "points_attention": []}
     assert resultat.verification is not None
-    assert resultat.verification["synthese_utilisateur"] == "Synthèse."
+    # La validation finale est désormais une fusion déterministe en code
+    # (chantier "temps de traitement", §2b) -- valider_finalement (le
+    # modèle) n'est PAS appelé ici puisque les verdicts par défaut ne se
+    # contredisent pas (voir les tests dédiés ci-dessous pour les deux cas).
+    assert resultat.verification["statut_global"] == "A_VERIFIER"
     agents_executes = [e.agent for e in resultat.trace]
     assert agents_executes == ["garde_fou_entree", "agent_principal", "legal_verifier", "critic_agent", "final_validator"]
 
@@ -180,3 +184,111 @@ def test_trio_qualite_execute_si_intention_le_demande(monkeypatch):
     )
     assert resultat is not None
     assert "statut_global" in resultat
+
+
+# --- Parallélisation et validation finale déterministe (chantier "temps de traitement", §2b) ---
+
+def test_appels_proteges_en_parallele_degrade_independamment():
+    def _ok():
+        return {"v": 1}
+
+    def _echoue():
+        raise RuntimeError("panne simulée")
+
+    resultats = quality_pipeline._appels_proteges_en_parallele([(_ok, {"repli": True}), (_echoue, {"repli": True})])
+    assert resultats[0] == {"v": 1}
+    assert resultats[1] == {"repli": True}
+
+
+def test_verificateur_et_critique_sexecutent_en_parallele(monkeypatch):
+    """Preuve mesurable de la parallélisation : deux agents qui dorment
+    chacun 0.2s doivent se terminer en bien moins que 0.4s au total --
+    l'attente devient le max des deux durées, jamais leur somme."""
+
+    def _lent(valeur):
+        def _appel(*a, **k):
+            time.sleep(0.2)
+            return valeur
+        return _appel
+
+    _mocker_agents_qualite(
+        monkeypatch,
+        verif=_lent({"statut_global": "A_VERIFIER", "elements": []}),
+        critique=_lent({"critiques": [], "synthese": ""}),
+    )
+    t0 = time.monotonic()
+    resultat = quality_pipeline.executer_pipeline_complet(
+        feature="conclusions", texte_a_screener="texte", fonction_principale=lambda: {"arguments": []}, sources_textes=["texte"],
+    )
+    duree = time.monotonic() - t0
+    assert duree < 0.35
+    assert resultat.verification is not None
+
+
+def test_validation_finale_deterministe_sans_appel_modele_si_verdicts_coherents(monkeypatch):
+    appels_modele = []
+    _mocker_agents_qualite(
+        monkeypatch,
+        verif=lambda *a, **k: {"statut_global": "VERIFIE", "elements": []},
+        critique=lambda *a, **k: {"critiques": [], "synthese": ""},
+        final=lambda *a, **k: appels_modele.append(1) or {},
+    )
+    resultat = quality_pipeline.executer_pipeline_complet(
+        feature="conclusions", texte_a_screener="texte", fonction_principale=lambda: {"arguments": []}, sources_textes=["texte"],
+    )
+    assert appels_modele == []
+    assert resultat.verification["statut_global"] == "VERIFIE"
+
+
+def test_validation_finale_appelle_le_modele_si_verdicts_se_contredisent(monkeypatch):
+    """Seul cas où le modèle est encore appelé pour la validation finale :
+    le vérificateur juge les citations fiables (VERIFIE) alors que le
+    critique a relevé une faiblesse de gravité Élevée -- désaccord réel que
+    la fusion déterministe ne peut pas trancher seule."""
+    appels_modele = []
+
+    def _valider_finalement_espion(verif, crit):
+        appels_modele.append(1)
+        return {"statut_global": "INCERTAIN", "points_a_verifier": [], "points_forts": [], "synthese_utilisateur": "Tranché par le modèle."}
+
+    _mocker_agents_qualite(
+        monkeypatch,
+        verif=lambda *a, **k: {"statut_global": "VERIFIE", "elements": []},
+        critique=lambda *a, **k: {"critiques": [{"cible": "x", "type": "contradiction_interne", "commentaire": "y", "gravite": "Élevée"}], "synthese": "z"},
+        final=_valider_finalement_espion,
+    )
+    resultat = quality_pipeline.executer_pipeline_complet(
+        feature="conclusions", texte_a_screener="texte", fonction_principale=lambda: {"arguments": []}, sources_textes=["texte"],
+    )
+    assert appels_modele == [1]
+    assert resultat.verification["synthese_utilisateur"] == "Tranché par le modèle."
+
+
+def test_garde_fou_precalcule_evite_un_second_appel(monkeypatch):
+    _mocker_agents_qualite(monkeypatch)
+    appels = []
+    monkeypatch.setattr(
+        legacy_analyse,
+        "evaluer_garde_fou_entree",
+        lambda texte: appels.append(1) or {"allowed": True, "risk_level": "low", "reason": "", "requires_clarification": False},
+    )
+    quality_pipeline.executer_pipeline_complet(
+        feature="conclusions",
+        texte_a_screener="texte",
+        fonction_principale=lambda: {"arguments": []},
+        garde_fou_precalcule={"allowed": True, "risk_level": "low", "reason": "déjà fait", "requires_clarification": False},
+    )
+    assert appels == []
+
+
+def test_executer_trio_qualite_public_sans_garde_fou_ni_agent_principal(monkeypatch):
+    """executer_trio_qualite() (public) -- utilisé par les endpoints en
+    streaming -- n'appelle ni le garde-fou ni un agent principal, seulement
+    le trio qualité."""
+    appels_garde_fou = []
+    monkeypatch.setattr(legacy_analyse, "evaluer_garde_fou_entree", lambda texte: appels_garde_fou.append(1) or {})
+    _mocker_agents_qualite(monkeypatch)
+    verification, trace = quality_pipeline.executer_trio_qualite("texte à vérifier", ["texte à vérifier"])
+    assert appels_garde_fou == []
+    assert verification is not None
+    assert [e.agent for e in trace] == ["legal_verifier", "critic_agent", "final_validator"]

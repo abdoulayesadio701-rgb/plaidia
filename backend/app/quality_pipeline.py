@@ -201,39 +201,6 @@ def _recalculer_statut_global(statut_propose: str, elements: list[dict]) -> str:
     return statut_propose
 
 
-def _texte_pour_verification(resultat) -> str:
-    """Sérialise le résultat de l'agent principal (dict structuré ou texte
-    libre selon la fonctionnalité) en texte lisible par les agents
-    qualité."""
-    if isinstance(resultat, str):
-        return resultat
-    try:
-        return json.dumps(resultat, ensure_ascii=False, indent=2)
-    except TypeError:
-        return str(resultat)
-
-
-def _appel_protege(fonction: Callable[[], dict], valeur_repli: dict):
-    """Exécute `fonction` avec un timeout strict, réutilisant l'idiome déjà
-    établi par recherche_juridique._appel_avec_timeout (ThreadPoolExecutor à
-    un seul worker, n'attend pas le thread après un timeout). Ne relance
-    jamais d'exception : un agent qualité lent, en erreur, ou dont la clé
-    API échoue dégrade proprement vers `valeur_repli` plutôt que de faire
-    échouer toute la requête."""
-    executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
-    future = executor.submit(fonction)
-    try:
-        return future.result(timeout=_TIMEOUT_AGENT_QUALITE)
-    except concurrent.futures.TimeoutError:
-        _log(f"agent qualité : délai dépassé ({_TIMEOUT_AGENT_QUALITE}s) -- résultat dégradé utilisé.")
-        return valeur_repli
-    except Exception as e:
-        _log(f"agent qualité en échec : {e} -- résultat dégradé utilisé.")
-        return valeur_repli
-    finally:
-        executor.shutdown(wait=False)
-
-
 @dataclass
 class EtapeTrace:
     agent: str
@@ -251,6 +218,132 @@ class ResultatPipeline:
 
 def _ms(t0: float) -> int:
     return int((time.monotonic() - t0) * 1000)
+
+
+def texte_pour_verification(resultat) -> str:
+    """Sérialise le résultat de l'agent principal (dict structuré ou texte
+    libre selon la fonctionnalité) en texte lisible par les agents
+    qualité. Public : réutilisé par les endpoints en streaming (§2a du
+    chantier "temps de traitement des générations"), qui appellent
+    executer_trio_qualite() directement plutôt que executer_pipeline_complet()."""
+    if isinstance(resultat, str):
+        return resultat
+    try:
+        return json.dumps(resultat, ensure_ascii=False, indent=2)
+    except TypeError:
+        return str(resultat)
+
+
+_ORDRE_GRAVITE = {"Faible": 0, "Moyenne": 1, "Élevée": 2}
+
+
+def _gravite_max(critiques: list[dict]) -> str | None:
+    if not critiques:
+        return None
+    return max(critiques, key=lambda c: _ORDRE_GRAVITE.get(c.get("gravite"), 0)).get("gravite")
+
+
+def _verdicts_se_contredisent(resultat_verif: dict, resultat_critique: dict) -> bool:
+    """Chantier "temps de traitement des générations", §2b : la validation
+    finale ne rappelle le modèle (agent de validation finale) QUE si le
+    vérificateur et le critique se contredisent réellement -- le vérificateur
+    juge les citations fiables (VERIFIE) alors que le critique a relevé une
+    faiblesse de gravité Élevée, que le vérificateur ne pouvait pas voir
+    puisqu'il ne juge que les citations. Dans tous les autres cas, les deux
+    verdicts pointent déjà dans la même direction et une fusion déterministe
+    en code (_valider_finalement_deterministe) suffit, sans appel réseau
+    supplémentaire."""
+    return resultat_verif.get("statut_global") == "VERIFIE" and _gravite_max(resultat_critique.get("critiques", [])) == "Élevée"
+
+
+def _valider_finalement_deterministe(resultat_verif: dict, resultat_critique: dict) -> dict:
+    """Fusion EN CODE du vérificateur et du critique, sans appel au modèle
+    (§2b) -- remplace l'agent de validation finale dans le cas courant où
+    les deux verdicts ne se contredisent pas (voir _verdicts_se_contredisent).
+    Reste aussi honnête que VALIDATION_FINALE_SYSTEM_PROMPT : jamais de
+    statut plus favorable que ce que le vérificateur a établi, jamais de
+    contenu juridique nouveau inventé."""
+    confiance = _mapper_verif_vers_confiance(resultat_verif.get("statut_global", "A_VERIFIER"))
+    critiques = resultat_critique.get("critiques", [])
+    if critiques and confiance == "VERIFIE":
+        # Une critique existe mais n'a pas déclenché de contradiction
+        # (gravité non Élevée) -- reste honnête : ne jamais afficher VERIFIE
+        # sans réserve si le contradicteur a quand même relevé un point.
+        confiance = "A_VERIFIER"
+
+    points_a_verifier = [
+        e["affirmation"] for e in resultat_verif.get("elements", [])
+        if e.get("statut") in ("NON_VERIFIE", "A_VERIFIER", "PARTIELLEMENT_VERIFIE")
+    ]
+
+    n_total = len(resultat_verif.get("elements", []))
+    n_verifie = sum(1 for e in resultat_verif.get("elements", []) if e.get("statut") == "VERIFIE")
+    phrases = []
+    if n_total:
+        phrases.append(f"{n_verifie}/{n_total} affirmation(s) vérifiée(s) par recoupement avec les sources.")
+    else:
+        phrases.append("Aucune citation détectée à recouper avec les sources.")
+    if critiques:
+        phrases.append(f"{len(critiques)} point(s) soulevé(s) par l'agent critique : {resultat_critique.get('synthese', '').strip() or 'voir le détail ci-dessous.'}")
+    else:
+        phrases.append("Aucune faiblesse notable relevée par l'agent critique.")
+
+    return {
+        "statut_global": confiance,
+        "points_a_verifier": points_a_verifier,
+        "points_forts": [],
+        "synthese_utilisateur": " ".join(phrases),
+    }
+
+
+def log_trace(feature: str, trace: list[EtapeTrace]) -> None:
+    """Journalise la durée de chaque étape du pipeline, et le total --
+    chantier "temps de traitement des générations", §1 : mesure réelle, dans
+    les logs backend, avant toute décision d'optimisation."""
+    total = sum(e.duree_ms for e in trace)
+    detail = " | ".join(f"{e.agent}={e.duree_ms}ms[{e.statut}]" for e in trace)
+    _log(f"{feature} -- durée totale mesurée : {total}ms -- {detail}")
+
+
+def _appel_protege(fonction: Callable[[], dict], valeur_repli: dict):
+    """Exécute `fonction` avec un timeout strict, réutilisant l'idiome déjà
+    établi par recherche_juridique._appel_avec_timeout (ThreadPoolExecutor à
+    un seul worker, n'attend pas le thread après un timeout). Ne relance
+    jamais d'exception : un agent qualité lent, en erreur, ou dont la clé
+    API échoue dégrade proprement vers `valeur_repli` plutôt que de faire
+    échouer toute la requête."""
+    return _appels_proteges_en_parallele([(fonction, valeur_repli)])[0]
+
+
+def _appels_proteges_en_parallele(taches: list[tuple[Callable[[], dict], dict]]) -> list[dict]:
+    """Généralise _appel_protege à plusieurs agents lancés EN PARALLÈLE (un
+    thread par tâche, même idiome que rapport_complet et
+    recherche_juridique.rechercher_contexte_juridique) -- chantier "temps de
+    traitement des générations", §2b : remplace un enchaînement séquentiel
+    (vérificateur puis critique) par une exécution simultanée, où l'attente
+    totale devient le max des durées individuelles, pas leur somme.
+
+    Chaque tâche garde son propre timeout et son propre repli, indépendamment
+    des autres -- un agent lent ou en échec ne bloque et ne dégrade jamais
+    les autres."""
+    if not taches:
+        return []
+    executor = concurrent.futures.ThreadPoolExecutor(max_workers=len(taches))
+    try:
+        futures = [executor.submit(fonction) for fonction, _ in taches]
+        resultats = []
+        for future, (_, repli) in zip(futures, taches):
+            try:
+                resultats.append(future.result(timeout=_TIMEOUT_AGENT_QUALITE))
+            except concurrent.futures.TimeoutError:
+                _log(f"agent qualité : délai dépassé ({_TIMEOUT_AGENT_QUALITE}s) -- résultat dégradé utilisé.")
+                resultats.append(repli)
+            except Exception as e:
+                _log(f"agent qualité en échec : {e} -- résultat dégradé utilisé.")
+                resultats.append(repli)
+        return resultats
+    finally:
+        executor.shutdown(wait=False)
 
 
 def _executer_trio_qualite(texte: str, sources_textes: list[str], contexte_dossier: str, trace: list[EtapeTrace]) -> dict:
@@ -272,11 +365,18 @@ def _executer_trio_qualite(texte: str, sources_textes: list[str], contexte_dossi
             for c in citations
         ],
     }
+    # §2b : vérificateur et critique n'ont besoin l'un de l'autre pour rien
+    # -- lancés EN PARALLÈLE plutôt qu'en séquence, l'attente devient le max
+    # des deux durées, pas leur somme.
     t0 = time.monotonic()
-    resultat_verif = _appel_protege(
-        lambda: legacy_analyse.verifier_juridiquement(texte, citations, contexte_sources), repli_verif
-    )
-    trace.append(EtapeTrace("legal_verifier", "ok" if resultat_verif is not repli_verif else "degrade", _ms(t0)))
+    repli_critique = {"critiques": [], "synthese": ""}
+    resultat_verif, resultat_critique = _appels_proteges_en_parallele([
+        (lambda: legacy_analyse.verifier_juridiquement(texte, citations, contexte_sources), repli_verif),
+        (lambda: legacy_analyse.critiquer_reponse(texte, f"{contexte_dossier}\n\n{REGLE_POSTURE_STRATEGIQUE}"), repli_critique),
+    ])
+    duree_parallele = _ms(t0)
+    trace.append(EtapeTrace("legal_verifier", "ok" if resultat_verif is not repli_verif else "degrade", duree_parallele))
+    trace.append(EtapeTrace("critic_agent", "ok" if resultat_critique is not repli_critique else "degrade", duree_parallele))
 
     # Le contrôle déterministe fait autorité EN CODE, pas seulement par
     # instruction de prompt -- s'applique que resultat_verif vienne d'un
@@ -289,22 +389,25 @@ def _executer_trio_qualite(texte: str, sources_textes: list[str], contexte_dossi
         "statut_global": _recalculer_statut_global(resultat_verif.get("statut_global", "A_VERIFIER"), elements_corriges),
     }
 
+    # §2b : la validation finale est désormais une fusion déterministe en
+    # code (_valider_finalement_deterministe), sans appel au modèle -- sauf
+    # si les deux verdicts se contredisent (_verdicts_se_contredisent), seul
+    # cas où un arbitrage par le modèle reste justifié.
     t0 = time.monotonic()
-    repli_critique = {"critiques": [], "synthese": ""}
-    resultat_critique = _appel_protege(lambda: legacy_analyse.critiquer_reponse(texte, f"{contexte_dossier}\n\n{REGLE_POSTURE_STRATEGIQUE}"), repli_critique)
-    trace.append(EtapeTrace("critic_agent", "ok" if resultat_critique is not repli_critique else "degrade", _ms(t0)))
-
-    t0 = time.monotonic()
-    repli_final = {
-        "statut_global": _mapper_verif_vers_confiance(resultat_verif.get("statut_global", "A_VERIFIER")),
-        "points_a_verifier": [
-            e["affirmation"] for e in resultat_verif.get("elements", []) if e.get("statut") in ("NON_VERIFIE", "A_VERIFIER")
-        ],
-        "points_forts": [],
-        "synthese_utilisateur": "Validation finale indisponible -- statut basé sur le vérificateur juridique seul.",
-    }
-    resultat_final = _appel_protege(lambda: legacy_analyse.valider_finalement(resultat_verif, resultat_critique), repli_final)
-    trace.append(EtapeTrace("final_validator", "ok" if resultat_final is not repli_final else "degrade", _ms(t0)))
+    if _verdicts_se_contredisent(resultat_verif, resultat_critique):
+        repli_final = {
+            "statut_global": _mapper_verif_vers_confiance(resultat_verif.get("statut_global", "A_VERIFIER")),
+            "points_a_verifier": [
+                e["affirmation"] for e in resultat_verif.get("elements", []) if e.get("statut") in ("NON_VERIFIE", "A_VERIFIER")
+            ],
+            "points_forts": [],
+            "synthese_utilisateur": "Validation finale indisponible -- statut basé sur le vérificateur juridique seul.",
+        }
+        resultat_final = _appel_protege(lambda: legacy_analyse.valider_finalement(resultat_verif, resultat_critique), repli_final)
+        trace.append(EtapeTrace("final_validator", "ok" if resultat_final is not repli_final else "degrade", _ms(t0), "verdicts contradictoires -- arbitrage par le modèle"))
+    else:
+        resultat_final = _valider_finalement_deterministe(resultat_verif, resultat_critique)
+        trace.append(EtapeTrace("final_validator", "deterministe", _ms(t0)))
 
     return {
         "statut_global": resultat_final.get("statut_global", "A_VERIFIER"),
@@ -315,6 +418,16 @@ def _executer_trio_qualite(texte: str, sources_textes: list[str], contexte_dossi
     }
 
 
+def executer_trio_qualite(texte: str, sources_textes: list[str] | None = None, contexte_dossier: str = "") -> tuple[dict, list[EtapeTrace]]:
+    """Point d'entrée public du trio qualité seul, sans garde-fou ni agent
+    principal -- utilisé par les endpoints en streaming (§2a du chantier
+    "temps de traitement des générations"), qui ont déjà émis le résultat de
+    l'agent principal et n'attendent plus que les statuts de vérification."""
+    trace: list[EtapeTrace] = []
+    verification = _executer_trio_qualite(texte, sources_textes or [], contexte_dossier, trace)
+    return verification, trace
+
+
 def executer_pipeline_complet(
     feature: str,
     texte_a_screener: str,
@@ -322,6 +435,7 @@ def executer_pipeline_complet(
     *,
     sources_textes: list[str] | None = None,
     contexte_dossier: str = "",
+    garde_fou_precalcule: dict | None = None,
 ) -> ResultatPipeline:
     """Pipeline complet (§9, diagramme cible) : garde-fou d'entrée -> agent
     principal (inchangé) -> trio qualité. Réservé aux fonctionnalités à
@@ -329,23 +443,32 @@ def executer_pipeline_complet(
     simulateur, consultation de jurisprudence) -- voir
     ARCHITECTURE_MULTI_AGENTS.md pour la classification complète.
 
+    `garde_fou_precalcule` (chantier "temps de traitement", §2b) : si fourni,
+    le garde-fou n'est PAS réexécuté -- utilisé quand l'appelant l'a déjà
+    lancé EN PARALLÈLE d'une autre étape indépendante (ex. la recherche
+    Légifrance/Judilibre dans /api/jurisprudence/consulter, voir
+    routers/jurisprudence.py) plutôt que de l'attendre en tête de pipeline.
+
     Lève security_guard.DemandeRefusee si le garde-fou refuse la demande --
     à laisser remonter tel quel, géré par main.py comme toute autre
     exception métier."""
     trace: list[EtapeTrace] = []
 
-    t0 = time.monotonic()
-    garde = executer_garde_fou(texte_a_screener)
-    trace.append(EtapeTrace("garde_fou_entree", "ok", _ms(t0), garde.get("reason", "")))
+    if garde_fou_precalcule is not None:
+        trace.append(EtapeTrace("garde_fou_entree", "ok", 0, garde_fou_precalcule.get("reason", "") + " (parallélisé avec une autre étape)"))
+    else:
+        t0 = time.monotonic()
+        garde = executer_garde_fou(texte_a_screener)
+        trace.append(EtapeTrace("garde_fou_entree", "ok", _ms(t0), garde.get("reason", "")))
 
     t0 = time.monotonic()
     resultat_principal = fonction_principale()
     trace.append(EtapeTrace("agent_principal", "ok", _ms(t0)))
 
-    texte_verif = _texte_pour_verification(resultat_principal)
+    texte_verif = texte_pour_verification(resultat_principal)
     verification = _executer_trio_qualite(texte_verif, sources_textes or [], contexte_dossier, trace)
 
-    _log(f"pipeline complet ({feature}) terminé -- statut global : {verification.get('statut_global')}.")
+    log_trace(feature, trace)
     return ResultatPipeline(resultat_principal=resultat_principal, verification=verification, trace=trace)
 
 
@@ -380,4 +503,6 @@ def executer_trio_qualite_si_necessaire(
     if not intention.get("necessite_verification_approfondie"):
         return None
     trace: list[EtapeTrace] = []
-    return _executer_trio_qualite(texte_reponse, sources_textes or [], contexte_dossier, trace)
+    verification = _executer_trio_qualite(texte_reponse, sources_textes or [], contexte_dossier, trace)
+    log_trace("chat", trace)
+    return verification

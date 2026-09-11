@@ -8,6 +8,7 @@ upload, réutilisé par tous les routers qui acceptent un document, plutôt
 qu'une copie par fonctionnalité).
 """
 
+import json
 import os
 import tempfile
 from pathlib import Path
@@ -160,6 +161,15 @@ async def extraire_texte_upload(fichier: UploadFile) -> str:
                 os.remove(tmp_path)
             except OSError:
                 pass
+
+
+def sse_event(event: str, data: dict) -> str:
+    """Sérialise un évènement Server-Sent Events -- format "event: ...\\ndata:
+    ...\\n\\n" documenté dans backend/README.md, jusqu'ici dupliqué localement
+    dans backend/app/routers/chat.py (_sse). Partagé ici (chantier "temps de
+    traitement des générations", §2a) pour être réutilisé par tout endpoint
+    en streaming : chat.py et les endpoints /stream de analyse.py."""
+    return f"event: {event}\ndata: {json.dumps(data, ensure_ascii=False)}\n\n"
 
 
 def get_dossier_or_404(dossier_id: int) -> dict:

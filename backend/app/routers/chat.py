@@ -17,7 +17,6 @@ au front de l'interpréter comme une erreur, la convention JSON {detail: ...}
 du reste de l'API ne s'applique qu'aux routes non-streamées.
 """
 
-import json
 import time
 
 from app.bootstrap import ROOT_DIR  # noqa: F401
@@ -33,7 +32,7 @@ import analyse as legacy_analyse
 import db
 import recherche_juridique as legacy_rj
 from app import chat_actions, demo, demo_data, quality_pipeline
-from app.deps import construire_contexte_dossier, get_dossier_or_404
+from app.deps import construire_contexte_dossier, get_dossier_or_404, sse_event as _sse
 from app.security_guard import executer_garde_fou
 from app.schemas.chat import (
     ChatContextuelIn,
@@ -48,10 +47,6 @@ from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
 
 router = APIRouter(prefix="/api/chat", tags=["chat"])
-
-
-def _sse(event: str, data: dict) -> str:
-    return f"event: {event}\ndata: {json.dumps(data, ensure_ascii=False)}\n\n"
 
 
 def _construire_contexte_recherche(juridiction: str, recherche_live: bool, question: str):

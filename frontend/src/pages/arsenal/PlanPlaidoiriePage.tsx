@@ -11,16 +11,17 @@
  * le récapitulatif envoyé après cette implémentation.
  */
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useLocation, useSearchParams } from "react-router-dom";
 import { analyse as analyseApi, downloadBlob } from "@/api";
 import type { PlanResultat, StatutDocument } from "@/api";
 import { useAppStore, useDossierActif } from "@/store/useAppStore";
-import { useLazyAction } from "@/hooks/useLazyAction";
+import { useLazyStream } from "@/hooks/useLazyStream";
 import Button from "@/components/Button";
 import DureeSlider from "@/components/DureeSlider";
 import EmptyState from "@/components/EmptyState";
 import ErrorState from "@/components/ErrorState";
+import EtapePipelineIndicator from "@/components/EtapePipelineIndicator";
 import PlanTimeline from "@/components/PlanTimeline";
 import { SkeletonList } from "@/components/Skeleton";
 import ChatContextuelPanel from "@/components/chat/ChatContextuelPanel";
@@ -46,7 +47,12 @@ export default function PlanPlaidoiriePage() {
   const documentId = Number(searchParams.get("document_id"));
   const aDocument = Number.isInteger(documentId) && documentId > 0;
 
-  const { data, loading, error, executer, definirDonnees } = useLazyAction((d: number) => analyseApi.genererPlan(dossierActif!.id, d));
+  const lancerFlux = useCallback(
+    (d: number, cb: Parameters<typeof analyseApi.streamGenererPlan>[2], signal: AbortSignal) =>
+      analyseApi.streamGenererPlan(dossierActif!.id, d, cb, signal),
+    [dossierActif]
+  );
+  const { data, etape, loading, error, executer, definirDonnees } = useLazyStream<PlanResultat, [number]>(lancerFlux);
   const { data: document, loading: documentLoading, error: documentError } = useAsync(
     () => analyseApi.obtenirDocumentGenere(documentId),
     [documentId, dossierActif?.id],
@@ -108,11 +114,13 @@ export default function PlanPlaidoiriePage() {
         </div>
       </div>
 
-      {(loading || documentLoading) && <SkeletonList count={2} />}
+      {(loading && !data?.plan) || documentLoading ? <SkeletonList count={2} /> : null}
+
+      {loading && <EtapePipelineIndicator etape={etape} />}
 
       {!loading && !documentLoading && (error || documentError) && <ErrorState message={error ?? documentError ?? "Erreur de chargement."} onRetry={() => void executer(duree)} />}
 
-      {!loading && !documentLoading && !error && !documentError && data && (
+      {!documentLoading && !error && !documentError && data?.plan && (
         <div className="space-y-6">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-2"><p className="text-sm text-warmgray">Plan généré pour {duree} min de parole.</p><StatutDocumentBadge statut={data.statut ?? "Brouillon"} /></div>
@@ -134,7 +142,7 @@ export default function PlanPlaidoiriePage() {
         </div>
       )}
 
-      {!loading && !error && !data && (
+      {!loading && !error && !data?.plan && (
         <EmptyState titre="Prêt à générer" description="Réglez le temps de parole ci-dessus puis cliquez sur « Générer le plan »." />
       )}
     </div>

@@ -6,11 +6,11 @@
  * de logique de sauvegarde à écrire ici, juste à le signaler à l'écran.
  */
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { analyse as analyseApi } from "@/api";
 import type { StatutDocument } from "@/api";
 import { useAppStore, useDossierActif } from "@/store/useAppStore";
-import { useLazyAction } from "@/hooks/useLazyAction";
+import { useLazyStream } from "@/hooks/useLazyStream";
 import { useImportTexte } from "@/hooks/useImportTexte";
 import { EXTENSIONS_DOCUMENT } from "@/config/fichiers";
 import Button from "@/components/Button";
@@ -18,6 +18,7 @@ import ArgumentCard from "@/components/ArgumentCard";
 import ChoixImportModal from "@/components/ChoixImportModal";
 import EmptyState from "@/components/EmptyState";
 import ErrorState from "@/components/ErrorState";
+import EtapePipelineIndicator from "@/components/EtapePipelineIndicator";
 import FileDropZone from "@/components/FileDropZone";
 import PinButton from "@/components/PinButton";
 import RichOutput from "@/components/RichOutput";
@@ -25,6 +26,7 @@ import { SkeletonList } from "@/components/Skeleton";
 import ChatContextuelPanel from "@/components/chat/ChatContextuelPanel";
 import VerificationPanel from "@/components/VerificationPanel";
 import StatutDocumentMenu, { StatutDocumentBadge } from "@/components/StatutDocument";
+import type { ConclusionsResultat } from "@/api/types";
 
 export default function AnalyserConclusionsPage() {
   const dossierActif = useDossierActif();
@@ -32,7 +34,12 @@ export default function AnalyserConclusionsPage() {
   const [texte, setTexte] = useState("");
   const [changementStatutEnCours, setChangementStatutEnCours] = useState(false);
 
-  const { data, loading, error, executer, definirDonnees } = useLazyAction((t: string) => analyseApi.analyserConclusions(t, dossierActif?.id));
+  const lancerFlux = useCallback(
+    (t: string, cb: Parameters<typeof analyseApi.streamAnalyserConclusions>[2], signal: AbortSignal) =>
+      analyseApi.streamAnalyserConclusions(t, dossierActif?.id, cb, signal),
+    [dossierActif?.id]
+  );
+  const { data, etape, loading, error, executer, definirDonnees } = useLazyStream<ConclusionsResultat, [string]>(lancerFlux);
   const { enImport, survole, dragProps, importerFichiers, choixEnAttente, resoudreChoix } = useImportTexte({
     dossierId: dossierActif?.id ?? null,
     getTexteActuel: () => texte,
@@ -96,11 +103,13 @@ export default function AnalyserConclusionsPage() {
 
       {choixEnAttente && <ChoixImportModal noms={choixEnAttente.noms} onChoisir={resoudreChoix} />}
 
-      {loading && <SkeletonList count={3} />}
+      {loading && !data?.arguments && <SkeletonList count={3} />}
+
+      {loading && <EtapePipelineIndicator etape={etape} />}
 
       {!loading && error && <ErrorState message={error} onRetry={() => void executer(texte)} />}
 
-      {!loading && !error && data && (
+      {!error && data?.arguments && (
         <div className="space-y-5">
           {data.analyse_id != null && (
             <div className="flex flex-wrap items-center justify-between gap-3">
@@ -159,7 +168,7 @@ export default function AnalyserConclusionsPage() {
         </div>
       )}
 
-      {!loading && !error && !data && (
+      {!loading && !error && !data?.arguments && (
         <EmptyState
           titre="Prêt à analyser"
           description="Collez le texte des conclusions adverses ci-dessus, ou importez un fichier, puis cliquez sur « Analyser »."

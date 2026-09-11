@@ -3,8 +3,10 @@ analyse.py — Appelle Claude pour analyser des conclusions adverses et
 retourne une structure exploitable (arguments classés + pistes de réfutation).
 """
 
+import concurrent.futures
 import json
 import os
+import re
 import contextvars
 from pathlib import Path
 import anthropic
@@ -93,6 +95,18 @@ def cle_api_configuree() -> bool:
 # Retour à Sonnet suite au retour utilisateur : les réponses manquaient
 # de profondeur avec Haiku — la qualité prime sur la vitesse pour cet usage.
 MODEL_ACTIF = "claude-sonnet-4-6"
+
+# Chantier "temps de traitement des générations", §2c : les étapes de simple
+# classification/routage (garde-fou d'entrée, détection d'intention,
+# extraction de mots-clés) ne demandent pas la même profondeur de
+# raisonnement que l'agent principal, le vérificateur ou le critique -- un
+# modèle plus léger y répond aussi fiablement, pour une fraction de la
+# latence et du coût. Réservé exclusivement à evaluer_garde_fou_entree,
+# analyser_intention_juridique, interpreter_intention et
+# identifier_notions_juridiques -- jamais à une fonction qui produit du
+# contenu juridique destiné à l'utilisateur final (voir MODEL_ACTIF
+# ci-dessus, qui reste le modèle de ces dernières).
+MODEL_LEGER = "claude-haiku-4-6"
 
 SYSTEM_PROMPT = """Tu es un assistant d'analyse juridique pour avocat francophone (France, espace OHADA...). Ta tâche : analyser des conclusions adverses et préparer une base de réfutation.
 
@@ -720,6 +734,129 @@ def analyser_conclusions(texte: str, contexte_recherche: str | None = None, juri
     return parsed
 
 
+# --- Découpe en moyens et analyse parallèle (chantier "temps de traitement", §2e) ---
+#
+# Des conclusions adverses substantielles regroupent souvent plusieurs
+# moyens indépendants (PREMIER MOYEN, SECOND MOYEN..., ou une numérotation
+# I./II./III...) -- les analyser un par un EN PARALLÈLE plutôt qu'en un seul
+# appel unique raccourcit la latence sans changer la profondeur d'analyse
+# par moyen (chaque appel reste le même analyser_conclusions() qu'avant ce
+# chantier). Découpage heuristique volontairement conservateur : seuls des
+# marqueurs de section sans ambiguïté (jamais un simple "Sur ..." en milieu
+# de paragraphe) déclenchent une coupure, pour ne jamais fragmenter une
+# phrase et risquer de perdre du contexte à un agent.
+
+_RE_MARQUEURS_MOYEN = re.compile(
+    r"^[ \t]*(?:"
+    r"(?:PREMIER|DEUXI[ÈE]ME|SECOND|TROISI[ÈE]ME|QUATRI[ÈE]ME|CINQUI[ÈE]ME|SIXI[ÈE]ME|SEPTI[ÈE]ME)\s+MOYEN\b"
+    r"|MOYEN\s+N°?\s*\d+"
+    r"|[IVXLCDM]{1,6}\s*[.)]\s+\S"
+    r")",
+    re.IGNORECASE | re.MULTILINE,
+)
+
+_TAILLE_MIN_MOYEN = 80  # caractères -- un fragment plus court qu'une phrase n'est pas un moyen exploitable seul, on le rattache au précédent plutôt que de l'analyser isolément.
+
+
+def _decouper_conclusions_en_moyens(texte: str) -> list[str]:
+    """Découpe `texte` en moyens détectés par _RE_MARQUEURS_MOYEN. Retourne
+    [texte] tel quel (mode séquentiel, inchangé) si moins de deux marqueurs
+    fiables sont trouvés -- jamais de sur-découpage sur un texte court ou
+    non structuré."""
+    positions = [m.start() for m in _RE_MARQUEURS_MOYEN.finditer(texte)]
+    if len(positions) < 2:
+        return [texte]
+
+    bornes = positions + [len(texte)]
+    fragments = [texte[bornes[i]:bornes[i + 1]].strip() for i in range(len(bornes) - 1)]
+    # Le texte avant le premier marqueur (préambule, exposé des faits...) est
+    # rattaché au premier moyen plutôt que jeté -- il contient souvent des
+    # éléments factuels utiles à l'analyse du moyen qui suit.
+    preambule = texte[:bornes[0]].strip()
+    if preambule and fragments:
+        fragments[0] = f"{preambule}\n\n{fragments[0]}"
+
+    moyens = []
+    for fragment in fragments:
+        if moyens and len(fragment) < _TAILLE_MIN_MOYEN:
+            moyens[-1] = f"{moyens[-1]}\n\n{fragment}"
+        else:
+            moyens.append(fragment)
+    return moyens if len(moyens) >= 2 else [texte]
+
+
+COHERENCE_MOYENS_SYSTEM_PROMPT = """Tu reçois la liste des arguments déjà extraits séparément de plusieurs moyens d'un même jeu de conclusions adverses -- chaque moyen a été analysé indépendamment, en parallèle, et tu es la seule passe qui voit l'ensemble. Vérifie UNIQUEMENT s'il existe une contradiction ou une redondance manifeste entre deux arguments issus de moyens différents.
+
+Réponds UNIQUEMENT avec un objet JSON valide, sans texte avant ou après, sans balises markdown, selon ce schéma exact :
+
+{"note_coherence": "une phrase signalant la contradiction ou la redondance trouvée, ou chaîne vide si aucune"}
+
+Règles impératives :
+- Ne relève que des contradictions ou redondances réelles et évidentes entre moyens -- jamais une nuance normale entre deux moyens simplement distincts.
+- Chaîne vide si rien à signaler : ne force jamais une remarque artificielle pour la forme."""
+
+
+def _verifier_coherence_globale_moyens(arguments: list[dict]) -> str:
+    """Passe courte de cohérence globale (§2e) après l'analyse parallèle par
+    moyen : ne reçoit que les résumés et niveaux de risque déjà extraits
+    (pas le texte intégral de chaque moyen), pour rester rapide -- utilise
+    MODEL_LEGER comme les autres étapes de classification de ce chantier.
+    Ne fait jamais échouer l'analyse : une erreur ici est seulement une
+    remarque de cohérence en moins, jamais une régression de fonctionnalité."""
+    if len(arguments) < 2:
+        return ""
+    resume = "\n".join(f"- [{a.get('risque', '?')}] {a.get('resume', '')}" for a in arguments)
+    try:
+        client = _client()
+        response = client.messages.create(
+            model=MODEL_LEGER,
+            max_tokens=200,
+            system=COHERENCE_MOYENS_SYSTEM_PROMPT + _directive_langue(),
+            messages=[{"role": "user", "content": resume}],
+        )
+        raw = response.content[0].text.strip().replace("```json", "").replace("```", "").strip()
+        parsed = json.loads(raw)
+        return (parsed.get("note_coherence") or "").strip()
+    except Exception:
+        return ""
+
+
+_ORDRE_RISQUE = {"Élevé": 0, "Moyen": 1, "Faible": 2}
+
+
+def analyser_conclusions_par_moyens(texte: str) -> dict:
+    """Version parallélisée d'analyser_conclusions() (chantier "temps de
+    traitement des générations", §2e) : découpe le texte en moyens détectés,
+    analyse chaque moyen par un appel séparé lancé EN PARALLÈLE, puis
+    fusionne les résultats (arguments triés par risque, points d'attention
+    concaténés) avec une courte passe de cohérence globale.
+
+    Si un seul moyen est détecté (ou aucun découpage fiable), reste
+    strictement séquentiel : appelle analyser_conclusions(texte) tel quel,
+    exactement comme avant ce chantier -- aucun changement de comportement
+    ni de qualité sur un texte court ou non structuré."""
+    moyens = _decouper_conclusions_en_moyens(texte)
+    if len(moyens) <= 1:
+        return analyser_conclusions(texte)
+
+    executor = concurrent.futures.ThreadPoolExecutor(max_workers=len(moyens))
+    try:
+        futures = [executor.submit(analyser_conclusions, moyen) for moyen in moyens]
+        resultats_par_moyen = [f.result() for f in futures]
+    finally:
+        executor.shutdown(wait=False)
+
+    arguments = [a for r in resultats_par_moyen for a in r.get("arguments", [])]
+    arguments.sort(key=lambda a: _ORDRE_RISQUE.get(a.get("risque"), 1))
+    points_attention = [p for r in resultats_par_moyen for p in r.get("points_attention", [])]
+
+    note_coherence = _verifier_coherence_globale_moyens(arguments)
+    if note_coherence:
+        points_attention.append(note_coherence)
+
+    return {"arguments": arguments, "points_attention": points_attention}
+
+
 def reviser_texte(texte_original: str, instruction_revision: str) -> str:
     """Révise un texte déjà généré (note client, PV...) selon une
     instruction précise, sans réécrire ce qui n'a pas été demandé de
@@ -1057,7 +1194,7 @@ def identifier_notions_juridiques(faits: str, but: str = "") -> dict:
         contenu += "\n\nAucun but n'a été précisé par l'avocat."
 
     response = client.messages.create(
-        model=MODEL_ACTIF,
+        model=MODEL_LEGER,
         max_tokens=400,
         system=NOTIONS_JURIDIQUES_SYSTEM_PROMPT,
         messages=[{"role": "user", "content": contenu}],
@@ -1221,7 +1358,7 @@ def interpreter_intention(texte: str) -> dict:
     action du menu dossier elle correspond, avec un niveau de confiance."""
     client = _client()
     response = client.messages.create(
-        model=MODEL_ACTIF,
+        model=MODEL_LEGER,
         max_tokens=300,
         system=INTENTION_SYSTEM_PROMPT,
         messages=[{"role": "user", "content": texte}],
@@ -1351,7 +1488,7 @@ def evaluer_garde_fou_entree(texte: str) -> dict:
         return {"allowed": True, "risk_level": "low", "reason": "Message court -- laissé passer sans appel au modèle.", "requires_clarification": False}
     client = _client()
     response = client.messages.create(
-        model=MODEL_ACTIF,
+        model=MODEL_LEGER,
         max_tokens=300,
         system=GARDE_FOU_SYSTEM_PROMPT + _directive_langue(),
         # Les premiers ~6000 caractères suffisent à classifier une demande
@@ -1408,7 +1545,7 @@ def analyser_intention_juridique(message: str, historique: list[dict] | None = N
     messages = list(historique or [])
     messages.append({"role": "user", "content": message})
     response = client.messages.create(
-        model=MODEL_ACTIF,
+        model=MODEL_LEGER,
         max_tokens=500,
         system=INTENTION_JURIDIQUE_SYSTEM_PROMPT,
         messages=messages,

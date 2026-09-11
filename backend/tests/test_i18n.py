@@ -123,6 +123,15 @@ def test_entete_x_langue_atteint_le_contextvar_via_le_vrai_middleware(monkeypatc
         }
 
     monkeypatch.setattr(legacy_analyse, "analyser_style_adverse", _espion_style)
+    # /api/analyse/style appelle désormais aussi le garde-fou d'entrée
+    # (profondeur adaptative, chantier "temps de traitement des
+    # générations" §2d) -- mocké ici pour ne pas dépendre d'un vrai appel
+    # réseau, comme analyser_style_adverse ci-dessus.
+    monkeypatch.setattr(
+        legacy_analyse,
+        "evaluer_garde_fou_entree",
+        lambda texte: {"allowed": True, "risk_level": "low", "reason": "", "requires_clarification": False},
+    )
     client = TestClient(app)
     reponse = client.post(
         "/api/analyse/style",

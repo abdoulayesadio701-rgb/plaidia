@@ -10,12 +10,15 @@ reproduit fidèlement PlaidIAApp._action_consulter_jurisprudence (gui.py).
 
 from app.bootstrap import ROOT_DIR  # noqa: F401
 
+import concurrent.futures
+
 import analyse as legacy_analyse
 import db
 import judilibre as legacy_judilibre
 import recherche_juridique as legacy_rj
 from app import demo, quality_pipeline
 from app.deps import construire_contexte_dossier, extraire_texte_upload, structurer_sortie_strategique
+from app.security_guard import executer_garde_fou
 from app.schemas.jurisprudence import (
     CollecterIn,
     CollecterOut,
@@ -43,20 +46,34 @@ def consulter(payload: ConsulterIn):
     dossier = dict(dossier_row) if dossier_row else None
     if not dossier:
         raise HTTPException(status_code=404, detail=f"Dossier {payload.dossier_id} introuvable.")
-    notions = legacy_analyse.identifier_notions_juridiques(payload.question, payload.but)
-    mots_cles = notions.get("mots_cles_recherche") or []
-    requete_recherche = " ".join(mots_cles) if mots_cles else payload.question
+    # §2b du chantier "temps de traitement" : le garde-fou ne dépend en rien
+    # de l'identification de notions ni de la recherche live -- il ne
+    # screene que le texte brut de la question -- donc lancé EN PARALLÈLE de
+    # cette chaîne plutôt qu'attendu en tête du pipeline complet ci-dessous.
+    executor_garde_fou = concurrent.futures.ThreadPoolExecutor(max_workers=1)
+    future_garde_fou = executor_garde_fou.submit(executer_garde_fou, payload.question)
+    try:
+        notions = legacy_analyse.identifier_notions_juridiques(payload.question, payload.but)
+        mots_cles = notions.get("mots_cles_recherche") or []
+        requete_recherche = " ".join(mots_cles) if mots_cles else payload.question
 
-    if payload.source == JURIDICTION_PAR_DEFAUT:
-        contexte_live = legacy_rj.rechercher_contexte_juridique(requete_recherche)
-        contexte_recherche = legacy_rj.formater_contexte_pour_prompt(contexte_live)
-    else:
-        textes = db.get_corpus_valide(source=payload.source)
-        if textes:
-            bloc = "\n".join(f"[{t['reference'] or 'sans référence'}] {t['contenu'][:2000]}" for t in textes)
-            contexte_recherche = f"--- Source : {payload.source} ---\n{bloc}"
+        if payload.source == JURIDICTION_PAR_DEFAUT:
+            contexte_live = legacy_rj.rechercher_contexte_juridique(requete_recherche)
+            contexte_recherche = legacy_rj.formater_contexte_pour_prompt(contexte_live)
         else:
-            contexte_recherche = ""
+            textes = db.get_corpus_valide(source=payload.source)
+            if textes:
+                bloc = "\n".join(f"[{t['reference'] or 'sans référence'}] {t['contenu'][:2000]}" for t in textes)
+                contexte_recherche = f"--- Source : {payload.source} ---\n{bloc}"
+            else:
+                contexte_recherche = ""
+
+        # Lève DemandeRefusee ici si le garde-fou refuse -- avant même
+        # d'appeler l'agent principal, exactement comme s'il avait été
+        # exécuté en tête de pipeline (voir garde_fou_precalcule ci-dessous).
+        garde_fou = future_garde_fou.result()
+    finally:
+        executor_garde_fou.shutdown(wait=False)
 
     # Pipeline complet (§9 ARCHITECTURE_MULTI_AGENTS.md) : c'est ici que le
     # contrôle déterministe des citations est le plus fort -- contexte_recherche
@@ -74,6 +91,7 @@ def consulter(payload: ConsulterIn):
         ),
         sources_textes=[contexte_recherche] if contexte_recherche else [],
         contexte_dossier=construire_contexte_dossier(dossier),
+        garde_fou_precalcule=garde_fou,
     )
     resultat = structurer_sortie_strategique(
         {"notions": notions, "reponse": pipeline.resultat_principal, "verification": pipeline.verification}, dossier, "jurisprudence_consultation"

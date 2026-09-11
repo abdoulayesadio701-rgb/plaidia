@@ -10,12 +10,13 @@ from app.bootstrap import ROOT_DIR  # noqa: F401
 
 import concurrent.futures
 import os
+import time
 
 import analyse as legacy_analyse
 import db
 import export as legacy_export
 from app import demo, demo_data, quality_pipeline
-from app.deps import construire_contexte_dossier, get_dossier_or_404, structurer_sortie_strategique
+from app.deps import construire_contexte_dossier, get_dossier_or_404, sse_event, structurer_sortie_strategique
 from app.schemas.analyse import (
     ConclusionsIn,
     ConclusionsOut,
@@ -38,10 +39,14 @@ from app.schemas.analyse import (
     TraductionOut,
 )
 from fastapi import APIRouter, HTTPException, Query
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from typing import Literal
 
 router = APIRouter(prefix="/api/analyse", tags=["analyse"])
+
+
+def _duree_ms(t0: float) -> int:
+    return int((time.monotonic() - t0) * 1000)
 
 
 def _strategie_combative_si_pertinente(
@@ -90,7 +95,10 @@ def analyser_conclusions(payload: ConclusionsIn):
     pipeline = quality_pipeline.executer_pipeline_complet(
         feature="conclusions",
         texte_a_screener=payload.texte,
-        fonction_principale=lambda: legacy_analyse.analyser_conclusions(payload.texte),
+        # §2e du chantier "temps de traitement" : découpe le texte en
+        # moyens et les analyse en parallèle -- reste séquentiel et
+        # identique à avant ce chantier si un seul moyen est détecté.
+        fonction_principale=lambda: legacy_analyse.analyser_conclusions_par_moyens(payload.texte),
         sources_textes=[payload.texte],
         contexte_dossier=contexte_dossier,
     )
@@ -114,6 +122,79 @@ def analyser_conclusions(payload: ConclusionsIn):
         verification=pipeline.verification,
         diagnostic=sections["diagnostic"],
         strategie=sections["strategie"],
+    )
+
+
+@router.post("/conclusions/stream")
+def analyser_conclusions_stream(payload: ConclusionsIn):
+    """Variante en streaming SSE de POST /conclusions (chantier "temps de
+    traitement des générations", §2a) : le résultat de l'agent principal est
+    émis dès qu'il est prêt (évènement "principal"), sans attendre le
+    vérificateur ni le critique -- leurs statuts arrivent ensuite, dans un
+    évènement séparé ("verification"). Même logique métier que /conclusions,
+    pas dupliquée : cet endpoint orchestre, il ne réanalyse rien.
+
+    Non disponible en mode démo (rien à streamer, la réponse préenregistrée
+    est déjà instantanée) -- utiliser /conclusions dans ce cas."""
+    dossier = get_dossier_or_404(payload.dossier_id) if payload.dossier_id is not None else None
+    if demo.mode_demo_effectif():
+        raise HTTPException(status_code=400, detail="Le streaming n'est pas disponible en mode démo -- utilisez /api/analyse/conclusions.")
+
+    def event_stream():
+        trace: list[quality_pipeline.EtapeTrace] = []
+        try:
+            t0 = time.monotonic()
+            yield sse_event("etape", {"etape": "garde_fou", "libelle": "Vérification de la demande"})
+            garde = quality_pipeline.executer_garde_fou(payload.texte)
+            trace.append(quality_pipeline.EtapeTrace("garde_fou_entree", "ok", _duree_ms(t0), garde.get("reason", "")))
+
+            t0 = time.monotonic()
+            yield sse_event("etape", {"etape": "analyse", "libelle": "Analyse des conclusions en cours"})
+            resultat = legacy_analyse.analyser_conclusions_par_moyens(payload.texte)
+            trace.append(quality_pipeline.EtapeTrace("agent_principal", "ok", _duree_ms(t0)))
+
+            contexte_dossier = construire_contexte_dossier(dossier) if dossier else ""
+            strategie_combative = _strategie_combative_si_pertinente(dossier, contexte_dossier, resultat.get("arguments", []))
+            sections = structurer_sortie_strategique(
+                {"arguments": resultat.get("arguments", []), "points_attention": resultat.get("points_attention", [])},
+                dossier or {"id": 0, "nom": "", "faits": "", "parties": ""},
+                "conclusions",
+                strategie_combative=strategie_combative,
+            )
+            yield sse_event("principal", {
+                "arguments": sections["arguments"],
+                "points_attention": sections["points_attention"],
+                "diagnostic": sections["diagnostic"],
+                "strategie": sections["strategie"],
+                "statut": "Brouillon",
+            })
+
+            yield sse_event("etape", {"etape": "verification", "libelle": "Vérification des sources et critique"})
+            verification, trace_trio = quality_pipeline.executer_trio_qualite(
+                quality_pipeline.texte_pour_verification(resultat), [payload.texte], contexte_dossier
+            )
+            trace.extend(trace_trio)
+            yield sse_event("verification", {"verification": verification})
+
+            analyse_id = None
+            if payload.dossier_id is not None:
+                analyse_id = db.save_analyse(
+                    payload.dossier_id, resultat.get("arguments", []), resultat.get("points_attention", []),
+                    langue=legacy_analyse.langue_requete(),
+                )
+            yield sse_event("document", {"analyse_id": analyse_id})
+
+            quality_pipeline.log_trace("conclusions (stream)", trace)
+            yield sse_event("done", {})
+        except quality_pipeline.DemandeRefusee as e:
+            yield sse_event("error", {"detail": e.reason, "risk_level": e.risk_level})
+        except Exception as e:
+            yield sse_event("error", {"detail": str(e)})
+
+    return StreamingResponse(
+        event_stream(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
 
 
@@ -160,6 +241,62 @@ def generer_plan(payload: PlanIn):
         langue=legacy_analyse.langue_requete(),
     )
     return PlanOut(**resultat, document_id=document["id"], statut=document["statut"])
+
+
+@router.post("/plan/stream")
+def generer_plan_stream(payload: PlanIn):
+    """Variante en streaming SSE de POST /plan (chantier "temps de
+    traitement des générations", §2a) -- même principe que
+    /conclusions/stream : le plan est émis dès qu'il est prêt, la
+    vérification arrive ensuite dans un évènement séparé."""
+    dossier = get_dossier_or_404(payload.dossier_id)
+    if demo.mode_demo_effectif():
+        raise HTTPException(status_code=400, detail="Le streaming n'est pas disponible en mode démo -- utilisez /api/analyse/plan.")
+
+    def event_stream():
+        trace: list[quality_pipeline.EtapeTrace] = []
+        try:
+            contexte = construire_contexte_dossier(dossier)
+
+            t0 = time.monotonic()
+            yield sse_event("etape", {"etape": "garde_fou", "libelle": "Vérification de la demande"})
+            garde = quality_pipeline.executer_garde_fou(contexte)
+            trace.append(quality_pipeline.EtapeTrace("garde_fou_entree", "ok", _duree_ms(t0), garde.get("reason", "")))
+
+            t0 = time.monotonic()
+            yield sse_event("etape", {"etape": "analyse", "libelle": "Construction du plan de plaidoirie"})
+            resultat_principal = legacy_analyse.generer_plan_plaidoirie(contexte, payload.temps_minutes)
+            trace.append(quality_pipeline.EtapeTrace("agent_principal", "ok", _duree_ms(t0)))
+
+            strategie_combative = _strategie_combative_si_pertinente(dossier, contexte)
+            sections = structurer_sortie_strategique({**resultat_principal}, dossier, "plan", strategie_combative=strategie_combative)
+            yield sse_event("principal", {**sections, "statut": "Brouillon"})
+
+            yield sse_event("etape", {"etape": "verification", "libelle": "Vérification des sources et critique"})
+            verification, trace_trio = quality_pipeline.executer_trio_qualite(
+                quality_pipeline.texte_pour_verification(resultat_principal), [contexte], contexte
+            )
+            trace.extend(trace_trio)
+            yield sse_event("verification", {"verification": verification})
+
+            document = db.creer_document_genere(
+                payload.dossier_id, "plan", f"Plan de plaidoirie — {dossier['nom']}", {"temps_minutes": payload.temps_minutes},
+                {**sections, "verification": verification}, langue=legacy_analyse.langue_requete(),
+            )
+            yield sse_event("document", {"document_id": document["id"], "statut": document["statut"]})
+
+            quality_pipeline.log_trace("plan (stream)", trace)
+            yield sse_event("done", {})
+        except quality_pipeline.DemandeRefusee as e:
+            yield sse_event("error", {"detail": e.reason, "risk_level": e.risk_level})
+        except Exception as e:
+            yield sse_event("error", {"detail": str(e)})
+
+    return StreamingResponse(
+        event_stream(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
 
 
 @router.post("/simulateur", response_model=SimulateurOut)
@@ -256,12 +393,18 @@ def rapport_complet(payload: RapportCompletIn):
 @router.post("/style", response_model=StyleOut)
 def analyser_style(payload: StyleIn):
     demo.exiger_cle_api()
+    # Profondeur adaptative (§2d du chantier "temps de traitement") :
+    # reformulation/analyse dérivée d'un texte déjà fourni -- garde-fou
+    # seul, pas le trio qualité complet (disproportionné pour ce type
+    # d'analyse, voir /api/chat/contextuel qui applique le même principe).
+    quality_pipeline.executer_garde_fou(payload.texte)
     return legacy_analyse.analyser_style_adverse(payload.texte)
 
 
 @router.post("/traduire", response_model=TraductionOut)
 def traduire(payload: TraductionIn):
     demo.exiger_cle_api()
+    quality_pipeline.executer_garde_fou(payload.texte)
     return legacy_analyse.traduire_texte(payload.texte)
 
 

@@ -2,14 +2,90 @@
  * analyse.ts — Client typé pour /api/analyse (backend/app/routers/analyse.py).
  */
 
-import { apiRequest, apiRequestBlob } from "./http";
-import type { ConclusionsResultat, DocumentGenere, PlanResultat, RapportCompletResultat, ResumeResultat, SimulateurResultat, StatutDocument, StyleResultat, TraductionResultat } from "./types";
+import { apiRequest, apiRequestBlob, BASE_URL } from "./http";
+import { obtenirClePersonnelle } from "./cleApiPersonnelle";
+import { entetesSse, lireFluxSse } from "./sse";
+import type { ConclusionsResultat, DocumentGenere, PlanResultat, RapportCompletResultat, ResumeResultat, SimulateurResultat, StatutDocument, StyleResultat, TraductionResultat, Verification } from "./types";
 
 export function analyserConclusions(texte: string, dossierId?: number): Promise<ConclusionsResultat> {
   return apiRequest<ConclusionsResultat>("/api/analyse/conclusions", {
     method: "POST",
     body: { texte, dossier_id: dossierId ?? null },
   });
+}
+
+/** Étape affichée par l'indicateur de progression pendant une génération en
+ * streaming (chantier "temps de traitement des générations", §3). */
+export interface EtapePipeline {
+  etape: string;
+  libelle: string;
+}
+
+interface CallbacksFluxPipeline<Principal> {
+  onEtape?: (etape: EtapePipeline) => void;
+  onPrincipal?: (patch: Partial<Principal>) => void;
+  onVerification?: (verification: Verification) => void;
+  onDocument?: (patch: Partial<Principal>) => void;
+  onDone?: () => void;
+  onError?: (message: string) => void;
+}
+
+function entetesAvecClePersonnelle(): Record<string, string> {
+  const headers = entetesSse();
+  const clePersonnelle = obtenirClePersonnelle();
+  if (clePersonnelle) headers["X-Anthropic-Api-Key"] = clePersonnelle;
+  return headers;
+}
+
+/**
+ * Variante en streaming de analyserConclusions() (§2a) : `onPrincipal` est
+ * appelé dès que l'agent principal a produit ses arguments -- avant que le
+ * vérificateur et le critique n'aient tourné -- puis `onVerification`
+ * arrive séparément, une fois prête. Voir POST /api/analyse/conclusions/stream
+ * (backend/app/routers/analyse.py).
+ */
+export function streamAnalyserConclusions(
+  texte: string,
+  dossierId: number | undefined,
+  callbacks: CallbacksFluxPipeline<ConclusionsResultat>,
+  signal?: AbortSignal
+): Promise<void> {
+  return lireFluxSse(
+    `${BASE_URL}/api/analyse/conclusions/stream`,
+    { method: "POST", headers: entetesAvecClePersonnelle(), body: JSON.stringify({ texte, dossier_id: dossierId ?? null }), signal },
+    {
+      etape: (data) => callbacks.onEtape?.(data as EtapePipeline),
+      principal: (data) => callbacks.onPrincipal?.(data as Partial<ConclusionsResultat>),
+      verification: (data) => callbacks.onVerification?.((data as { verification: Verification }).verification),
+      document: (data) => callbacks.onDocument?.(data as Partial<ConclusionsResultat>),
+      done: () => callbacks.onDone?.(),
+      error: (data) => callbacks.onError?.((data as { detail: string }).detail),
+    },
+    callbacks.onError
+  );
+}
+
+/** Variante en streaming de genererPlan() (§2a) -- voir POST
+ * /api/analyse/plan/stream (backend/app/routers/analyse.py). */
+export function streamGenererPlan(
+  dossierId: number,
+  tempsMinutes: number,
+  callbacks: CallbacksFluxPipeline<PlanResultat>,
+  signal?: AbortSignal
+): Promise<void> {
+  return lireFluxSse(
+    `${BASE_URL}/api/analyse/plan/stream`,
+    { method: "POST", headers: entetesAvecClePersonnelle(), body: JSON.stringify({ dossier_id: dossierId, temps_minutes: tempsMinutes }), signal },
+    {
+      etape: (data) => callbacks.onEtape?.(data as EtapePipeline),
+      principal: (data) => callbacks.onPrincipal?.(data as Partial<PlanResultat>),
+      verification: (data) => callbacks.onVerification?.((data as { verification: Verification }).verification),
+      document: (data) => callbacks.onDocument?.(data as Partial<PlanResultat>),
+      done: () => callbacks.onDone?.(),
+      error: (data) => callbacks.onError?.((data as { detail: string }).detail),
+    },
+    callbacks.onError
+  );
 }
 
 export function changerStatutConclusion(analyseId: number, statut: StatutDocument): Promise<{ analyse_id: number; statut: StatutDocument }> {

@@ -9,6 +9,7 @@
 
 import { apiRequest, BASE_URL } from "./http";
 import { obtenirClePersonnelle } from "./cleApiPersonnelle";
+import { entetesSse, lireFluxSse } from "./sse";
 import type { ChatContextuelResultat, ConversationDetail, ConversationResume, FeatureChatContextuel, MessageChat, Verification } from "./types";
 
 export interface ChatStreamCallbacks {
@@ -35,99 +36,28 @@ export interface ChatStreamOptions {
 export async function streamChat(messages: MessageChat[], options: ChatStreamOptions, callbacks: ChatStreamCallbacks): Promise<void> {
   const { rechercheLive = false, juridiction = "Légifrance (France)", dossierId = null, signal } = options;
 
-  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  const headers = entetesSse();
   const clePersonnelle = obtenirClePersonnelle();
   if (clePersonnelle) headers["X-Anthropic-Api-Key"] = clePersonnelle;
 
-  let response: Response;
-  try {
-    response = await fetch(`${BASE_URL}/api/chat/stream`, {
+  await lireFluxSse(
+    `${BASE_URL}/api/chat/stream`,
+    {
       method: "POST",
       headers,
       body: JSON.stringify({ messages, recherche_live: rechercheLive, juridiction, dossier_id: dossierId }),
       signal,
-    });
-  } catch (e) {
-    // Une annulation volontaire (AbortController.abort()) ne doit jamais
-    // s'afficher comme une erreur de connexion -- c'est le comportement demandé.
-    if (e instanceof DOMException && e.name === "AbortError") return;
-    callbacks.onError?.("Impossible de joindre le serveur. Vérifiez que le backend est lancé.");
-    return;
-  }
-
-  if (!response.ok || !response.body) {
-    let message = `Erreur ${response.status}`;
-    try {
-      const data = await response.json();
-      if (typeof data?.detail === "string") message = data.detail;
-    } catch {
-      /* pas de corps JSON exploitable */
-    }
-    callbacks.onError?.(message);
-    return;
-  }
-
-  const reader = response.body.getReader();
-  const decoder = new TextDecoder("utf-8");
-  let buffer = "";
-
-  const dispatch = (rawEvent: string) => {
-    let eventName = "message";
-    let dataLine = "";
-    for (const line of rawEvent.split("\n")) {
-      if (line.startsWith("event:")) eventName = line.slice(6).trim();
-      else if (line.startsWith("data:")) dataLine += line.slice(5).trim();
-    }
-    if (!dataLine) return;
-    let data: unknown;
-    try {
-      data = JSON.parse(dataLine);
-    } catch {
-      return;
-    }
-    switch (eventName) {
-      case "recherche_debut":
-        callbacks.onRechercheDebut?.();
-        break;
-      case "recherche_resultat":
-        callbacks.onRechercheResultat?.(data as { n_articles: number; n_jurisprudence: number });
-        break;
-      case "delta":
-        callbacks.onDelta?.((data as { text: string }).text);
-        break;
-      case "verification":
-        callbacks.onVerification?.(data as Verification);
-        break;
-      case "done":
-        callbacks.onDone?.();
-        break;
-      case "error":
-        callbacks.onError?.((data as { detail: string }).detail);
-        break;
-    }
-  };
-
-  // Boucle de lecture : un morceau réseau peut contenir 0, 1 ou plusieurs
-  // trames "\n\n"-séparées, et une trame peut être coupée entre deux morceaux
-  // — d'où le tampon `buffer` qui ne relâche que ce qui est complet.
-  try {
-    for (;;) {
-      const { value, done } = await reader.read();
-      if (done) break;
-      buffer += decoder.decode(value, { stream: true });
-      let sepIndex: number;
-      while ((sepIndex = buffer.indexOf("\n\n")) !== -1) {
-        const rawEvent = buffer.slice(0, sepIndex);
-        buffer = buffer.slice(sepIndex + 2);
-        if (rawEvent.trim()) dispatch(rawEvent);
-      }
-    }
-  } catch (e) {
-    // Annulation volontaire en cours de flux (bouton "Arrêter la génération")
-    // -- silencieuse, ce n'est pas une erreur à afficher.
-    if (e instanceof DOMException && e.name === "AbortError") return;
-    callbacks.onError?.("La connexion a été interrompue pendant la génération.");
-  }
+    },
+    {
+      recherche_debut: () => callbacks.onRechercheDebut?.(),
+      recherche_resultat: (data) => callbacks.onRechercheResultat?.(data as { n_articles: number; n_jurisprudence: number }),
+      delta: (data) => callbacks.onDelta?.((data as { text: string }).text),
+      verification: (data) => callbacks.onVerification?.(data as Verification),
+      done: () => callbacks.onDone?.(),
+      error: (data) => callbacks.onError?.((data as { detail: string }).detail),
+    },
+    callbacks.onError
+  );
 }
 
 // --- Chat contextuel (édition d'un résultat déjà affiché) ---------------
