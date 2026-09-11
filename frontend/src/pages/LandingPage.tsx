@@ -19,6 +19,7 @@ import gardeFouSecurite from "@/assets/garde-fou-securite.jpg";
 import gardeFouIntention from "@/assets/garde-fou-intention.jpg";
 import gardeFouVerification from "@/assets/garde-fou-verification.jpg";
 import gardeFouCritique from "@/assets/garde-fou-critique.jpg";
+import gardeFouValidation from "@/assets/garde-fou-validation.jpg";
 import {
   IllustrationAnalyser,
   IllustrationChat,
@@ -299,8 +300,8 @@ export default function LandingPage() {
               icone: "✓",
               titre: "Validation",
               texte: "Consolide les deux contrôles précédents en un statut clair — sans jamais inventer une source pour combler un doute.",
-              photo: null,
-              photoAlt: "",
+              photo: gardeFouValidation,
+              photoAlt: "Tampon \"VALIDE\" apposé sur une demande d'approbation",
             },
           ].map((etape) => (
             <div
