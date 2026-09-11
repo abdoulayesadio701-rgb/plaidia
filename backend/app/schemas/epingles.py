@@ -4,7 +4,7 @@ from typing import Literal, Optional
 
 from pydantic import BaseModel, Field
 
-TypeEpingle = Literal["dossier", "analyse", "document_genere", "conversation"]
+TypeEpingle = Literal["dossier", "analyse"]
 
 
 class EpinglerIn(BaseModel):
@@ -21,5 +21,3 @@ class EpingleOut(BaseModel):
     dossier_id: Optional[int] = None
     libelle: str
     date_creation: str
-    cible_titre: Optional[str] = None
-    cible_feature: Optional[str] = None

@@ -18,8 +18,6 @@ interface EpinglesPanelProps {
 const LIBELLE_TYPE: Record<string, string> = {
   dossier: "Dossier",
   analyse: "Analyse enregistrée",
-  document_genere: "Document généré",
-  conversation: "Conversation",
 };
 
 export default function EpinglesPanel({ onFermer }: EpinglesPanelProps) {
@@ -43,13 +41,7 @@ export default function EpinglesPanel({ onFermer }: EpinglesPanelProps) {
     if (dossierCible != null && dossiers.some((d) => d.id === dossierCible)) {
       selectionnerDossier(dossierCible);
     }
-    if (el.type === "dossier") navigate("/app/chemise/dossiers");
-    else if (el.type === "analyse") navigate("/app/chemise/historique");
-    else if (el.type === "conversation") navigate(`/app/chat?conversation_id=${el.reference_id}`);
-    else if (el.cible_feature === "plan") navigate(`/app/arsenal/plan?document_id=${el.reference_id}`);
-    else if (el.cible_feature === "simulateur") navigate(`/app/arsenal/simulateur?document_id=${el.reference_id}`);
-    else if (el.cible_feature === "jurisprudence_consultation") navigate(`/app/grimoire/jurisprudence?document_id=${el.reference_id}`);
-    else navigate(`/app/chemise/historique`);
+    navigate(el.type === "dossier" ? "/app/chemise/dossiers" : "/app/chemise/historique");
     onFermer();
   };
 
@@ -62,8 +54,8 @@ export default function EpinglesPanel({ onFermer }: EpinglesPanelProps) {
         {epingles.map((el) => (
           <li key={el.id} className="flex items-center gap-1">
             <button onClick={() => ouvrir(el)} className="min-w-0 flex-1 rounded-md px-2.5 py-2 text-left text-sm text-ivory transition-colors hover:bg-surface">
-              <span className="block truncate">{el.cible_titre ?? el.libelle}</span>
-              <span className="text-xs text-warmgray">{LIBELLE_TYPE[el.type] ?? el.type}{el.dossier_id != null ? ` · dossier #${el.dossier_id}` : ""}</span>
+              <span className="block truncate">{el.libelle}</span>
+              <span className="text-xs text-warmgray">{LIBELLE_TYPE[el.type] ?? el.type}</span>
             </button>
             <button
               onClick={() => void desepinglerElement(el.id)}

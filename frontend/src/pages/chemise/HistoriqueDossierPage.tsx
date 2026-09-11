@@ -18,7 +18,6 @@ import EmptyState from "@/components/EmptyState";
 import ErrorState from "@/components/ErrorState";
 import { SkeletonList } from "@/components/Skeleton";
 import StatutDocumentMenu, { StatutDocumentBadge } from "@/components/StatutDocument";
-import PinButton from "@/components/PinButton";
 
 function formaterDate(iso: string): string {
   try {
@@ -98,7 +97,16 @@ export default function HistoriqueDossierPage() {
           {dossierActif.domaine && <span className="badge border-gold-600/30 bg-surface-2 text-gold-500">{dossierActif.domaine}</span>}
           <span className="badge border-gold-600/30 bg-surface-2 text-warmgray">{dossierActif.statut}</span>
           {dossierActif.numero_dossier && <span className="text-xs text-muted">Réf. {dossierActif.numero_dossier}</span>}
+          {dossierActif.partie_representee && <span className="badge border-amethyst-400/30 bg-amethyst-400/10 text-amethyst-400">{dossierActif.partie_representee}</span>}
+          {dossierActif.stade_procedure && <span className="badge border-gold-600/30 bg-surface-2 text-gold-500">{dossierActif.stade_procedure}</span>}
         </div>
+
+        {dossierActif.objectif && (
+          <div>
+            <p className="mb-1 text-micro font-medium uppercase tracking-wide text-warmgray">Objectif</p>
+            <p className="text-sm text-ivory">{dossierActif.objectif}</p>
+          </div>
+        )}
 
         <div>
           <p className="mb-1 text-micro font-medium uppercase tracking-wide text-warmgray">Parties</p>
@@ -137,7 +145,7 @@ export default function HistoriqueDossierPage() {
                   className="card flex items-center justify-between gap-4 p-4 transition-colors hover:border-gold-500/40"
                 >
                   <div className="min-w-0"><p className="truncate text-sm font-medium text-ivory">{document.titre}</p><p className="text-xs text-muted">{document.feature}</p></div>
-                  <div className="flex shrink-0 items-center gap-2"><StatutDocumentBadge statut={document.statut} /><PinButton type="document_genere" referenceId={document.id} dossierId={document.dossier_id} libelle={document.titre} arreterPropagation /><span className="text-xs text-muted">Rouvrir</span></div>
+                  <div className="flex shrink-0 items-center gap-2"><StatutDocumentBadge statut={document.statut} /><span className="text-xs text-muted">Rouvrir</span></div>
                 </Link>
               );
             })}
@@ -168,10 +176,7 @@ export default function HistoriqueDossierPage() {
                 className="card flex items-center justify-between gap-4 p-4 transition-colors hover:border-gold-500/40"
               >
                 <span className="min-w-0 truncate text-sm font-medium text-ivory">{conversation.titre}</span>
-                <div className="flex shrink-0 items-center gap-2">
-                  <PinButton type="conversation" referenceId={conversation.id} dossierId={dossierActif.id} libelle={conversation.titre} arreterPropagation />
-                  <span className="text-xs text-muted">{formaterDate(conversation.date_modification)}</span>
-                </div>
+                <span className="shrink-0 text-xs text-muted">{formaterDate(conversation.date_modification)}</span>
               </Link>
             ))}
           </div>

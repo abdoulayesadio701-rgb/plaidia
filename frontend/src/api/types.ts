@@ -442,7 +442,7 @@ export interface VersionDocument {
 // Épinglage (backend/app/schemas/epingles.py)
 // ---------------------------------------------------------------------
 
-export type TypeEpingle = "dossier" | "analyse" | "document_genere" | "conversation";
+export type TypeEpingle = "dossier" | "analyse";
 
 export interface ElementEpingle {
   id: number;
@@ -451,8 +451,6 @@ export interface ElementEpingle {
   dossier_id?: number | null;
   libelle: string;
   date_creation: string;
-  cible_titre?: string | null;
-  cible_feature?: string | null;
 }
 
 // ---------------------------------------------------------------------

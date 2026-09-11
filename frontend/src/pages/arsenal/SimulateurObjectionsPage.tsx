@@ -19,7 +19,6 @@ import { SkeletonList } from "@/components/Skeleton";
 import ChatContextuelPanel from "@/components/chat/ChatContextuelPanel";
 import VerificationPanel from "@/components/VerificationPanel";
 import StatutDocumentMenu, { StatutDocumentBadge } from "@/components/StatutDocument";
-import PinButton from "@/components/PinButton";
 import { useAsync } from "@/hooks/useAsync";
 
 export default function SimulateurObjectionsPage() {
@@ -121,7 +120,7 @@ export default function SimulateurObjectionsPage() {
 
       {!loading && !documentLoading && !error && !documentError && data && (
         <div className="space-y-5">
-          <div className="flex items-center justify-between gap-3"><div className="flex items-center gap-2"><span className="text-sm text-warmgray">Document sauvegardé</span><StatutDocumentBadge statut={data.statut ?? "Brouillon"} /></div><div className="flex items-center gap-2"><StatutDocumentMenu statut={data.statut ?? "Brouillon"} loading={statutEnCours} onChange={changerStatut} /><PinButton type="document_genere" referenceId={data.document_id!} dossierId={dossierActif.id} libelle={`Simulateur — ${dossierActif.nom}`} /></div></div>
+          <div className="flex items-center justify-between gap-3"><div className="flex items-center gap-2"><span className="text-sm text-warmgray">Document sauvegardé</span><StatutDocumentBadge statut={data.statut ?? "Brouillon"} /></div><StatutDocumentMenu statut={data.statut ?? "Brouillon"} loading={statutEnCours} onChange={changerStatut} /></div>
           <label className="flex w-fit cursor-pointer items-center gap-2.5 rounded-md border border-gold-600/20 bg-surface px-4 py-2.5 text-sm text-warmgray">
             <button
               type="button"
@@ -178,6 +177,9 @@ export default function SimulateurObjectionsPage() {
               <RichOutput texte={data.point_le_plus_faible} prose={false} className="text-sm" />
             </div>
           )}
+
+          {data.diagnostic && <div className="card"><h2 className="mb-2 font-serif text-h4 text-gold-500">Diagnostic</h2><p className="whitespace-pre-wrap text-sm text-warmgray">{data.diagnostic}</p></div>}
+          {data.strategie && <div className="card"><h2 className="mb-2 font-serif text-h4 text-gold-500">Stratégie pour la partie représentée</h2><p className="whitespace-pre-wrap text-sm text-ivory">{data.strategie}</p></div>}
 
           <VerificationPanel verification={data.verification} />
 
