@@ -47,8 +47,15 @@ def mode_demo_serveur() -> bool:
     """État structurel du serveur, sans tenir compte d'une éventuelle clé
     personnelle fournie pour la requête en cours -- c'est ce que reflète le
     bandeau "Mode démo" de l'app (GET /api/config), affiché indépendamment
-    de ce que fera ensuite tel ou tel visiteur avec sa propre clé."""
-    return DEMO_MODE_FORCE or not legacy_analyse.cle_api_configuree()
+    de ce que fera ensuite tel ou tel visiteur avec sa propre clé.
+
+    Exige à la fois la clé Anthropic (garde-fou, détection d'intention) ET
+    la clé DeepSeek (agent principal, vérificateur, critique...) -- depuis
+    le changement de fournisseur de modèle, une fonctionnalité réelle a
+    besoin des deux pour aboutir ; n'en avoir qu'une ne permettrait qu'un
+    garde-fou fonctionnel suivi d'une erreur DeepSeek moins lisible qu'une
+    503 de mode démo."""
+    return DEMO_MODE_FORCE or not (legacy_analyse.cle_api_configuree() and legacy_analyse.cle_api_deepseek_configuree())
 
 
 def mode_demo_effectif() -> bool:
