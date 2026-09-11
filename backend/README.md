@@ -47,18 +47,26 @@ dépendent renverront une erreur 500 explicite
 planter silencieusement.
 
 `NVIDIA_API_KEY` est optionnelle : elle héberge le second fournisseur de
-modèle, DeepSeek (chantier "optimisation des coûts API"), utilisé
-uniquement pour l'extraction d'éléments clés (`POST /api/greffier/
-extraction`) et le résumé de dossier (`POST /api/analyse/resume`) — voir
-`analyse.TypeTache`. **Tout le reste de l'application (analyse d'arguments
-juridiques, génération de plaidoirie, chat, vérificateur, critique...)
-reste exclusivement sur Claude, sans exception**, absence de
-`NVIDIA_API_KEY` ou pas. Sans elle (et sans `nvidia_apikey.txt`), ces deux
-seules routes renvoient une 503 explicite
-(`app/demo.py::exiger_cle_api_deepseek`) — le reste du serveur fonctionne
-normalement. Un journal simple de l'usage par fournisseur/tâche/tokens est
-tenu dans `logs/usage_api.jsonl` (voir `usage_log.py`), pour suivre la
-répartition des coûts après coup.
+modèle, DeepSeek (chantier "optimisation des coûts API"), utilisé pour
+l'extraction d'éléments clés (`POST /api/greffier/extraction`), le résumé
+de dossier (`POST /api/analyse/resume`) et les tâches de structuration de
+contenu déjà fourni sans raisonnement juridique nouveau — chronologie
+(`POST /api/greffier/chronologie`), PV d'audience (`POST /api/greffier/
+pv-audience`), réquisitoire (`POST /api/greffier/requisitoire`), rapport
+d'instruction (`POST /api/greffier/rapport-instruction`) et notes de
+travail (`POST /api/notes/`) — voir `analyse.TypeTache`. **La génération
+de plaidoirie et l'analyse d'arguments juridiques (chat, vérificateur,
+critique, stratégie combative...) restent exclusivement sur Claude, sans
+exception** — décision explicite maintenue malgré la demande d'y router
+aussi DeepSeek, en raison du précédent déjà documenté sur ce projet
+(perte de profondeur constatée avec un modèle plus léger sur ce type de
+contenu, voir le commentaire au-dessus de `MODEL_ACTIF` dans `analyse.py`).
+Absence de `NVIDIA_API_KEY` ou pas, ces fonctions ne sont pas affectées.
+Sans elle (et sans `nvidia_apikey.txt`), les routes ci-dessus renvoient
+une 503 explicite (`app/demo.py::exiger_cle_api_deepseek`) — le reste du
+serveur fonctionne normalement. Un journal simple de l'usage par
+fournisseur/tâche/tokens est tenu dans `logs/usage_api.jsonl` (voir
+`usage_log.py`), pour suivre la répartition des coûts après coup.
 
 `backend/.env` n'est jamais lu par erreur par `gui.py`/`cli.py` (qui
 utilisent `.env` à la racine ou les fichiers `.txt`) — les deux

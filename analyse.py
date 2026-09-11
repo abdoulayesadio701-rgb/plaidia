@@ -208,16 +208,32 @@ def _client_deepseek():
 
 class TypeTache(str, Enum):
     """Catégorie de tâche d'un appel modèle -- détermine le fournisseur dans
-    _TACHES_VERS_FOURNISSEUR ci-dessous. EXTRACTION/RESUME/INDEXATION vont
-    vers DeepSeek ; ANALYSE/GENERATION restent sur Claude, sans exception
-    (voir le commentaire au-dessus de MODEL_ACTIF). INDEXATION n'a aucun
-    site d'appel aujourd'hui -- aucune fonctionnalité n'indexe encore de
-    jurisprudence par LLM (judilibre.collecter_jurisprudence est un pur
-    appel REST) -- elle existe pour que ce choix soit déjà pris le jour où
-    cette fonctionnalité sera ajoutée."""
+    _TACHES_VERS_FOURNISSEUR ci-dessous.
+
+    ANALYSE/GENERATION restent le verrou "sans exception" : elles ne
+    doivent JAMAIS pointer vers autre chose que "claude" (voir le test
+    dédié dans backend/tests/test_model_router.py). generer_plan_plaidoirie,
+    generer_strategie_combative, analyser_conclusions,
+    verifier_juridiquement, critiquer_reponse, valider_finalement et
+    repondre_conversation restent taguées ainsi -- rien ne les a fait
+    bouger, y compris la génération de plaidoirie elle-même (décision
+    explicite de l'utilisateur : aucune exception sur ce point).
+
+    STRUCTURATION couvre les fonctions qui restructurent un contenu déjà
+    fourni sans raisonnement juridique nouveau (chronologie, PV, analyse
+    de réquisitoire/rapport d'instruction, notes de travail) -- accepté
+    explicitement par l'utilisateur malgré le risque déjà documenté sur ce
+    projet (voir le commentaire au-dessus de MODEL_ACTIF), faute de trio
+    qualité indépendant en aval pour ces fonctions-là.
+
+    INDEXATION n'a aucun site d'appel aujourd'hui -- aucune fonctionnalité
+    n'indexe encore de jurisprudence par LLM (judilibre.collecter_jurisprudence
+    est un pur appel REST) -- elle existe pour que ce choix soit déjà pris
+    le jour où cette fonctionnalité sera ajoutée."""
 
     EXTRACTION = "extraction"
     RESUME = "resume"
+    STRUCTURATION = "structuration"
     INDEXATION = "indexation"
     ANALYSE = "analyse"
     GENERATION = "generation"
@@ -227,10 +243,11 @@ class TypeTache(str, Enum):
 # if/else dispersé : un test dédié (voir backend/tests/test_model_router.py)
 # verrouille que ANALYSE et GENERATION valent toujours "claude", pour qu'un
 # futur ajout dans ce dict ne puisse pas silencieusement faire glisser une
-# tâche de raisonnement juridique vers DeepSeek.
+# tâche de raisonnement juridique ou de génération de texte vers DeepSeek.
 _TACHES_VERS_FOURNISSEUR: dict[TypeTache, str] = {
     TypeTache.EXTRACTION: "deepseek",
     TypeTache.RESUME: "deepseek",
+    TypeTache.STRUCTURATION: "deepseek",
     TypeTache.INDEXATION: "deepseek",
     TypeTache.ANALYSE: "claude",
     TypeTache.GENERATION: "claude",
@@ -516,15 +533,16 @@ Règles impératives :
 
 
 def construire_chronologie(contexte_affaire: str) -> dict:
-    """Construit une chronologie structurée à partir du contenu d'une affaire."""
-    client = _client()
-    response = client.messages.create(
-        model=MODEL_ACTIF,
-        max_tokens=1800,
-        system=CHRONOLOGIE_SYSTEM_PROMPT + _directive_langue(),
-        messages=[{"role": "user", "content": f"Contenu de l'affaire :\n{contexte_affaire}"}],
+    """Construit une chronologie structurée à partir du contenu d'une
+    affaire. Routée vers DeepSeek (TypeTache.STRUCTURATION) -- restructure
+    un contenu déjà fourni, pas de raisonnement juridique nouveau."""
+    raw = _appeler_modele(
+        TypeTache.STRUCTURATION,
+        CHRONOLOGIE_SYSTEM_PROMPT + _directive_langue(),
+        [{"role": "user", "content": f"Contenu de l'affaire :\n{contexte_affaire}"}],
+        1800,
     )
-    raw = response.content[0].text.strip().replace("```json", "").replace("```", "").strip()
+    raw = raw.replace("```json", "").replace("```", "").strip()
     try:
         parsed = json.loads(raw)
     except json.JSONDecodeError as e:
@@ -647,15 +665,14 @@ Règles impératives :
 
 def rediger_pv(notes_audience: str) -> str:
     """Structure des notes d'audience brutes en une première version de
-    procès-verbal, à relire et compléter par le greffier."""
-    client = _client()
-    response = client.messages.create(
-        model=MODEL_ACTIF,
-        max_tokens=2000,
-        system=PV_SYSTEM_PROMPT + _directive_langue(),
-        messages=[{"role": "user", "content": f"Notes prises pendant l'audience :\n{notes_audience}"}],
+    procès-verbal, à relire et compléter par le greffier. Routée vers
+    DeepSeek (TypeTache.STRUCTURATION)."""
+    return _appeler_modele(
+        TypeTache.STRUCTURATION,
+        PV_SYSTEM_PROMPT + _directive_langue(),
+        [{"role": "user", "content": f"Notes prises pendant l'audience :\n{notes_audience}"}],
+        2000,
     )
-    return response.content[0].text.strip()
 
 
 REQUISITOIRE_SYSTEM_PROMPT = """Tu es un assistant qui aide un greffier francophone à structurer le contenu d'un réquisitoire du ministère public, à partir de son texte.
@@ -682,15 +699,15 @@ Règles impératives :
 def analyser_requisitoire(texte_requisitoire: str) -> dict:
     """Structure le contenu d'un réquisitoire (qualification retenue,
     éléments invoqués, circonstances, peine requise) de façon neutre,
-    sans prendre parti — pour le greffier, pas une base de réfutation."""
-    client = _client()
-    response = client.messages.create(
-        model=MODEL_ACTIF,
-        max_tokens=1800,
-        system=REQUISITOIRE_SYSTEM_PROMPT + _directive_langue(),
-        messages=[{"role": "user", "content": f"Texte du réquisitoire :\n{texte_requisitoire}"}],
+    sans prendre parti — pour le greffier, pas une base de réfutation.
+    Routée vers DeepSeek (TypeTache.STRUCTURATION)."""
+    raw = _appeler_modele(
+        TypeTache.STRUCTURATION,
+        REQUISITOIRE_SYSTEM_PROMPT + _directive_langue(),
+        [{"role": "user", "content": f"Texte du réquisitoire :\n{texte_requisitoire}"}],
+        1800,
     )
-    raw = response.content[0].text.strip().replace("```json", "").replace("```", "").strip()
+    raw = raw.replace("```json", "").replace("```", "").strip()
     try:
         parsed = json.loads(raw)
     except json.JSONDecodeError as e:
@@ -726,15 +743,15 @@ Règles impératives :
 def analyser_rapport_instruction(texte_rapport: str) -> dict:
     """Structure le contenu d'un rapport d'instruction (actes accomplis,
     éléments à charge/à décharge, mesures ordonnées, sens proposé) de
-    façon neutre, pour le greffier."""
-    client = _client()
-    response = client.messages.create(
-        model=MODEL_ACTIF,
-        max_tokens=1800,
-        system=RAPPORT_INSTRUCTION_SYSTEM_PROMPT + _directive_langue(),
-        messages=[{"role": "user", "content": f"Texte du rapport d'instruction :\n{texte_rapport}"}],
+    façon neutre, pour le greffier. Routée vers DeepSeek
+    (TypeTache.STRUCTURATION)."""
+    raw = _appeler_modele(
+        TypeTache.STRUCTURATION,
+        RAPPORT_INSTRUCTION_SYSTEM_PROMPT + _directive_langue(),
+        [{"role": "user", "content": f"Texte du rapport d'instruction :\n{texte_rapport}"}],
+        1800,
     )
-    raw = response.content[0].text.strip().replace("```json", "").replace("```", "").strip()
+    raw = raw.replace("```json", "").replace("```", "").strip()
     try:
         parsed = json.loads(raw)
     except json.JSONDecodeError as e:
@@ -1423,15 +1440,15 @@ Règles impératives :
 
 def traiter_notes(notes_brutes: str) -> dict:
     """Structure des notes de travail brutes et en extrait les actions à
-    faire — sans rien inventer ni omettre du contenu original."""
-    client = _client()
-    response = client.messages.create(
-        model=MODEL_ACTIF,
-        max_tokens=1500,
-        system=NOTES_INTELLIGENTES_SYSTEM_PROMPT,
-        messages=[{"role": "user", "content": notes_brutes}],
+    faire — sans rien inventer ni omettre du contenu original. Routée vers
+    DeepSeek (TypeTache.STRUCTURATION)."""
+    raw = _appeler_modele(
+        TypeTache.STRUCTURATION,
+        NOTES_INTELLIGENTES_SYSTEM_PROMPT,
+        [{"role": "user", "content": notes_brutes}],
+        1500,
     )
-    raw = response.content[0].text.strip().replace("```json", "").replace("```", "").strip()
+    raw = raw.replace("```json", "").replace("```", "").strip()
     try:
         parsed = json.loads(raw)
     except json.JSONDecodeError as e:

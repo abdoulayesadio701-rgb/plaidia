@@ -188,6 +188,59 @@ def test_resumer_dossier_utilise_le_type_tache_resume(monkeypatch):
     assert appels == [legacy_analyse.TypeTache.RESUME]
 
 
+# --- Fonctions migrées : structuration (chronologie, PV, réquisitoire, ------
+# --- rapport d'instruction, notes) -- extension demandée explicitement -----
+
+@pytest.mark.parametrize(
+    ("fonction", "reponse_json", "args"),
+    [
+        (legacy_analyse.construire_chronologie, '{"evenements": [], "elements_manquants": []}', ("contenu de l'affaire",)),
+        (legacy_analyse.rediger_pv, "texte du PV", ("notes d'audience",)),
+        (
+            legacy_analyse.analyser_requisitoire,
+            '{"qualification_retenue": "", "faits_et_elements_invoques": [], "circonstances_aggravantes": [], '
+            '"circonstances_attenuantes": [], "peine_requise": "non précisée", "points_attention": []}',
+            ("texte du réquisitoire",),
+        ),
+        (
+            legacy_analyse.analyser_rapport_instruction,
+            '{"actes_instruction": [], "elements_a_charge": [], "elements_a_decharge": [], '
+            '"mesures_ordonnees": [], "sens_propose": "non précisé", "points_attention": []}',
+            ("texte du rapport",),
+        ),
+        (
+            legacy_analyse.traiter_notes,
+            '{"note_structuree": "", "actions_a_faire": [], "points_a_retenir": []}',
+            ("notes brutes",),
+        ),
+    ],
+)
+def test_fonctions_de_structuration_utilisent_le_type_tache_structuration(monkeypatch, fonction, reponse_json, args):
+    appels = []
+
+    def _espion(type_tache, system, messages, max_tokens):
+        appels.append(type_tache)
+        return reponse_json
+
+    monkeypatch.setattr(legacy_analyse, "_appeler_modele", _espion)
+    fonction(*args)
+    assert appels == [legacy_analyse.TypeTache.STRUCTURATION]
+
+
+def test_generer_plan_plaidoirie_reste_sur_claude_sans_exception(monkeypatch):
+    """Décision finale de l'utilisateur après plusieurs revirements (voir
+    l'historique de conversation) : la génération de plaidoirie reste
+    exclusivement sur Claude. Test de régression explicite sur ce point
+    précis, pas seulement couvert par le verrouillage générique de
+    TypeTache.GENERATION."""
+    def _echoue_si_appelee(*a, **k):
+        raise AssertionError("_appeler_modele ne doit pas être dans le chemin de generer_plan_plaidoirie")
+
+    monkeypatch.setattr(legacy_analyse, "_appeler_modele", _echoue_si_appelee)
+    monkeypatch.setattr(legacy_analyse, "_client", lambda: _FakeClientClaude('{"plan": [], "points_attention": []}'))
+    legacy_analyse.generer_plan_plaidoirie("contexte du dossier", 15)
+
+
 def test_analyser_conclusions_nappelle_jamais_appeler_modele(monkeypatch):
     """Preuve inverse explicite : une fonction d'analyse/génération continue
     d'appeler _client() directement, elle ne passe pas par le routeur."""
@@ -248,4 +301,62 @@ def test_resume_appelle_le_garde_fou_dentree(client, monkeypatch, dossier_demo_i
     monkeypatch.setattr(analyse_router.quality_pipeline, "executer_garde_fou", _refuse)
 
     reponse = client.post("/api/analyse/resume", json={"dossier_id": dossier_demo_id})
+    assert reponse.status_code == 422
+
+
+# --- Garde-fou d'entrée câblé sur les endpoints de structuration migrés -----
+
+@pytest.mark.parametrize(
+    ("chemin", "payload_supplementaire"),
+    [
+        ("/api/greffier/pv-audience", {"notes": "x" * 30}),
+        ("/api/greffier/requisitoire", {"texte": "x" * 30}),
+        ("/api/greffier/rapport-instruction", {"texte": "x" * 30}),
+    ],
+)
+def test_endpoints_greffier_de_structuration_appellent_le_garde_fou_dentree(client, monkeypatch, chemin, payload_supplementaire):
+    import app.routers.greffier as greffier_router
+    from app import demo
+
+    monkeypatch.setattr(demo, "mode_demo_effectif", lambda: False)
+    monkeypatch.setattr(demo, "exiger_cle_api_deepseek", lambda: None)
+
+    def _refuse(texte):
+        raise DemandeRefusee("demande refusée par le test", "medium")
+
+    monkeypatch.setattr(greffier_router, "executer_garde_fou", _refuse)
+
+    reponse = client.post(chemin, json=payload_supplementaire)
+    assert reponse.status_code == 422
+
+
+def test_chronologie_appelle_le_garde_fou_dentree(client, monkeypatch, dossier_demo_id):
+    import app.routers.greffier as greffier_router
+    from app import demo
+
+    monkeypatch.setattr(demo, "mode_demo_effectif", lambda: False)
+    monkeypatch.setattr(demo, "exiger_cle_api_deepseek", lambda: None)
+
+    def _refuse(texte):
+        raise DemandeRefusee("demande refusée par le test", "medium")
+
+    monkeypatch.setattr(greffier_router, "executer_garde_fou", _refuse)
+
+    reponse = client.post("/api/greffier/chronologie", json={"dossier_id": dossier_demo_id})
+    assert reponse.status_code == 422
+
+
+def test_creer_note_appelle_le_garde_fou_dentree(client, monkeypatch, dossier_demo_id):
+    import app.routers.notes as notes_router
+    from app import demo
+
+    monkeypatch.setattr(demo, "mode_demo_effectif", lambda: False)
+    monkeypatch.setattr(demo, "exiger_cle_api_deepseek", lambda: None)
+
+    def _refuse(texte):
+        raise DemandeRefusee("demande refusée par le test", "medium")
+
+    monkeypatch.setattr(notes_router, "executer_garde_fou", _refuse)
+
+    reponse = client.post("/api/notes/", json={"dossier_id": dossier_demo_id, "note_brute": "x" * 30})
     assert reponse.status_code == 422

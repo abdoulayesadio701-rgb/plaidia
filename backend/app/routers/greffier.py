@@ -46,10 +46,15 @@ router = APIRouter(prefix="/api/greffier", tags=["greffier"])
 
 @router.post("/chronologie", response_model=ChronologieOut)
 def chronologie(payload: ChronologieIn):
+    """Route vers DeepSeek (voir analyse.TypeTache.STRUCTURATION) -- garde-fou
+    d'entrée ajouté ici en même temps que le changement de fournisseur : il
+    manquait déjà sous Claude sur cette route."""
     dossier = get_dossier_or_404(payload.dossier_id)
     if demo.mode_demo_effectif():
         return demo_data.CHRONOLOGIE_DEMO
+    demo.exiger_cle_api_deepseek()
     contexte = construire_contexte_dossier(dossier)
+    executer_garde_fou(contexte)
     return legacy_analyse.construire_chronologie(contexte)
 
 
@@ -122,8 +127,17 @@ def recherche_transversale(terme: str):
 
 @router.post("/pv-audience", response_model=PvAudienceOut)
 def pv_audience(payload: PvAudienceIn):
+    """Route vers DeepSeek (voir analyse.TypeTache.STRUCTURATION) -- garde-fou
+    d'entrée et contrôle déterministe des citations ajoutés ici en même
+    temps que le changement de fournisseur : ils manquaient déjà sous
+    Claude sur cette route."""
     demo.exiger_cle_api()
+    demo.exiger_cle_api_deepseek()
+    executer_garde_fou(payload.notes)
     texte = legacy_analyse.rediger_pv(payload.notes)
+    for c in quality_pipeline.verifier_citations_deterministe(texte, [payload.notes]):
+        if c["statut_deterministe"] != "VERIFIE":
+            print(f"[greffier] citation non vérifiée dans un PV DeepSeek : {c}", flush=True)
     return PvAudienceOut(texte=texte)
 
 
@@ -185,11 +199,33 @@ def exporter_verification_procedurale(payload: ExportVerificationProceduraleIn):
 
 @router.post("/requisitoire", response_model=RequisitoireOut)
 def requisitoire(payload: RequisitoireIn):
+    """Route vers DeepSeek (voir analyse.TypeTache.STRUCTURATION) -- garde-fou
+    d'entrée et contrôle déterministe des citations ajoutés ici en même
+    temps que le changement de fournisseur : ils manquaient déjà sous
+    Claude sur cette route."""
     demo.exiger_cle_api()
-    return legacy_analyse.analyser_requisitoire(payload.texte)
+    demo.exiger_cle_api_deepseek()
+    executer_garde_fou(payload.texte)
+    resultat = legacy_analyse.analyser_requisitoire(payload.texte)
+    for point in resultat.get("points_attention", []):
+        for c in quality_pipeline.verifier_citations_deterministe(str(point), [payload.texte]):
+            if c["statut_deterministe"] != "VERIFIE":
+                print(f"[greffier] citation non vérifiée dans un réquisitoire DeepSeek : {c}", flush=True)
+    return resultat
 
 
 @router.post("/rapport-instruction", response_model=RapportInstructionOut)
 def rapport_instruction(payload: RapportInstructionIn):
+    """Route vers DeepSeek (voir analyse.TypeTache.STRUCTURATION) -- garde-fou
+    d'entrée et contrôle déterministe des citations ajoutés ici en même
+    temps que le changement de fournisseur : ils manquaient déjà sous
+    Claude sur cette route."""
     demo.exiger_cle_api()
-    return legacy_analyse.analyser_rapport_instruction(payload.texte)
+    demo.exiger_cle_api_deepseek()
+    executer_garde_fou(payload.texte)
+    resultat = legacy_analyse.analyser_rapport_instruction(payload.texte)
+    for point in resultat.get("points_attention", []):
+        for c in quality_pipeline.verifier_citations_deterministe(str(point), [payload.texte]):
+            if c["statut_deterministe"] != "VERIFIE":
+                print(f"[greffier] citation non vérifiée dans un rapport d'instruction DeepSeek : {c}", flush=True)
+    return resultat

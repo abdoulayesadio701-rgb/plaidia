@@ -12,8 +12,9 @@ import os
 import analyse as legacy_analyse
 import db
 import export as legacy_export
-from app import demo
+from app import demo, quality_pipeline
 from app.deps import construire_contexte_dossier, get_dossier_or_404
+from app.security_guard import executer_garde_fou
 from app.schemas.notes import ExportNoteClientIn, NoteClientIn, NoteClientOut, NoteCreate, NoteOut
 from fastapi import APIRouter
 from fastapi.responses import FileResponse
@@ -23,9 +24,18 @@ router = APIRouter(prefix="/api/notes", tags=["notes"])
 
 @router.post("/", response_model=NoteOut, status_code=201)
 def creer_note(payload: NoteCreate):
+    """Route vers DeepSeek (voir analyse.TypeTache.STRUCTURATION) -- garde-fou
+    d'entrée ajouté ici en même temps que le changement de fournisseur : il
+    manquait déjà sous Claude sur cette route."""
     get_dossier_or_404(payload.dossier_id)
     demo.exiger_cle_api()
+    demo.exiger_cle_api_deepseek()
+    executer_garde_fou(payload.note_brute)
     resultat = legacy_analyse.traiter_notes(payload.note_brute)
+    for point in resultat.get("points_a_retenir", []):
+        for c in quality_pipeline.verifier_citations_deterministe(str(point), [payload.note_brute]):
+            if c["statut_deterministe"] != "VERIFIE":
+                print(f"[notes] citation non vérifiée dans une note DeepSeek : {c}", flush=True)
     note_id = db.ajouter_note(
         payload.dossier_id,
         payload.note_brute,
