@@ -13,8 +13,9 @@
  * Traitement "dépôt de pièce" (voir globals.css §Parchemin) : la zone de
  * texte devient un ilot de parchemin clair, scellé d'un cachet de cire
  * améthyste qui se craquelle à l'ouverture — seule exception délibérée à
- * la palette sombre (au même titre que le marqueur "À VÉRIFIER"), pensée
- * pour ce geste précis : déposer une pièce dans le dossier.
+ * la palette sombre (au même titre que les balises .marker-verify/
+ * .marker-citation, voir RichOutput.tsx), pensée pour ce geste précis :
+ * déposer une pièce dans le dossier.
  */
 
 import { useEffect, useState, type KeyboardEvent } from "react";

@@ -145,18 +145,19 @@ def test_chat_stream_reste_en_mode_demo_et_contient_le_marqueur(client: TestClie
     assert "text/event-stream" in r.headers["content-type"]
     assert "event: done" in r.text
 
-    # Le marqueur "À VÉRIFIER" peut être coupé entre deux trames "delta"
-    # (ici, "À " et "VÉRIFIER " arrivent dans deux événements séparés) --
-    # exactement pourquoi RichOutput.tsx recompose le texte accumulé côté
-    # front plutôt que de chercher la sous-chaîne dans chaque fragment brut.
-    # On reproduit cette recomposition ici plutôt que de chercher la
-    # sous-chaîne dans le flux SSE brut, ce qui échouerait à tort.
+    # La balise [VERIF:...] (remplace l'ancien marqueur libre "À VÉRIFIER",
+    # voir analyse.REGLE_BALISAGE_CITATIONS) peut être coupée entre deux
+    # trames "delta" -- exactement pourquoi RichOutput.tsx recompose le
+    # texte accumulé côté front plutôt que de chercher la sous-chaîne dans
+    # chaque fragment brut. On reproduit cette recomposition ici plutôt que
+    # de chercher la sous-chaîne dans le flux SSE brut, ce qui échouerait à
+    # tort.
     texte_reconstitue = "".join(
         json.loads(bloc.split("data:", 1)[1])["text"]
         for bloc in r.text.split("\n\n")
         if bloc.startswith("event: delta")
     )
-    assert "À VÉRIFIER" in texte_reconstitue
+    assert "[VERIF:" in texte_reconstitue
 
 
 def test_chat_contextuel_bloque_en_mode_demo(client: TestClient):

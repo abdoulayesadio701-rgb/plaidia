@@ -84,20 +84,33 @@ titres et les ombres/dégradés "premium", jamais pour un bouton primaire.
 Ce sont des couleurs **sémantiques**, indépendantes de l'accent améthyste
 — ne jamais les confondre avec les états actif/focus.
 
-### 1.6 Marqueur "À VÉRIFIER" — garde-fou anti-hallucination
+### 1.6 Balises de référence juridique — garde-fou anti-hallucination
+
+Depuis le chantier de balisage (voir `analyse.REGLE_BALISAGE_CITATIONS`),
+l'agent encadre chaque référence juridique d'une balise structurée
+plutôt que d'écrire "À VÉRIFIER" en texte libre : `[ART:<numéro>:<code>]`,
+`[JURISPRUDENCE:<référence>]` ou `[VERIF:<description>]`. `RichOutput.tsx`
+les interprète et leur donne chacune un rendu dédié — voir §"Marqueur
+À VÉRIFIER" plus bas pour le détail visuel des deux styles.
 
 | Token | Hex | RGB | Usage |
 |---|---|---|---|
-| `verify-bg` | `#FFE9B0` | 255 233 176 | Fond ambre pâle |
-| `verify-text` | `#7A4A00` | 122 74 0 | Texte brun, toujours en gras |
+| `verify-bg` | `#FFE9B0` | 255 233 176 | Fond ambre pâle — balise `[VERIF:...]` (`.marker-verify`) |
+| `verify-text` | `#7A4A00` | 122 74 0 | Texte brun, toujours en gras — idem |
 
-Un des deux seuls éléments à fond clair de toute l'interface (l'autre est
-le parchemin, §1.8) — intentionnel : il doit sauter aux yeux au milieu
-d'une page sombre. Ne jamais l'adoucir, ne jamais réduire son contraste,
-ne jamais le remplacer par une simple couleur de texte. Ces deux valeurs
-sont reprises telles quelles de `gui.py` (tag `a_verifier`) pour la
-continuité visuelle entre l'ancienne interface tkinter et le nouveau
-front.
+Un des deux seuls éléments à fond clair (opaque) de toute l'interface
+(l'autre est le parchemin, §1.8) — intentionnel : `[VERIF:...]` doit
+sauter aux yeux au milieu d'une page sombre. Ne jamais l'adoucir, ne
+jamais réduire son contraste, ne jamais le remplacer par une simple
+couleur de texte. Ces deux valeurs sont reprises telles quelles de
+`gui.py` (tag `a_verifier`) pour la continuité visuelle entre l'ancienne
+interface tkinter et le nouveau front.
+
+`[ART:...]`/`[JURISPRUDENCE:...]` (une référence citée avec **confiance**,
+à ne jamais confondre visuellement avec `[VERIF:...]`) utilisent `.marker-
+citation` — `bg-gold-500/10` / `text-gold-400`, une teinte discrète sur le
+fond sombre plutôt qu'un aplat clair : ce n'est pas un avertissement, juste
+une référence repérable en un coup d'œil.
 
 ### 1.8 Parchemin — dépôt de pièce
 
@@ -138,7 +151,7 @@ panneaux : `border-gold-600/20` (20 % d'opacité) au repos,
 | **Display** | Playfair Display | serif | Réservée au mot-marque "Plaid'IA" et au titre principal d'une page d'accueil. Jamais pour un titre de section courant — trop dramatique en usage répété. |
 | **Serif** | Cormorant Garamond | serif | `h1`–`h4` de contenu, intitulés de carte, citations. La voix "cabinet ancien" du produit. |
 | **Sans** | Inter | system-ui, sans-serif | Tout le texte de corps, boutons, formulaires, UI dense. |
-| **Mono** | JetBrains Mono | ui-monospace, monospace | Références juridiques (articles de loi, numéros RG, réf. Judilibre/Légifrance, "À VÉRIFIER" inline dans du texte technique). |
+| **Mono** | JetBrains Mono | ui-monospace, monospace | Références juridiques (articles de loi, numéros RG, réf. Judilibre/Légifrance, balises `[ART:...]`/`[VERIF:...]` inline dans du texte technique). |
 
 Import (Google Fonts, à placer dans `index.html` ou en tête de
 `globals.css`) :
@@ -227,12 +240,23 @@ texte plein de la même couleur, bordure 1px de la même couleur à 30 %.
 Toujours accompagnés du mot ("Élevé", "Moyen", "Faible"), jamais de la
 couleur seule — accessibilité daltonisme.
 
-### Marqueur "À VÉRIFIER"
+### Balises de référence juridique
 
-`<mark>` sémantique, fond `verify-bg`, texte `verify-text` en
-`font-bold`, `radius-sm`, padding horizontal léger (`px-1`). Inline dans
-le flux de texte, jamais en bloc à part — il doit interrompre visuellement
-la lecture exactement là où la vérification est nécessaire.
+Rendu par `RichOutput.tsx`, à partir des balises `[ART:...]`/
+`[JURISPRUDENCE:...]`/`[VERIF:...]` produites par l'agent (voir
+`analyse.REGLE_BALISAGE_CITATIONS`) — jamais la syntaxe brute de la
+balise elle-même :
+
+- **`[VERIF:...]`** (garde-fou anti-hallucination, remplace l'ancien
+  marqueur libre "À VÉRIFIER") : `<mark>` sémantique, fond `verify-bg`,
+  texte `verify-text` en `font-bold`, `radius-sm`, padding horizontal
+  léger (`px-1`). Inline dans le flux de texte, jamais en bloc à part —
+  il doit interrompre visuellement la lecture exactement là où la
+  vérification est nécessaire.
+- **`[ART:...]`/`[JURISPRUDENCE:...]`** (référence citée avec confiance) :
+  `<span className="marker-citation">`, fond `gold-500` à 10 % d'opacité,
+  texte `gold-400` en `font-medium`, même `radius-sm`/`px-1` — délibérément
+  plus discret que `[VERIF:...]`, ce n'est pas un avertissement.
 
 ### Onglets (tabs)
 

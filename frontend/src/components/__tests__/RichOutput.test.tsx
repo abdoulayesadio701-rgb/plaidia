@@ -71,6 +71,39 @@ describe("RichOutput", () => {
     marqueurs.forEach((m) => expect(m.tagName).toBe("MARK"));
   });
 
+  it("rend une balise [ART:...] en citation lisible", () => {
+    render(<RichOutput texte="Le principe [ART:132-24:CP] impose au juge de tenir compte des éléments." />);
+    const citation = screen.getByText("art. 132-24 du Code pénal");
+    expect(citation.tagName).toBe("SPAN");
+    expect(citation).toHaveClass("marker-citation");
+  });
+
+  it("rend une balise [JURISPRUDENCE:...] en citation lisible", () => {
+    render(<RichOutput texte="[JURISPRUDENCE:Cass. Crim., 12 mars 2023, n°22-84.123] le confirme." />);
+    const citation = screen.getByText("Cass. Crim., 12 mars 2023, n°22-84.123");
+    expect(citation.tagName).toBe("SPAN");
+    expect(citation).toHaveClass("marker-citation");
+  });
+
+  it("rend une balise [VERIF:...] comme l'ancien marqueur À VÉRIFIER", () => {
+    render(<RichOutput texte="Un point [VERIF:absence de rapport d'enquête] reste incertain." />);
+    const marqueur = screen.getByText("À VÉRIFIER : absence de rapport d'enquête");
+    expect(marqueur.tagName).toBe("MARK");
+    expect(marqueur).toHaveClass("marker-verify");
+  });
+
+  it("ne rend pas une balise [VERIF:...] encore incomplète (robustesse au streaming SSE)", () => {
+    const { container, rerender } = render(<RichOutput texte="Un point [VERIF:absence de rap" />);
+
+    // La balise n'est pas fermée -- aucun <mark> ne doit encore exister.
+    expect(container.querySelector("mark")).toBeNull();
+    expect(container.textContent).toContain("[VERIF:absence de rap");
+
+    rerender(<RichOutput texte="Un point [VERIF:absence de rapport] reste incertain." />);
+    const marqueur = screen.getByText("À VÉRIFIER : absence de rapport");
+    expect(marqueur.tagName).toBe("MARK");
+  });
+
   it("transforme une URL source en lien cliquable ouvrant un nouvel onglet", () => {
     render(<RichOutput texte="Source : https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006419285" />);
     const lien = screen.getByRole("link", { name: /consulter la source/i });

@@ -60,11 +60,13 @@ rapport d'instruction.
 
 ## Garde-fous anti-hallucination
 
-- **Marqueur « À VÉRIFIER »** : chaque prompt système impose au modèle de
-  signaler explicitement toute référence, jurisprudence ou règle qu'il
-  n'est pas certain de citer correctement, au lieu de l'affirmer comme un
-  fait établi. Le front repère ce marqueur dans n'importe quel texte
-  produit (chat en streaming inclus) et le surligne visuellement — voir
+- **Balisage des références juridiques** : chaque prompt système impose au
+  modèle d'encadrer toute référence juridique d'une balise structurée
+  (`[ART:<numéro>:<code>]`, `[JURISPRUDENCE:<référence>]`) et, s'il n'est
+  pas certain de la citer correctement, `[VERIF:<description>]` plutôt que
+  de l'affirmer comme un fait établi — voir `analyse.REGLE_BALISAGE_CITATIONS`.
+  Le front repère ces balises dans n'importe quel texte produit (chat en
+  streaming inclus) et leur donne un rendu visuel dédié — voir
   `frontend/src/components/RichOutput.tsx`.
 - **Syllogisme juridique imposé** : les prompts d'analyse de conclusions
   et de réponse au chat exigent explicitement l'enchaînement faits →
@@ -252,11 +254,13 @@ timelines, document classification, cross-document consistency checks,
 hearing minutes drafting).
 
 **Anti-hallucination guardrails** are the core design principle: every
-system prompt requires the model to flag any citation or rule it isn't
-fully certain about with an inline **"À VÉRIFIER" (TO VERIFY)** marker,
-visually highlighted everywhere in the UI, including live-streamed chat
-responses. Automatically collected case law is never citable until a
-human validates it. A transparent **demo mode** serves realistic
+system prompt requires the model to wrap every legal citation in a
+structured tag (`[ART:<number>:<code>]`, `[JURISPRUDENCE:<reference>]`)
+and, when it isn't fully certain about one, `[VERIF:<description>]`
+instead of stating it as an established fact — each tag rendered with
+its own visual treatment everywhere in the UI, including live-streamed
+chat responses. Automatically collected case law is never citable until
+a human validates it. A transparent **demo mode** serves realistic
 pre-recorded responses (no API key required, no real Claude calls) when
 no API key is configured server-side, with a visible banner so nobody
 mistakes a demo answer for a real one; visitors can optionally supply

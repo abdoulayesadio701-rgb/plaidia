@@ -2,7 +2,8 @@
 
 Interface web de Plaid'IA, consommant l'API FastAPI de `backend/`. Reprend
 la logique de `gui.py` (tkinter) — espaces Avocat/Greffier, barre de
-commande en langage naturel, garde-fou "À VÉRIFIER" — dans une interface
+commande en langage naturel, balisage des références juridiques
+(`[ART:...]`/`[JURISPRUDENCE:...]`/`[VERIF:...]`) — dans une interface
 web moderne, sur le design system documenté dans [`DESIGN.md`](./DESIGN.md).
 
 ## Installation
@@ -72,7 +73,7 @@ frontend/
       AppLayout.tsx              # Squelette général (bandeau + commande + sidebar + statut)
       TopBar.tsx, CommandBar.tsx, Sidebar.tsx, StatusBar.tsx, DossierSelector.tsx
     components/
-      RichOutput.tsx              # Surligne "À VÉRIFIER", interprète **gras**
+      RichOutput.tsx              # Rendu dédié [ART:...]/[JURISPRUDENCE:...]/[VERIF:...], interprète **gras**
       RiskBadge.tsx                # Pastille Faible / Moyen / Élevé
       Button.tsx, Modal.tsx, NouveauDossierModal.tsx, Tooltip.tsx
       Spinner.tsx, ErrorState.tsx, ToastContainer.tsx, PagePlaceholder.tsx
@@ -90,8 +91,9 @@ frontend/
 - **Chaque fonction de `src/api/*.ts`** correspond une-pour-une à une route
   du backend (voir `backend/README.md`) — en cas de doute sur un type ou
   un endpoint, `/docs` (Swagger) du backend fait foi.
-- **Le marqueur "À VÉRIFIER"** ne doit jamais être filtré, reformulé ou
-  redécoré ailleurs que dans `RichOutput`/`.marker-verify` — c'est le
+- **Les balises `[ART:...]`/`[JURISPRUDENCE:...]`/`[VERIF:...]`** ne
+  doivent jamais être filtrées, reformulées ou redécorées ailleurs que
+  dans `RichOutput`/`.marker-verify`/`.marker-citation` — c'est le
   garde-fou anti-hallucination, voir DESIGN.md §1.6.
 
 ## Non vérifié

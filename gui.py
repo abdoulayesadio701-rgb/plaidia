@@ -8,6 +8,7 @@ et questions libres — avec de vrais boutons, sans commande à taper.
 Lancement : python gui.py
 """
 
+import re
 import sys
 import threading
 import tkinter as tk
@@ -16,6 +17,20 @@ from tkinter import ttk, scrolledtext, messagebox, simpledialog
 import db
 import analyse
 from analyse import interpreter_intention
+
+# ---------- Balisage des références juridiques (voir analyse.REGLE_BALISAGE_CITATIONS) --
+# Remplace l'ancien marqueur libre "À VÉRIFIER : " -- même jeu de regex que
+# backend/app/quality_pipeline.py et export.py, dupliqué ici plutôt
+# qu'importé : gui.py est l'application standalone historique, elle ne
+# dépend jamais de backend/app (voir backend/README.md).
+_RE_TAG_ART = re.compile(r"\[ART:([^:\]]+):([A-Z]+)\]")
+_RE_TAG_JURISPRUDENCE = re.compile(r"\[JURISPRUDENCE:([^\]]+)\]")
+_RE_TAG_VERIF = re.compile(r"\[VERIF:([^\]]*)\]")
+_RE_TAG_TOUTE = re.compile(r"\[(?:ART|JURISPRUDENCE|VERIF):[^\]]*\]")
+_CODES_LIBELLES = {
+    "CP": "Code pénal", "CCIV": "Code civil", "CPC": "Code de procédure civile",
+    "CPP": "Code de procédure pénale", "CTRAV": "Code du travail", "CCOM": "Code de commerce",
+}
 
 # ---------- Palette et polices ----------
 NAVY = "#1F3A5F"
@@ -672,6 +687,7 @@ class PlaidIAApp:
             widget.tag_configure("risque_faible", foreground="#4C6B3F", font=("Consolas", 10, "bold"))
             widget.tag_configure("attention", foreground="#B3261E")
             widget.tag_configure("a_verifier", background="#FFE9B0", foreground="#7A4A00", font=("Consolas", 10, "bold"))
+            widget.tag_configure("citation", foreground=NAVY, font=("Consolas", 10, "bold"))
             widget.tag_configure("gras", font=("Consolas", 10, "bold"))
         self._afficher("Bienvenue dans Plaid'IA.\n\nCréez ou sélectionnez un dossier ci-dessus pour commencer.", "titre")
         self.sortie.config(state="disabled")
@@ -728,6 +744,7 @@ class PlaidIAApp:
         self.zone_chat.tag_configure("titre", font=("Segoe UI", 12, "bold"), foreground=NAVY)
         self.zone_chat.tag_configure("attention", foreground="#B3261E")
         self.zone_chat.tag_configure("a_verifier", background="#FFE9B0", foreground="#7A4A00", font=("Consolas", 10, "bold"))
+        self.zone_chat.tag_configure("citation", foreground=NAVY, font=("Consolas", 10, "bold"))
         self.zone_chat.tag_configure("gras", font=("Consolas", 10, "bold"))
         self.zone_chat.config(state="disabled")
 
@@ -912,25 +929,37 @@ class PlaidIAApp:
     def _afficher(self, texte, tag=None, widget=None, saut_ligne=True):
         widget = widget if widget is not None else self.sortie
         widget.config(state="normal")
-        if "À VÉRIFIER" in texte:
-            # Surligne chaque occurrence de "À VÉRIFIER" — la marque de
-            # fabrique visuelle du garde-fou anti-hallucination de l'outil.
-            segments = texte.split("À VÉRIFIER")
-            for i, segment in enumerate(segments):
-                if tag:
-                    widget.insert("end", segment, tag)
-                else:
-                    widget.insert("end", segment)
-                if i < len(segments) - 1:
-                    widget.insert("end", "À VÉRIFIER", "a_verifier")
-            if saut_ligne:
-                widget.insert("end", "\n")
+
+        def _inserer(contenu, tag_a_utiliser):
+            if contenu:
+                widget.insert("end", contenu, tag_a_utiliser) if tag_a_utiliser else widget.insert("end", contenu)
+
+        # Balises [ART:...]/[JURISPRUDENCE:...]/[VERIF:...] (voir
+        # analyse.REGLE_BALISAGE_CITATIONS) -- rendues en texte lisible avec
+        # une mise en forme dédiée, comme le faisait l'ancien marqueur libre
+        # "À VÉRIFIER" pour les documents antérieurs à ce chantier (repéré
+        # ici via le même regex, jamais régénéré rétroactivement).
+        texte = texte or ""
+        if not _RE_TAG_TOUTE.search(texte) and "À VÉRIFIER" not in texte:
+            _inserer((texte + "\n") if saut_ligne else texte, tag)
         else:
-            contenu = texte + "\n" if saut_ligne else texte
-            if tag:
-                widget.insert("end", contenu, tag)
-            else:
-                widget.insert("end", contenu)
+            pos = 0
+            for segment_avant, brut in re.findall(r"(.*?)(\[(?:ART|JURISPRUDENCE|VERIF):[^\]]*\]|À VÉRIFIER)", texte, re.DOTALL):
+                _inserer(segment_avant, tag)
+                pos += len(segment_avant) + len(brut)
+                m_verif = _RE_TAG_VERIF.fullmatch(brut)
+                m_art = _RE_TAG_ART.fullmatch(brut)
+                m_jur = _RE_TAG_JURISPRUDENCE.fullmatch(brut)
+                if m_verif:
+                    _inserer(f"À VÉRIFIER : {m_verif.group(1)}", "a_verifier")
+                elif m_art:
+                    _inserer(f"art. {m_art.group(1)} du {_CODES_LIBELLES.get(m_art.group(2), m_art.group(2))}", "citation")
+                elif m_jur:
+                    _inserer(m_jur.group(1), "citation")
+                else:
+                    _inserer(brut, "a_verifier")  # "À VÉRIFIER" hérité, texte antérieur à ce chantier
+            fin = texte[pos:]
+            _inserer((fin + "\n") if saut_ligne else fin, tag)
         widget.see("end")
         widget.config(state="disabled")
 
@@ -1901,9 +1930,9 @@ class PlaidIAApp:
         """Met à jour le panneau à droite du chat avec des faits vérifiables
         sur la dernière réponse — pas une auto-évaluation du modèle, mais
         des éléments qu'on peut réellement compter : sources effectivement
-        trouvées en direct, nombre de mentions "À VÉRIFIER" dans la réponse.
-        Un compteur élevé de "À VÉRIFIER" est un signal de prudence honnête,
-        pas un défaut à cacher."""
+        trouvées en direct, nombre de balises [VERIF:...] (voir
+        analyse.REGLE_BALISAGE_CITATIONS) dans la réponse. Un compteur élevé
+        est un signal de prudence honnête, pas un défaut à cacher."""
         for widget in self.panneau_intelligence.winfo_children():
             widget.destroy()
 
@@ -1930,12 +1959,12 @@ class PlaidIAApp:
         else:
             ligne("○", "Recherche live désactivée pour cette question", GRAY)
 
-        nb_a_verifier = reponse.count("À VÉRIFIER")
+        nb_a_verifier = len(_RE_TAG_VERIF.findall(reponse)) + reponse.count("À VÉRIFIER")
         if nb_a_verifier == 0:
-            ligne("✓", "Aucune mention « À VÉRIFIER » dans la réponse", "#3D8B5A")
+            ligne("✓", "Aucune balise [VERIF:...] dans la réponse", "#3D8B5A")
         else:
             pluriel = "s" if nb_a_verifier > 1 else ""
-            ligne("⚠", f"{nb_a_verifier} mention{pluriel} « À VÉRIFIER » — à contrôler avant usage", "#B3261E")
+            ligne("⚠", f"{nb_a_verifier} point{pluriel} « À VÉRIFIER » — à contrôler avant usage", "#B3261E")
 
         tk.Frame(self.panneau_intelligence, bg="#EEF1F6", height=8).pack()
         tk.Label(
@@ -2065,14 +2094,16 @@ class PlaidIAApp:
         # en arrière-plan ne soit pas affectée si l'utilisateur relance vite.
         historique_envoi = list(self.historique_question)
         fragments_recus = []
-        # Petit tampon pour ne jamais couper le marqueur "À VÉRIFIER" entre
-        # deux fragments reçus du flux (ce qui empêcherait son surlignage).
-        # On ne libère à l'affichage que ce qui est certainement "sûr" ;
-        # les derniers caractères restent en réserve jusqu'au fragment suivant.
-        # Le même tampon retient aussi l'état "en gras" (**...**) d'un
-        # fragment à l'autre, puisqu'un passage en gras peut s'étaler sur
-        # plusieurs fragments reçus successivement.
-        marqueur = "À VÉRIFIER"
+        # Petit tampon pour ne jamais couper une balise [ART:...]/
+        # [JURISPRUDENCE:...]/[VERIF:...] (voir analyse.REGLE_BALISAGE_CITATIONS)
+        # entre deux fragments reçus du flux (ce qui empêcherait son rendu
+        # dédié dans _afficher). On ne libère à l'affichage que ce qui est
+        # certainement "sûr" : si le texte reçu se termine par un "[" sans
+        # "]" après lui, tout à partir de ce "[" reste en réserve jusqu'au
+        # fragment suivant -- une balise ne peut pas être reconnue tant
+        # qu'elle n'est pas complète. Le même tampon retient aussi l'état
+        # "en gras" (**...**) d'un fragment à l'autre, puisqu'un passage en
+        # gras peut s'étaler sur plusieurs fragments reçus successivement.
         tampon = {"texte": "", "gras": False}
 
         self._chat_stream_en_cours = True
@@ -2082,13 +2113,14 @@ class PlaidIAApp:
 
         def flush_tampon(force=False):
             texte = tampon["texte"]
-            seuil = len(marqueur) - 1
             if force:
                 a_afficher, reste = texte, ""
-            elif len(texte) > seuil:
-                a_afficher, reste = texte[:-seuil], texte[-seuil:]
             else:
-                a_afficher, reste = "", texte
+                pos_ouverture = texte.rfind("[")
+                if pos_ouverture != -1 and "]" not in texte[pos_ouverture:]:
+                    a_afficher, reste = texte[:pos_ouverture], texte[pos_ouverture:]
+                else:
+                    a_afficher, reste = texte, ""
             tampon["texte"] = reste
             if a_afficher:
                 # Interprète les marqueurs **gras** du markdown plutôt que

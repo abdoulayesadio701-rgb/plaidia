@@ -49,10 +49,72 @@ def test_verifier_citations_sans_aucune_source_disponible():
 def test_citation_deja_signalee_a_verifier_par_le_modele_nest_pas_recontrolee():
     """Une citation que le modèle a lui-même honnêtement préfixée
     « À VÉRIFIER » ne doit pas ressortir comme une citation dissimulée --
-    elle est ignorée par le contrôle déterministe, pas signalée en plus."""
+    elle est ignorée par le contrôle déterministe, pas signalée en plus.
+    Filet hérité (texte antérieur au chantier de balisage) : voir
+    test_balise_verif_nest_jamais_recontrolee pour l'équivalent balisé."""
     texte = "À VÉRIFIER : article L. 9999-9 du Code du travail."
     resultats = quality_pipeline._verifier_citations(texte, [])
     assert resultats == []
+
+
+# --- Balisage des références juridiques ([ART:...]/[JURISPRUDENCE:...]/[VERIF:...]) --
+# Remplace le marqueur libre "À VÉRIFIER : " -- voir analyse.REGLE_BALISAGE_CITATIONS.
+
+def test_extraire_citations_balisees_detecte_art_et_jurisprudence():
+    texte = "Le principe [ART:132-24:CP] impose ... [JURISPRUDENCE:Cass. Crim., 12 mars 2023, n°22-84.123] le confirme."
+    citations = quality_pipeline._extraire_citations_balisees(texte)
+    assert {"type": "ART", "brut": "[ART:132-24:CP]", "cle_recherche": "132-24"} in citations
+    assert any(c["type"] == "JURISPRUDENCE" and c["cle_recherche"].startswith("Cass. Crim.") for c in citations)
+
+
+def test_extraire_verif_recupere_les_descriptions():
+    texte = "Un point [VERIF:absence de rapport d'enquête de personnalité au dossier] reste à confirmer."
+    assert quality_pipeline._extraire_verif(texte) == ["absence de rapport d'enquête de personnalité au dossier"]
+
+
+def test_verifier_citations_balisee_marque_verifie_si_presente_dans_les_sources():
+    texte = "Le principe d'individualisation de la peine [ART:132-24:CP] impose ..."
+    resultats = quality_pipeline._verifier_citations(texte, ["Le Code pénal prévoit à son article 132-24 que ..."])
+    assert resultats == [{"citation": "[ART:132-24:CP]", "statut_deterministe": "VERIFIE"}]
+
+
+def test_verifier_citations_balisee_marque_non_verifie_si_absente_des_sources():
+    texte = "Voir [ART:9999-9:CCIV], qui n'existe dans aucune source fournie."
+    resultats = quality_pipeline._verifier_citations(texte, ["Ce texte source ne mentionne aucun article de ce type."])
+    assert resultats == [{"citation": "[ART:9999-9:CCIV]", "statut_deterministe": "NON_VERIFIE"}]
+
+
+def test_verifier_citations_jurisprudence_balisee_sans_aucune_source_disponible():
+    texte = "Voir [JURISPRUDENCE:Cass. Crim., 12 mars 2023, n°22-84.123]."
+    resultats = quality_pipeline._verifier_citations(texte, [])
+    assert resultats == [{"citation": "[JURISPRUDENCE:Cass. Crim., 12 mars 2023, n°22-84.123]", "statut_deterministe": "AUCUNE_SOURCE"}]
+
+
+def test_balise_verif_nest_jamais_recontrolee():
+    """Équivalent balisé de test_citation_deja_signalee_a_verifier_par_le_modele_nest_pas_recontrolee
+    -- [VERIF:...] est un aveu explicite d'incertitude, jamais une citation
+    à confronter aux sources."""
+    texte = "Un point [VERIF:article L. 9999-9 du Code du travail, référence à confirmer] reste incertain."
+    resultats = quality_pipeline._verifier_citations(texte, [])
+    assert resultats == []
+
+
+def test_citation_balisee_et_heritee_ne_sont_pas_comptees_deux_fois():
+    """Le contenu d'une balise [JURISPRUDENCE:...] ressemble aussi au regex
+    hérité (Cass. Crim....) -- il ne doit être compté qu'une fois, via le
+    chemin balisé, pas une seconde fois via le filet hérité."""
+    texte = "Voir [JURISPRUDENCE:Cass. Crim., 12 mars 2023, n°22-84.123]."
+    resultats = quality_pipeline._verifier_citations(texte, [])
+    assert len(resultats) == 1
+
+
+def test_filet_heritage_detecte_toujours_une_citation_non_balisee():
+    """Une citation qui n'a pas été balisée (texte antérieur au chantier de
+    balisage, ou oubli du modèle) reste détectée par le filet hérité."""
+    texte = "Selon l'article L. 1232-1 du Code du travail (non balisé), ..."
+    resultats = quality_pipeline._verifier_citations(texte, ["... article L. 1232-1 dispose que ..."])
+    assert any("1232-1" in r["citation"] for r in resultats)
+    assert all(r["statut_deterministe"] == "VERIFIE" for r in resultats)
 
 
 # --- Autorité du code sur la couche LLM du vérificateur ---------------------

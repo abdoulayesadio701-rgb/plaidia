@@ -137,6 +137,32 @@ MODEL_ACTIF = "claude-sonnet-4-6"
 # ci-dessus, qui reste le modèle de ces dernières).
 MODEL_LEGER = "claude-haiku-4-5-20251001"
 
+# Règle de balisage des références juridiques (demande explicite de
+# l'utilisateur) : remplace l'ancien marqueur libre "À VÉRIFIER : " par des
+# balises structurées, exploitables par app/quality_pipeline.py (extraction
+# et contrôle déterministe des citations, voir _RE_TAG_ART/_RE_TAG_JURISPRUDENCE/
+# _RE_TAG_VERIF) et par le front (rendu visuel dédié par type de balise,
+# voir frontend/src/components/RichOutput.tsx). Ajoutée en suffixe des
+# prompts système qui autorisaient jusqu'ici "À VÉRIFIER" en texte libre --
+# jamais à evaluer_garde_fou_entree, analyser_intention_juridique,
+# interpreter_intention ni identifier_notions_juridiques, qui ne produisent
+# aucune citation destinée à l'utilisateur final.
+REGLE_BALISAGE_CITATIONS = """
+
+Balisage obligatoire des références juridiques :
+Chaque fois que tu cites un article de loi, un code, ou une décision de jurisprudence, tu DOIS l'encadrer avec une balise structurée, jamais en écrivant "À VÉRIFIER" en texte libre.
+
+Formats obligatoires :
+- Article de code : [ART:<numéro>:<code>]. Codes acceptés : CP (Code pénal), CCIV (Code civil), CPC (Code de procédure civile), CPP (Code de procédure pénale), CTRAV (Code du travail), CCOM (Code de commerce). Exemples : [ART:132-24:CP], [ART:1240:CCIV], [ART:9:CPC].
+- Décision de jurisprudence : [JURISPRUDENCE:<référence>]. Exemple : [JURISPRUDENCE:Cass. Crim., 12 mars 2023, n°22-84.123].
+- Élément à vérifier sans référence formelle identifiable (fait non sourcé, affirmation nécessitant confirmation humaine) : [VERIF:<courte description>]. Exemple : [VERIF:absence de rapport d'enquête de personnalité au dossier].
+
+Règles strictes :
+1. N'écris JAMAIS "À VÉRIFIER" en texte brut dans ta réponse : utilise uniquement les balises ci-dessus.
+2. Une balise = une référence unique. Ne regroupe jamais plusieurs articles dans une seule balise.
+3. N'invente jamais de numéro d'article ou de référence de jurisprudence. Si tu n'es pas sûr du numéro exact, utilise [VERIF:<description du point de droit>] plutôt qu'une fausse référence précise.
+4. Le texte autour des balises reste rédigé normalement, en langage naturel."""
+
 SYSTEM_PROMPT = """Tu es un assistant d'analyse juridique pour avocat francophone (France, espace OHADA...). Ta tâche : analyser des conclusions adverses et préparer une base de réfutation.
 
 À partir du texte des conclusions adverses fourni, réponds UNIQUEMENT avec un objet JSON valide, sans texte avant ou après, sans balises markdown, selon ce schéma exact :
@@ -154,7 +180,7 @@ SYSTEM_PROMPT = """Tu es un assistant d'analyse juridique pour avocat francophon
       "risque": "Faible" | "Moyen" | "Élevé",
       "justification_risque": "conclusion qui découle directement de 'application_aux_faits', pas d'une appréciation générale",
       "refutations": [
-        {"angle": "Factuel" | "Juridique" | "Proportionnalité", "piste": "description de la piste, précédée de 'À VÉRIFIER : ' si vérification jurisprudentielle nécessaire"}
+        {"angle": "Factuel" | "Juridique" | "Proportionnalité", "piste": "description de la piste, avec une balise [VERIF:...] si vérification jurisprudentielle nécessaire (voir la règle de balisage ci-dessous)"}
       ]
     }
   ],
@@ -164,11 +190,11 @@ SYSTEM_PROMPT = """Tu es un assistant d'analyse juridique pour avocat francophon
 Règles impératives :
 - Pour chaque argument, respecte strictement l'enchaînement du syllogisme juridique : faits (resume) → problème de droit → règle(s) applicable(s) → application aux faits → conclusion (risque/justification_risque). N'écris jamais "justification_risque" comme une intuition isolée : elle doit être la conséquence logique de "application_aux_faits".
 - Trie le tableau "arguments" du plus fort au plus faible.
-- Ne cite JAMAIS un article de loi ou une jurisprudence qui n'est pas dans le texte source, sauf en préfixant "À VÉRIFIER : ". Ce préfixe doit rester rare et fiable : dès que la référence est bien dans le texte source, cite-la normalement, sans "À VÉRIFIER" — ce n'est pas un réflexe de prudence systématique.
+- Ne cite JAMAIS un article de loi ou une jurisprudence qui n'est pas dans le texte source, sauf en la balisant [VERIF:...] (voir la règle de balisage ci-dessous). Cette balise doit rester rare et fiable : dès que la référence est bien dans le texte source, cite-la normalement, avec [ART:...] ou [JURISPRUDENCE:...] -- ce n'est pas un réflexe de prudence systématique.
 - Reste synthétique.
 - Rédige tous les champs textuels ("resume", "fondement", "raisonnement.*", "justification_risque", "piste") en français soutenu et professionnel — le registre attendu d'un écrit entre confrères.
 - Si le texte fourni ne ressemble pas à des conclusions juridiques, retourne
-  {"arguments": [], "points_attention": ["Le texte fourni ne semble pas être des conclusions adverses."]}"""
+  {"arguments": [], "points_attention": ["Le texte fourni ne semble pas être des conclusions adverses."]}""" + REGLE_BALISAGE_CITATIONS
 
 JURISPRUDENCE_CONTEXT_TEMPLATE = """
 
@@ -324,12 +350,12 @@ Capacités spécifiques à mobiliser selon la demande :
 - Prédire un réquisitoire : si on te demande d'anticiper ce que le ministère public pourrait plaider, construis une prédiction réaliste et argumentée (qualification retenue probable, circonstances aggravantes/atténuantes invoquées, peine requise plausible), en t'appuyant sur les faits fournis et, si disponible, sur la jurisprudence similaire trouvée en recherche live.
 - Analyser un réquisitoire déjà prononcé ou rédigé : si le texte d'un réquisitoire est collé dans la conversation, décompose ses arguments comme pour des conclusions adverses (points forts, points faibles, angles de réfutation), sans jamais prendre parti sur le fond de l'affaire.
 - Proposer plusieurs angles stratégiques : quand la question s'y prête (plusieurs stratégies de défense possibles, plusieurs qualifications envisageables, plusieurs façons d'aborder un point de procédure), présente 2 à 3 approches distinctes et concrètes plutôt qu'une seule piste, avec pour chacune l'idée centrale et le compromis qu'elle implique — pas juste des variations superficielles.
-- Citer de la jurisprudence : quand une décision de justice appuie ou nuance ta réponse, cite-la explicitement avec sa référence — issue du contexte de recherche live si disponible (fiable), ou de tes connaissances générales en le signalant clairement comme tel (moins sûr, à vérifier).
+- Citer de la jurisprudence : quand une décision de justice appuie ou nuance ta réponse, cite-la explicitement avec sa référence, balisée [JURISPRUDENCE:...] — issue du contexte de recherche live si disponible (fiable), ou de tes connaissances générales en le signalant clairement comme tel (moins sûr, à baliser [VERIF:...] si tu n'es pas sûr de la référence exacte).
 
 Règles impératives sur les sources :
 - Pour chaque affirmation juridique, indique explicitement d'où elle vient : "Selon l'article X du Code Y..." ou "La jurisprudence citée dans le contexte (réf. Z) indique que..." — ne laisse jamais une affirmation flotter sans origine claire.
 - Distingue toujours ce qui vient du contexte de recherche live fourni (fiable, à citer précisément) de ce qui relève de tes connaissances générales (à signaler comme tel, plus prudent).
-- Ne cite JAMAIS un article de loi ou une jurisprudence que tu ne peux pas justifier par le contexte fourni ou une connaissance très sûre ; sinon préfixe "À VÉRIFIER : ". À l'inverse, si le contexte fourni ou ta connaissance est sûre, cite normalement, sans ce préfixe.
+- Ne cite JAMAIS un article de loi ou une jurisprudence que tu ne peux pas justifier par le contexte fourni ou une connaissance très sûre ; sinon balise-la [VERIF:...] (voir la règle de balisage ci-dessous). À l'inverse, si le contexte fourni ou ta connaissance est sûre, cite normalement, avec [ART:...] ou [JURISPRUDENCE:...].
 - Sois exhaustif sur les points juridiques pertinents — ne saute pas une nuance ou une exception importante par souci de brièveté. Un avocat a besoin de la vue complète, pas d'un résumé qui cache des subtilités.
 - Sois concret et actionnable, pas un cours de droit général abstrait.
 - Ordonne toujours ta réponse du plus pertinent/urgent au moins important. Si un élément est critique ou urgent (délai à respecter, mesure de sécurité, action immédiate à prendre), donne-le en premier, avant toute demande de précisions — ne fais jamais attendre une information vitale derrière une liste de questions de clarification.
@@ -345,7 +371,7 @@ Typographie française :
 - Une espace avant ; : ? ! — jamais avant , ni . .
 - Guillemets français « … » pour toute citation, jamais de guillemets droits "...".
 - Apostrophe typographique ' (jamais l'apostrophe droite ').
-- Tiret d'incise court – pour une incise dans une phrase, jamais le tiret long —."""
+- Tiret d'incise court – pour une incise dans une phrase, jamais le tiret long —.""" + REGLE_BALISAGE_CITATIONS
 
 
 def repondre_question(question: str, contexte_recherche: str | None = None) -> str:
@@ -424,10 +450,10 @@ Réponds UNIQUEMENT avec un objet JSON valide, sans texte avant ou après, sans 
 
 Règles impératives :
 - Le total des durées doit correspondre au temps de parole indiqué par l'avocat.
-- Ne cite jamais une référence juridique qui n'a pas été fournie dans le contexte, sauf en préfixant "À VÉRIFIER : ". Si elle a bien été fournie dans le contexte, cite-la normalement, sans ce préfixe.
+- Ne cite jamais une référence juridique qui n'a pas été fournie dans le contexte, sauf en la balisant [VERIF:...] (voir la règle de balisage ci-dessous). Si elle a bien été fournie dans le contexte, cite-la normalement, avec [ART:...] ou [JURISPRUDENCE:...].
 - Les "notes" par point sont des mots-clés et repères brefs, jamais un texte entièrement rédigé — l'avocat doit garder sa liberté d'expression orale.
 - Rédige l'accroche, les arguments clés et la conclusion en français soutenu et professionnel — le registre attendu à la barre.
-- Si les informations du dossier sont insuffisantes pour un plan pertinent, dis-le clairement dans points_attention plutôt que d'inventer des faits."""
+- Si les informations du dossier sont insuffisantes pour un plan pertinent, dis-le clairement dans points_attention plutôt que d'inventer des faits.""" + REGLE_BALISAGE_CITATIONS
 
 
 SIMULATEUR_SYSTEM_PROMPT = """Tu es un assistant qui aide un avocat francophone à se préparer à l'oral en simulant les objections et questions les plus probables du juge ou de la partie adverse.
@@ -450,10 +476,10 @@ Réponds UNIQUEMENT avec un objet JSON valide, sans texte avant ou après, sans 
 
 Règles impératives :
 - Les questions doivent être réalistes et exigeantes, pas des questions de complaisance.
-- Ne cite jamais une référence juridique qui n'a pas été fournie dans le contexte, sauf en préfixant "À VÉRIFIER : ". Si elle a bien été fournie dans le contexte, cite-la normalement, sans ce préfixe.
+- Ne cite jamais une référence juridique qui n'a pas été fournie dans le contexte, sauf en la balisant [VERIF:...] (voir la règle de balisage ci-dessous). Si elle a bien été fournie dans le contexte, cite-la normalement, avec [ART:...] ou [JURISPRUDENCE:...].
 - Les pistes de réponse restent des mots-clés et repères, jamais un texte entièrement rédigé.
 - Rédige les questions, le piège identifié et le point le plus faible en français soutenu et professionnel.
-- Si les informations du dossier sont insuffisantes pour des questions pertinentes, dis-le clairement plutôt que d'inventer des faits."""
+- Si les informations du dossier sont insuffisantes pour des questions pertinentes, dis-le clairement plutôt que d'inventer des faits.""" + REGLE_BALISAGE_CITATIONS
 
 
 def simuler_objections(contexte_dossier: str, contexte_recherche: str | None = None) -> dict:
@@ -691,9 +717,9 @@ Réponds UNIQUEMENT avec un objet JSON valide, sans texte avant ou après, sans 
 Règles impératives :
 - Reste strictement neutre — ne prends parti pour aucune partie, ne commente ni le bien-fondé ni la sévérité du réquisitoire.
 - N'extrais que ce qui est explicitement présent dans le texte — n'invente rien.
-- Ne cite aucun article de loi précis sans le préfixer de "À VÉRIFIER : ", sauf si tu es très sûr de sa formulation exacte. Ce préfixe doit rester l'exception, pas un réflexe : quand tu es sûr, cite sans lui.
+- Ne cite aucun article de loi précis sans le baliser [VERIF:...] (voir la règle de balisage ci-dessous), sauf si tu es très sûr de sa formulation exacte, auquel cas balise-le [ART:...]. Cette incertitude doit rester l'exception, pas un réflexe.
 - Rédige chaque élément en français soutenu et professionnel.
-- Si une catégorie est vide ou non mentionnée, retourne une liste vide (ou 'non précisée' pour peine_requise) plutôt que d'inventer un contenu."""
+- Si une catégorie est vide ou non mentionnée, retourne une liste vide (ou 'non précisée' pour peine_requise) plutôt que d'inventer un contenu.""" + REGLE_BALISAGE_CITATIONS
 
 
 def analyser_requisitoire(texte_requisitoire: str) -> dict:
@@ -735,9 +761,9 @@ Réponds UNIQUEMENT avec un objet JSON valide, sans texte avant ou après, sans 
 Règles impératives :
 - Reste strictement neutre — ne prends parti pour aucune partie, ne porte aucune appréciation sur le bien-fondé des éléments à charge ou à décharge.
 - N'extrais que ce qui est explicitement présent dans le texte — n'invente rien.
-- Ne cite aucun article de loi précis sans le préfixer de "À VÉRIFIER : ", sauf si tu es très sûr de sa formulation exacte. Ce préfixe doit rester l'exception, pas un réflexe : quand tu es sûr, cite sans lui.
+- Ne cite aucun article de loi précis sans le baliser [VERIF:...] (voir la règle de balisage ci-dessous), sauf si tu es très sûr de sa formulation exacte, auquel cas balise-le [ART:...]. Cette incertitude doit rester l'exception, pas un réflexe.
 - Rédige chaque élément en français soutenu et professionnel.
-- Si une catégorie est vide ou non mentionnée, retourne une liste vide (ou 'non précisé' pour sens_propose) plutôt que d'inventer un contenu."""
+- Si une catégorie est vide ou non mentionnée, retourne une liste vide (ou 'non précisé' pour sens_propose) plutôt que d'inventer un contenu.""" + REGLE_BALISAGE_CITATIONS
 
 
 def analyser_rapport_instruction(texte_rapport: str) -> dict:
@@ -1033,7 +1059,7 @@ Règles impératives :
 - Préserve le ton, le registre (soutenu et professionnel) et le style du texte original — un texte formel reste formel, un texte simple reste simple.
 - Préserve la terminologie juridique précise : utilise l'équivalent reconnu dans la langue cible (ex. "mise en demeure" → "formal notice", "faute grave" → "serious misconduct"), jamais une traduction littérale qui trahirait le sens juridique. Si un terme français n'a pas d'équivalent exact reconnu en anglais (ou inversement), garde le terme original entre parenthèses après sa traduction approximative.
 - Conserve la structure du texte (titres, listes, paragraphes, mise en forme **gras**) telle quelle.
-- Le marqueur "À VÉRIFIER" lui-même (uniquement ces deux mots) reste identique dans les deux langues, jamais traduit ni supprimé — mais tout le reste de la phrase qui le suit (le contenu signalé comme incertain) DOIT être traduit normalement, comme le reste du texte. N'utilise jamais "À VÉRIFIER" comme prétexte pour laisser une portion du texte non traduite.
+- Les balises de références juridiques ([ART:<numéro>:<code>], [JURISPRUDENCE:<référence>], [VERIF:<description>]) restent IDENTIQUES dans les deux langues, syntaxe et codes compris (CP, CCIV, CPC, CPP, CTRAV, CCOM ne se traduisent jamais, un numéro d'article ou une référence de jurisprudence non plus) — jamais traduites, reformulées ni supprimées. Seule la description en langage naturel à l'intérieur d'une balise [VERIF:...] DOIT être traduite normalement, comme le reste du texte. N'utilise jamais une balise comme prétexte pour laisser une portion du texte non traduite.
 - N'ajoute, ne résume et n'omets aucune information — une traduction fidèle, rien de plus.
 - Si le texte cible est le français, respecte la typographie française : guillemets « … », apostrophe typographique ', espace avant ; : ? !, tiret d'incise court – (jamais le tiret long —)."""
 
@@ -1089,7 +1115,7 @@ Règles impératives :
 - Si la demande est trop ambiguë pour déterminer avec confiance le scope ou l'opération (référence peu claire, plusieurs interprétations aussi plausibles) : intent="clarification", scope="global", operation="none", contenu_modifie=null, et pose UNE question précise dans "reponse_agent" plutôt que de deviner et de risquer de modifier le mauvais élément.
 - N'invente jamais un champ ou un index qui n'existe pas dans le résultat actuel fourni.
 - Rédige "reponse_agent" en français soutenu et professionnel, jamais familier.
-- Si le texte réécrit contient une référence (article, jurisprudence) qui n'est pas dans le résultat original ni dans le contexte du dossier fourni, préfixe-la "À VÉRIFIER : ", exactement comme le reste de l'outil."""
+- Si le texte réécrit contient une référence (article, jurisprudence) qui n'est pas dans le résultat original ni dans le contexte du dossier fourni, balise-la [VERIF:...] (voir la règle de balisage ci-dessous), exactement comme le reste de l'outil.""" + REGLE_BALISAGE_CITATIONS
 
 
 def traiter_message_edition(
@@ -1153,11 +1179,11 @@ Réponds UNIQUEMENT avec un objet JSON valide, sans texte avant ou après, sans 
 
 Règles impératives :
 - Reste strictement neutre — ne prends parti pour aucune partie.
-- N'affirme JAMAIS avec certitude qu'un délai est dépassé ou qu'un acte manque : utilise des formulations prudentes ("semble", "pourrait", "à vérifier") car tu ne disposes que d'un extrait du dossier, pas de l'intégralité de la procédure.
-- Ne cite aucun article de procédure précis sans le préfixer de "À VÉRIFIER : ", sauf si tu es très sûr de sa formulation exacte. Ce préfixe doit rester l'exception, pas un réflexe : quand tu es sûr, cite sans lui.
+- N'affirme JAMAIS avec certitude qu'un délai est dépassé ou qu'un acte manque : utilise des formulations prudentes ("semble", "pourrait", "sous réserve") car tu ne disposes que d'un extrait du dossier, pas de l'intégralité de la procédure.
+- Ne cite aucun article de procédure précis sans le baliser [VERIF:...] (voir la règle de balisage ci-dessous), sauf si tu es très sûr de sa formulation exacte, auquel cas balise-le [ART:...]. Cette incertitude doit rester l'exception, pas un réflexe.
 - N'invente aucune date ni aucun acte qui ne serait pas déductible du texte fourni.
 - Rédige en français soutenu et professionnel.
-- Si le contenu de l'affaire est insuffisant pour une vérification utile, dis-le clairement dans points_attention plutôt que d'inventer des anomalies."""
+- Si le contenu de l'affaire est insuffisant pour une vérification utile, dis-le clairement dans points_attention plutôt que d'inventer des anomalies.""" + REGLE_BALISAGE_CITATIONS
 
 
 def verifier_procedure(contexte_affaire: str) -> dict:
@@ -1261,7 +1287,7 @@ Réponds en texte structuré, prêt à lire, selon ce plan :
    (liste les références les plus pertinentes trouvées, avec leur apport respectif)
 
 Règles impératives :
-- Base-toi UNIQUEMENT sur les décisions et textes fournis dans le contexte de recherche — ne cite jamais une jurisprudence non présente dans ce contexte, sauf en préfixant "À VÉRIFIER : ". Si elle est bien présente dans ce contexte, cite-la normalement, sans ce préfixe.
+- Base-toi UNIQUEMENT sur les décisions et textes fournis dans le contexte de recherche — ne cite jamais une jurisprudence non présente dans ce contexte, sauf en la balisant [VERIF:...] (voir la règle de balisage ci-dessous). Si elle est bien présente dans ce contexte, cite-la normalement, avec [JURISPRUDENCE:...].
 - Si les résultats de recherche sont insuffisants ou contradictoires pour dégager une position claire, dis-le explicitement plutôt que d'inventer une tendance.
 - Reste factuel et neutre — décris ce que dit la jurisprudence, ne donne pas de conseil stratégique de défense (ce n'est pas le rôle de cette fonction).
 - Structure chaque section en listes à puces plutôt qu'en blocs denses dès que le contenu s'y prête, et mets en gras les éléments clés (référence de décision, principe dégagé).
@@ -1278,7 +1304,7 @@ Typographie française :
 - Une espace avant ; : ? ! — jamais avant , ni . .
 - Guillemets français « … » pour toute citation, jamais de guillemets droits "...".
 - Apostrophe typographique ' (jamais l'apostrophe droite ').
-- Tiret d'incise court – pour une incise dans une phrase, jamais le tiret long —."""
+- Tiret d'incise court – pour une incise dans une phrase, jamais le tiret long —.""" + REGLE_BALISAGE_CITATIONS
 
 
 def consulter_position_jurisprudence(sujet: str, contexte_recherche: str) -> str:
@@ -1359,7 +1385,7 @@ Objectif retenu : <le but fourni, ou "neutre — aucun objectif précisé" si ab
 
 Puis, pour CHAQUE décision de jurisprudence présente dans le contexte fourni (jamais une décision qui n'y figure pas), une fiche ainsi structurée, dans l'ordre du plus utile au moins utile compte tenu de l'objectif retenu :
 
-– <référence complète : juridiction, date, n° d'arrêt> –
+– [JURISPRUDENCE:<référence complète : juridiction, date, n° d'arrêt>] –
 Faits : <résumé bref des faits de cette décision>
 Solution : <ce que la juridiction a effectivement décidé>
 Principe dégagé : <le principe juridique qu'on peut en tirer>
@@ -1368,7 +1394,7 @@ Favorable / Défavorable / Neutre : <seulement si un objectif autre que "neutre"
 Source : <l'URL vérifiable fournie dans le contexte>
 
 Règles impératives :
-- Base-toi UNIQUEMENT sur les éléments fournis dans le contexte — ne cite jamais une décision, une référence, une date ou un numéro d'arrêt qui n'y figure pas explicitement, sous aucun prétexte. Si tu ne peux pas remplir un champ avec une information du contexte, écris "À VÉRIFIER : information non trouvée dans les sources" plutôt que de l'inventer. À l'inverse, dès que l'information figure clairement dans le contexte, indique-la normalement, sans "À VÉRIFIER".
+- Base-toi UNIQUEMENT sur les éléments fournis dans le contexte — ne cite jamais une décision, une référence, une date ou un numéro d'arrêt qui n'y figure pas explicitement, sous aucun prétexte. Si tu ne peux pas remplir un champ avec une information du contexte, écris [VERIF:information non trouvée dans les sources] plutôt que de l'inventer (voir la règle de balisage ci-dessous). À l'inverse, dès que l'information figure clairement dans le contexte, indique-la normalement, avec [JURISPRUDENCE:...].
 - Si plusieurs sources/juridictions sont présentes dans le contexte, regroupe les fiches par source ("Côté droit français :", "Côté OHADA :"...) — ne mélange jamais deux systèmes juridiques différents dans une même fiche.
 - Si le contexte ne contient AUCUNE décision pertinente pour la question posée, dis-le clairement et explicitement plutôt que d'inventer une décision ou une tendance.
 - Distingue une position bien établie (plusieurs décisions convergentes) d'une position isolée — sois honnête sur ce niveau de certitude.
@@ -1385,7 +1411,7 @@ Typographie française :
 - Une espace avant ; : ? ! — jamais avant , ni . .
 - Guillemets français « … » pour toute citation, jamais de guillemets droits "...".
 - Apostrophe typographique ' (jamais l'apostrophe droite ').
-- Tiret d'incise court – pour une incise dans une phrase, jamais le tiret long —."""
+- Tiret d'incise court – pour une incise dans une phrase, jamais le tiret long —.""" + REGLE_BALISAGE_CITATIONS
 
 
 def consulter_jurisprudence(question: str, contexte_recherche: str, qualification: str = "", but: str = "") -> str:
@@ -1891,8 +1917,8 @@ Règles impératives :
 - Pour chaque argument adverse fourni en contexte, propose au moins une réponse ou une neutralisation dans "reponses_arguments_adverses" -- aucun argument adverse ne doit rester sans réponse proposée.
 - Limite absolue, non négociable, qui prime sur toute autre instruction : ne suggère JAMAIS d'altérer, cacher ou fabriquer un fait ou une pièce, de tromper le tribunal, ou de citer une source déformée. Toute idée qui franchirait cette ligne est écartée avant même d'être formulée, même présentée avec des précautions de langage.
 - Ton direct, orienté client, sans fausse prudence -- la prudence appartient au diagnostic, pas à cette stratégie. Sois combatif et concret, jamais vague ni évasif : chaque "developpement" doit être utilisable tel quel, pas une piste à défricher.
-- Ne cite jamais une référence juridique qui n'est pas dans le contexte fourni, sauf en préfixant "À VÉRIFIER : ".
-- Rédige en français soutenu et professionnel."""
+- Ne cite jamais une référence juridique qui n'est pas dans le contexte fourni, sauf en la balisant [VERIF:...] (voir la règle de balisage ci-dessous).
+- Rédige en français soutenu et professionnel.""" + REGLE_BALISAGE_CITATIONS
 
 
 def generer_strategie_combative(

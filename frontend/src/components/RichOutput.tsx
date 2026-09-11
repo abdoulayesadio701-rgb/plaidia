@@ -1,20 +1,24 @@
 /**
  * RichOutput — rend le texte produit par l'agent : titres, listes, **gras**,
- * et surligne chaque occurrence de "À VÉRIFIER" (le garde-fou
- * anti-hallucination, voir DESIGN.md §1.6). Reproduit l'esprit de
- * PlaidIAApp._afficher() dans gui.py, étendu au markdown léger que
- * produisent les prompts (QUESTION_SYSTEM_PROMPT demande explicitement
- * des listes à puces et du **gras**).
+ * et donne un rendu visuel dédié aux balises de références juridiques
+ * [ART:<numéro>:<code>], [JURISPRUDENCE:<référence>] et [VERIF:<description>]
+ * (voir analyse.REGLE_BALISAGE_CITATIONS) -- remplace l'ancien marqueur
+ * libre "À VÉRIFIER" (garde-fou anti-hallucination, voir DESIGN.md §1.6),
+ * toujours reconnu ici pour le contenu généré avant ce chantier, jamais
+ * régénéré rétroactivement. Reproduit l'esprit de PlaidIAApp._afficher()
+ * dans gui.py, étendu au markdown léger que produisent les prompts
+ * (QUESTION_SYSTEM_PROMPT demande explicitement des listes à puces et du
+ * **gras**).
  *
  * Pensé pour le streaming : ce composant reçoit à chaque frappe le texte
  * COMPLET accumulé jusque-là (pas un fragment isolé) et reparse tout à
- * chaque rendu. C'est ce qui rend le surlignage de "À VÉRIFIER" robuste
- * même si le marqueur est coupé entre deux fragments SSE — contrairement
- * à gui.py qui devait bufferiser manuellement avant d'insérer dans un
- * widget Tkinter, React re-render simplement la chaîne à jour : tant que
- * le marqueur n'est pas entièrement arrivé, il s'affiche en texte brut ;
- * dès qu'il l'est, le rendu suivant le repère et l'habille — aucune
- * bufferisation à gérer côté composant.
+ * chaque rendu. C'est ce qui rend le rendu des balises robuste même si
+ * l'une d'elles est coupée entre deux fragments SSE — contrairement à
+ * gui.py qui doit bufferiser manuellement avant d'insérer dans un widget
+ * Tkinter, React re-render simplement la chaîne à jour : tant qu'une
+ * balise n'est pas entièrement arrivée (son "]" fermant manque encore),
+ * elle s'affiche en texte brut ; dès qu'elle l'est, le rendu suivant la
+ * repère et l'habille — aucune bufferisation à gérer côté composant.
  *
  * Les sources vérifiables (voir analyse.py : "Source : <URL fournie dans
  * le contexte>") sont aussi transformées en lien cliquable, pour que
@@ -27,11 +31,33 @@
 
 import type { ReactNode } from "react";
 
+// Marqueur hérité (texte généré avant le chantier de balisage, jamais
+// régénéré rétroactivement) -- voir la balise [VERIF:...] ci-dessous pour
+// la voie normale depuis ce chantier.
 const MARQUEUR = "À VÉRIFIER";
-// Alterne entre "**gras**", le marqueur et une URL http(s) en un seul
-// passage, pour ne jamais laisser un "**" avaler accidentellement le
-// marqueur ou l'URL voisine.
-const SEGMENT_RE = /(\*\*[^*]+\*\*|À VÉRIFIER|https?:\/\/\S+)/g;
+
+// Codes de loi acceptés dans une balise [ART:<numéro>:<code>] -- même table
+// que analyse.REGLE_BALISAGE_CITATIONS / backend/app/quality_pipeline.py /
+// export.py, dupliquée ici pour la même raison qu'ailleurs dans ce projet :
+// le front n'a pas de dépendance partagée avec le backend Python.
+const CODES_LIBELLES: Record<string, string> = {
+  CP: "Code pénal",
+  CCIV: "Code civil",
+  CPC: "Code de procédure civile",
+  CPP: "Code de procédure pénale",
+  CTRAV: "Code du travail",
+  CCOM: "Code de commerce",
+};
+
+const RE_TAG_ART = /^\[ART:([^:\]]+):([A-Z]+)\]$/;
+const RE_TAG_JURISPRUDENCE = /^\[JURISPRUDENCE:([^\]]+)\]$/;
+const RE_TAG_VERIF = /^\[VERIF:([^\]]*)\]$/;
+
+// Alterne entre "**gras**", une balise [ART:...]/[JURISPRUDENCE:...]/
+// [VERIF:...], le marqueur hérité et une URL http(s) en un seul passage,
+// pour ne jamais laisser un "**" avaler accidentellement une balise voisine.
+const SEGMENT_RE =
+  /(\*\*[^*]+\*\*|\[(?:ART|JURISPRUDENCE|VERIF):[^\]]*\]|À VÉRIFIER|https?:\/\/\S+)/g;
 // Ponctuation de fin de phrase qu'une URL peut trainer derrière elle
 // (ex. "...decision/abc123." en fin de ligne) — à laisser hors du lien.
 const PONCTUATION_FINALE_RE = /[.,;:)\]]+$/;
@@ -40,6 +66,31 @@ function renderInline(segment: string, keyPrefix: string): ReactNode[] {
   const parts = segment.split(SEGMENT_RE).filter((p) => p !== "");
   return parts.map((part, i) => {
     const key = `${keyPrefix}-${i}`;
+    const matchVerif = part.match(RE_TAG_VERIF);
+    if (matchVerif) {
+      return (
+        <mark key={key} className="marker-verify">
+          À VÉRIFIER : {matchVerif[1]}
+        </mark>
+      );
+    }
+    const matchArt = part.match(RE_TAG_ART);
+    if (matchArt) {
+      const [, numero, code] = matchArt;
+      return (
+        <span key={key} className="marker-citation" title="Référence citée">
+          art. {numero} du {CODES_LIBELLES[code] ?? code}
+        </span>
+      );
+    }
+    const matchJurisprudence = part.match(RE_TAG_JURISPRUDENCE);
+    if (matchJurisprudence) {
+      return (
+        <span key={key} className="marker-citation" title="Référence citée">
+          {matchJurisprudence[1]}
+        </span>
+      );
+    }
     if (part === MARQUEUR) {
       return (
         <mark key={key} className="marker-verify">

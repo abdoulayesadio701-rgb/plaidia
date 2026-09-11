@@ -129,14 +129,23 @@ backend/
 Le détail complet (paramètres, schémas de réponse) est dans Swagger
 (`/docs`) — c'est la référence à jour, générée directement depuis le code.
 
-## Le marqueur "À VÉRIFIER"
+## Les balises de référence juridique
 
-Conservé tel quel, sans aucun traitement serveur, dans tous les champs
-texte retournés (`resume`, `fondement`, `reponse`, fragments du chat...).
-C'est au front de le repérer (recherche de sous-chaîne, comme le faisait
-`gui.py._afficher()`) et de le surligner visuellement — c'est le
-garde-fou anti-hallucination visible de l'outil, il ne doit jamais être
-supprimé ni modifié côté serveur.
+Depuis le chantier de balisage (voir `analyse.REGLE_BALISAGE_CITATIONS`),
+l'agent encadre chaque référence juridique d'une balise structurée
+plutôt que d'écrire "À VÉRIFIER" en texte libre : `[ART:<numéro>:<code>]`,
+`[JURISPRUDENCE:<référence>]` ou `[VERIF:<description>]` — ancien
+marqueur libre que `[VERIF:...]` remplace.
+
+Dans les réponses JSON de l'API (`resume`, `fondement`, `reponse`,
+fragments du chat...), ces balises sont **conservées telles quelles, sans
+aucun traitement serveur** : c'est au front de les repérer (`RichOutput.tsx`)
+et de leur donner un rendu visuel dédié — elles ne doivent jamais être
+supprimées ni modifiées avant d'atteindre ce point. **Exception** : les
+exports Word/PDF (`export.py`) les convertissent en texte lisible avant
+insertion dans le document (`_rendre_balises_lisibles`) — un `.docx`/`.pdf`
+est une page statique, la syntaxe brute d'une balise y serait illisible
+pour qui l'ouvre sans le contexte d'une interface qui l'interprète.
 
 ## Gestion des erreurs
 
@@ -157,7 +166,7 @@ Réponse `Content-Type: text/event-stream`, événements nommés :
 
 - `event: recherche_debut` — émis uniquement si `recherche_live: true`, avant l'appel à Légifrance/Judilibre.
 - `event: recherche_resultat` — `{"n_articles": N, "n_jurisprudence": M}`, une fois la recherche live terminée.
-- `event: delta` — `{"text": "..."}`, un fragment de la réponse à la fois (peut contenir un morceau de `À VÉRIFIER` coupé entre deux trames — au front de bufferiser comme le faisait `_envoyer_message_chat` dans gui.py s'il veut un surlignage parfait).
+- `event: delta` — `{"text": "..."}`, un fragment de la réponse à la fois (peut contenir une balise `[ART:...]`/`[JURISPRUDENCE:...]`/`[VERIF:...]` coupée entre deux trames — `RichOutput.tsx` reparse le texte accumulé à chaque rendu plutôt que chaque fragment isolé, exactement pourquoi ; `gui.py` doit lui bufferiser manuellement avant d'insérer dans son widget Tkinter).
 - `event: done` — `{}`, fin normale du flux.
 - `event: error` — `{"detail": "..."}`, en cas d'erreur pendant la génération.
 

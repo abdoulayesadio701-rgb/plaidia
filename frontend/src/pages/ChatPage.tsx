@@ -1,7 +1,7 @@
 /**
  * ChatPage — "Poser une question", reprend PlaidIAApp._envoyer_message_chat
  * (gui.py) en streaming SSE web. Voir les composants réutilisés :
- * RichOutput (rendu markdown léger + surlignage "À VÉRIFIER"),
+ * RichOutput (rendu markdown léger + rendu dédié des balises de citation),
  * TexteLongModal (coller un réquisitoire/des conclusions), Button, Modal.
  */
 
@@ -17,7 +17,6 @@ import FileDropZone from "@/components/FileDropZone";
 import RichOutput from "@/components/RichOutput";
 import TexteLongModal from "@/components/TexteLongModal";
 import VerificationPanel from "@/components/VerificationPanel";
-import PinButton from "@/components/PinButton";
 
 interface StatutRecherche {
   enCours: boolean;
@@ -78,7 +77,6 @@ export default function ChatPage() {
   const dossierIdParam = searchParams.get("dossier_id");
   const dossierIdDepuisUrl = dossierIdParam && /^\d+$/.test(dossierIdParam) ? Number(dossierIdParam) : null;
   const dossierIdChat = dossierIdDepuisUrl ?? dossierActifId;
-  const chatConversationId = useAppStore((s) => s.chatConversationId);
 
   useEffect(() => {
     if (!conversationIdParam) return;
@@ -274,7 +272,6 @@ export default function ChatPage() {
     <div className="flex h-full flex-col">
       {/* En-tête de la vue chat */}
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3 border-b border-gold-600/15 pb-4">
-        {chatConversationId !== null && <PinButton type="conversation" referenceId={chatConversationId} dossierId={dossierIdChat} libelle="Conversation de chat" />}
         <label className="flex cursor-pointer items-center gap-2.5 text-sm text-warmgray">
           <button
             type="button"

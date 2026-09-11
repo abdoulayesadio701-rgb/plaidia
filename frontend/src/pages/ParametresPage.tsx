@@ -72,8 +72,9 @@ function AProposSection() {
       <h2 className="font-serif text-h3 font-semibold text-gold-500">À propos</h2>
       <p className="text-sm leading-relaxed text-warmgray">
         Plaid'IA est un outil d'aide à la préparation pour avocats et greffiers, France et espace OHADA. Chaque réponse signale
-        elle-même ce qui reste à vérifier plutôt que de présenter une déduction comme un fait établi — voir le marqueur{" "}
-        <mark className="marker-verify">À VÉRIFIER</mark> dans les réponses de l'agent.
+        elle-même ce qui reste à vérifier plutôt que de présenter une déduction comme un fait établi — voir la balise{" "}
+        <mark className="marker-verify">À VÉRIFIER : ...</mark> dans les réponses de l'agent, à distinguer d'une référence
+        citée avec confiance comme <span className="marker-citation">art. 1240 du Code civil</span>.
       </p>
       <a href={URL_GITHUB} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-sm text-amethyst-400 hover:underline">
         Code source sur GitHub ↗

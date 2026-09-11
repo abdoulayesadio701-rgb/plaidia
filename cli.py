@@ -676,7 +676,7 @@ outil sur un dossier réel, assurez-vous que :
 
 Cet outil est un prototype d'aide à la réflexion — il ne remplace pas
 votre propre jugement professionnel, et toute référence juridique
-marquée "À VÉRIFIER" doit être contrôlée avant toute utilisation.
+balisée [VERIF:...] doit être contrôlée avant toute utilisation.
 ════════════════════════════════════════════════════════════════════
 """
 
@@ -1010,52 +1010,67 @@ def cmd_lister_jurisprudence(args):
         print(f"    Source : {r['source']}\n")
 
 
+# Balisage des références juridiques (voir analyse.REGLE_BALISAGE_CITATIONS)
+# -- [VERIF:<description>] remplace l'ancien marqueur libre "À VÉRIFIER : "
+# pour un point sans référence formelle identifiable, exactement le cas
+# d'usage des fonctions ci-dessous (proposer une recherche de jurisprudence
+# sur ce qui reste incertain). Le filet hérité ("À VÉRIFIER" en texte
+# libre) reste détecté pour ne pas perdre les résultats déjà stockés avant
+# ce chantier.
+_RE_TAG_VERIF_CLI = re.compile(r"\[VERIF:([^\]]*)\]")
+
+
+def _contient_point_a_verifier(texte: str) -> bool:
+    return bool(_RE_TAG_VERIF_CLI.search(texte or "")) or "À VÉRIFIER" in (texte or "")
+
+
 def _extraire_a_verifier_texte(texte: str) -> list:
-    """Repère les fragments contenant 'À VÉRIFIER' dans une réponse en
-    texte libre (utilisé pour le chat, dont les réponses ne sont pas
-    structurées en JSON)."""
+    """Repère les fragments contenant un point à vérifier ([VERIF:...] ou,
+    pour du texte antérieur à ce chantier, l'ancien marqueur "À VÉRIFIER")
+    dans une réponse en texte libre (utilisé pour le chat, dont les
+    réponses ne sont pas structurées en JSON)."""
     phrases = re.split(r'(?<=[.!?])\s+', texte)
-    return [p.strip() for p in phrases if "À VÉRIFIER" in p]
+    return [p.strip() for p in phrases if _contient_point_a_verifier(p)]
 
 
 def _extraire_a_verifier_analyse(result: dict) -> list:
-    """Récupère tous les 'À VÉRIFIER' présents dans les pistes de réfutation
-    d'une analyse d'arguments adverses."""
+    """Récupère tous les points à vérifier présents dans les pistes de
+    réfutation d'une analyse d'arguments adverses."""
     items = []
     for arg in result.get("arguments", []):
         for r in arg.get("refutations", []):
             piste = r.get("piste", "")
-            if "À VÉRIFIER" in piste:
+            if _contient_point_a_verifier(piste):
                 items.append(piste)
     return items
 
 
 def _extraire_a_verifier_plan(plan: dict) -> list:
-    """Récupère tous les 'À VÉRIFIER' présents dans les notes d'un plan de
-    plaidoirie."""
+    """Récupère tous les points à vérifier présents dans les notes d'un
+    plan de plaidoirie."""
     items = []
     for point in plan.get("plan", []):
         notes = point.get("notes", "")
-        if "À VÉRIFIER" in notes:
+        if _contient_point_a_verifier(notes):
             items.append(notes)
     return items
 
 
 def _extraire_a_verifier_simulateur(result: dict) -> list:
-    """Récupère tous les 'À VÉRIFIER' présents dans les pistes de réponse
-    du simulateur d'objections."""
+    """Récupère tous les points à vérifier présents dans les pistes de
+    réponse du simulateur d'objections."""
     items = []
     for obj in result.get("objections", []):
         piste = obj.get("piste_reponse", "")
-        if "À VÉRIFIER" in piste:
+        if _contient_point_a_verifier(piste):
             items.append(piste)
     return items
 
 
 def _proposer_consultation_jurisprudence(items_a_verifier: list, contexte_dossier: str = ""):
     """Propose de consulter la jurisprudence en direct sur les points
-    'À VÉRIFIER' identifiés dans un résultat (analyse, plan, simulateur).
-    N'agit que si l'utilisateur le demande explicitement."""
+    balisés [VERIF:...] identifiés dans un résultat (analyse, plan,
+    simulateur). N'agit que si l'utilisateur le demande explicitement."""
     if not items_a_verifier:
         return
 

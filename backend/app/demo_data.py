@@ -40,14 +40,14 @@ CONCLUSIONS_DEMO = {
             "fondement": "Relevé de badgeuse produit en pièce 4 par l'employeur, faisant état de trois retards de 22 à 41 minutes sur la période du 5 au 9 février 2024.",
             "raisonnement": {
                 "probleme_de_droit": "Des retards répétés, même de courte durée, peuvent-ils à eux seuls caractériser une faute grave justifiant un licenciement sans préavis ni indemnité ?",
-                "regle_applicable": "La faute grave suppose un manquement rendant impossible le maintien du salarié dans l'entreprise pendant la durée du préavis. À VÉRIFIER : la qualification retenue par la jurisprudence pour des retards isolés sans avertissement préalable.",
+                "regle_applicable": "La faute grave suppose un manquement rendant impossible le maintien du salarié dans l'entreprise pendant la durée du préavis. [VERIF:la qualification retenue par la jurisprudence pour des retards isolés sans avertissement préalable]",
                 "application_aux_faits": "M. Diallo n'a fait l'objet d'aucune sanction disciplinaire en cinq ans d'ancienneté ; les trois retards invoqués sont concentrés sur une semaine coïncidant avec un mouvement de grève RER B (pièce 7), ce qui affaiblit sensiblement le caractère fautif et délibéré retenu par l'employeur.",
             },
             "risque": "Moyen",
             "justification_risque": "L'absence de tout antécédent disciplinaire et la coïncidence avec une grève des transports fragilisent la qualification de faute grave, sans l'exclure totalement si l'employeur démontre qu'un trajet alternatif était raisonnablement praticable.",
             "refutations": [
                 {"angle": "Factuel", "piste": "Produire l'attestation SNCF/RATP de perturbation du trafic sur la ligne empruntée par M. Diallo aux dates visées."},
-                {"angle": "Juridique", "piste": "À VÉRIFIER : rechercher un arrêt de la chambre sociale excluant la faute grave en cas de retards liés à un mouvement de grève des transports."},
+                {"angle": "Juridique", "piste": "[VERIF:rechercher un arrêt de la chambre sociale excluant la faute grave en cas de retards liés à un mouvement de grève des transports]"},
             ],
         },
         {
@@ -70,7 +70,7 @@ CONCLUSIONS_DEMO = {
             "fondement": "Argument de principe soulevé par l'employeur en réponse à l'absence d'antécédents disciplinaires de M. Diallo.",
             "raisonnement": {
                 "probleme_de_droit": "L'ancienneté et l'absence de tout antécédent disciplinaire doivent-elles être prises en compte dans l'appréciation de la gravité de la faute reprochée ?",
-                "regle_applicable": "À VÉRIFIER : la jurisprudence sociale intègre traditionnellement l'ancienneté et le comportement antérieur du salarié parmi les éléments d'appréciation de la gravité d'un manquement, sans que ce soit un obstacle absolu.",
+                "regle_applicable": "[VERIF:la jurisprudence sociale intègre traditionnellement l'ancienneté et le comportement antérieur du salarié parmi les éléments d'appréciation de la gravité d'un manquement, sans que ce soit un obstacle absolu]",
                 "application_aux_faits": "Si l'ancienneté n'exclut pas par principe la faute grave, cinq années sans le moindre incident constituent un élément de contexte que le conseil de prud'hommes pondérera nécessairement face à des faits eux-mêmes contestés dans leur matérialité et leur gravité.",
             },
             "risque": "Faible",
@@ -154,7 +154,7 @@ SIMULATEUR_DEMO = {
             "origine": "Partie adverse",
             "question": "Si les propos du 9 février n'étaient qu'un désaccord anodin, pourquoi votre client ne les a-t-il pas contestés lors de l'entretien préalable ?",
             "piege": "Faire peser sur le silence de M. Diallo lors de l'entretien une présomption d'aveu implicite.",
-            "piste_reponse": "Rappeler que l'entretien préalable n'est pas un débat contradictoire mais une formalité procédurale asymétrique, et que le silence du salarié ne vaut jamais reconnaissance des faits. À VÉRIFIER : citer un arrêt en ce sens si disponible.",
+            "piste_reponse": "Rappeler que l'entretien préalable n'est pas un débat contradictoire mais une formalité procédurale asymétrique, et que le silence du salarié ne vaut jamais reconnaissance des faits. [VERIF:citer un arrêt en ce sens si disponible]",
         },
         {
             "origine": "Magistrat",
@@ -210,8 +210,9 @@ RESUME_DEMO = {
 
 # --- Chat : quelques réponses préenregistrées selon des mots-clés simples,
 # et une réponse générique par défaut qui oriente vers les actions cannées
-# ci-dessus. Chacune conserve le marqueur "À VÉRIFIER" pour démontrer le
-# garde-fou anti-hallucination même en mode démo.
+# ci-dessus. Chacune conserve une balise [VERIF:...] (ou [ART:...]) pour
+# démontrer le balisage anti-hallucination même en mode démo -- voir
+# analyse.REGLE_BALISAGE_CITATIONS.
 
 REPONSE_CHAT_DEFAUT = """Vous êtes en **mode démo** de Plaid'IA : aucune clé API n'est configurée sur ce serveur public, je ne peux donc pas traiter librement une question ici.
 
@@ -223,7 +224,7 @@ Ce que vous pouvez explorer dès maintenant, avec des données réalistes préen
 
 Pour poser une vraie question et obtenir une réponse générée en direct, utilisez **« Utiliser ma propre clé Anthropic »** en pied de page — votre clé reste dans votre navigateur et n'est jamais journalisée par le serveur.
 
-À VÉRIFIER : comme toute réponse de Plaid'IA, même hors mode démo, ceci resterait à vérifier avant tout usage professionnel — c'est tout l'esprit de ce garde-fou."""
+[VERIF:comme toute réponse de Plaid'IA, même hors mode démo, ceci resterait à vérifier avant tout usage professionnel — c'est tout l'esprit de ce garde-fou]."""
 
 REPONSE_CHAT_FAUTE_GRAVE = """Dans le dossier de démonstration (Diallo c/ Atlas Logistique), la qualification de faute grave retenue par l'employeur repose sur des retards répétés et un incident d'insubordination.
 
@@ -233,13 +234,13 @@ Deux éléments fragilisent cette qualification dans les faits présentés ici :
 - l'absence de tout antécédent disciplinaire en cinq ans d'ancienneté ;
 - la coïncidence des retards avec un mouvement de grève des transports en commun.
 
-À VÉRIFIER : la position de la jurisprudence de la chambre sociale sur la prise en compte des perturbations de transport dans l'appréciation de la faute grave.
+[VERIF:la position de la jurisprudence de la chambre sociale sur la prise en compte des perturbations de transport dans l'appréciation de la faute grave]
 
 *Réponse préenregistrée du mode démo, illustrant le format habituel de l'agent — pas une analyse en direct de votre situation.*"""
 
-REPONSE_CHAT_DELAI = """Sur le plan procédural, une contestation de licenciement devant le conseil de prud'hommes doit en principe être introduite dans un délai de 12 mois à compter de la notification du licenciement (article L. 1471-1 du Code du travail).
+REPONSE_CHAT_DELAI = """Sur le plan procédural, une contestation de licenciement devant le conseil de prud'hommes doit en principe être introduite dans un délai de 12 mois à compter de la notification du licenciement ([ART:L.1471-1:CTRAV]).
 
-À VÉRIFIER : ce délai peut varier selon la nature exacte du grief invoqué (discrimination, harcèlement...) — à confirmer au cas par cas.
+[VERIF:ce délai peut varier selon la nature exacte du grief invoqué (discrimination, harcèlement...) — à confirmer au cas par cas]
 
 Dans le dossier de démonstration, le licenciement a été notifié le 28 février 2024 et la saisine du conseil de prud'hommes est intervenue le 15 avril 2024 — largement dans les délais.
 

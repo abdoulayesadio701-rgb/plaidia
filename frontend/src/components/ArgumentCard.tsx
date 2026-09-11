@@ -5,8 +5,9 @@
  *
  * Chaque champ texte passe par RichOutput plutôt qu'un <p> brut : le
  * fondement, le raisonnement et les pistes de réfutation peuvent tous
- * contenir le marqueur "À VÉRIFIER" (voir le prompt système d'analyse.py),
- * jamais seulement `resume`.
+ * contenir une balise [ART:...]/[JURISPRUDENCE:...]/[VERIF:...] (voir le
+ * prompt système d'analyse.py, REGLE_BALISAGE_CITATIONS), jamais seulement
+ * `resume`.
  */
 
 import type { Argument } from "@/api";

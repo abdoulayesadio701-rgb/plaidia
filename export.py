@@ -3,12 +3,58 @@ export.py — Génère un document Word (.docx) ou PDF à partir d'une analyse,
 pour que l'avocat puisse l'imprimer, l'annoter ou l'intégrer à son dossier.
 """
 
+import re
 from datetime import datetime
 from pathlib import Path
 import paths
 import analyse as legacy_analyse
 
 EXPORTS_DIR = paths.base_dir() / "exports"
+
+# --- Balisage des références juridiques (voir analyse.REGLE_BALISAGE_CITATIONS) --
+# Un .docx/.pdf est une page statique, contrairement au front (RichOutput.tsx)
+# qui interprète la balise brute [ART:...]/[JURISPRUDENCE:...]/[VERIF:...]
+# pour un rendu visuel dédié -- ici, on la convertit une fois en texte
+# lisible avant toute insertion dans le document, plutôt que de laisser la
+# syntaxe brute apparaître telle quelle sur une page imprimée.
+_CODES_LIBELLES_EXPORT = {
+    "CP": "Code pénal", "CCIV": "Code civil", "CPC": "Code de procédure civile",
+    "CPP": "Code de procédure pénale", "CTRAV": "Code du travail", "CCOM": "Code de commerce",
+}
+_RE_TAG_ART_EXPORT = re.compile(r"\[ART:([^:\]]+):([A-Z]+)\]")
+_RE_TAG_JURISPRUDENCE_EXPORT = re.compile(r"\[JURISPRUDENCE:([^\]]+)\]")
+_RE_TAG_VERIF_EXPORT = re.compile(r"\[VERIF:([^\]]*)\]")
+
+
+def _rendre_balises_lisibles(texte: str) -> str:
+    """Convertit les balises en texte lisible pour un document imprimé --
+    [ART:132-24:CP] -> "art. 132-24 du Code pénal", [JURISPRUDENCE:...] ->
+    la référence seule, [VERIF:...] -> "[À VÉRIFIER : ...]" (reprend
+    l'ancien marqueur en texte libre, qui reste immédiatement reconnaissable
+    à l'impression, contrairement à la syntaxe de la balise elle-même)."""
+    if not texte:
+        return texte
+    texte = _RE_TAG_ART_EXPORT.sub(
+        lambda m: f"art. {m.group(1)} du {_CODES_LIBELLES_EXPORT.get(m.group(2), m.group(2))}", texte
+    )
+    texte = _RE_TAG_JURISPRUDENCE_EXPORT.sub(lambda m: m.group(1), texte)
+    texte = _RE_TAG_VERIF_EXPORT.sub(lambda m: f"[À VÉRIFIER : {m.group(1)}]", texte)
+    return texte
+
+
+def _nettoyer_balises(valeur):
+    """Applique _rendre_balises_lisibles récursivement à toute structure
+    (dict/list/str) -- appelée une fois en tête de chaque fonction
+    d'export, plutôt que sur chaque site d'insertion individuel dans le
+    document (arguments, plan, notes...), pour ne pas avoir à en oublier
+    un au milieu des dizaines d'appels add_run()/Paragraph() de ce module."""
+    if isinstance(valeur, str):
+        return _rendre_balises_lisibles(valeur)
+    if isinstance(valeur, list):
+        return [_nettoyer_balises(v) for v in valeur]
+    if isinstance(valeur, dict):
+        return {k: _nettoyer_balises(v) for k, v in valeur.items()}
+    return valeur
 
 # --- Titres et en-têtes bilingues (internationalisation FR/EN) -------------
 # La langue vient du même ContextVar que analyse._directive_langue() (posé
@@ -152,6 +198,7 @@ def _page_de_garde_pdf_flowables(titre: str, sous_titre: str = "") -> list:
 def exporter_word(dossier: dict, result: dict) -> str:
     """Génère un .docx et retourne le chemin du fichier créé."""
     dossier = dict(dossier)
+    result = _nettoyer_balises(result)
     try:
         from docx import Document
         from docx.shared import Pt, RGBColor
@@ -230,6 +277,7 @@ def exporter_word(dossier: dict, result: dict) -> str:
 def exporter_pdf(dossier: dict, result: dict) -> str:
     """Génère un .pdf et retourne le chemin du fichier créé."""
     dossier = dict(dossier)
+    result = _nettoyer_balises(result)
     try:
         from reportlab.lib.pagesizes import A4
         from reportlab.lib.units import cm
@@ -311,6 +359,9 @@ def exporter_dossier_complet_word(dossier: dict, analyse: dict | None, plan: dic
     simulateur d'objections pour un dossier — le rapport complet à emporter
     à l'audience. Chaque section est optionnelle."""
     dossier = dict(dossier)
+    analyse = _nettoyer_balises(analyse)
+    plan = _nettoyer_balises(plan)
+    simulateur = _nettoyer_balises(simulateur)
     try:
         from docx import Document
         from docx.shared import Pt, RGBColor
@@ -401,6 +452,7 @@ def exporter_note_client_word(dossier: dict, texte_note: str) -> str:
     """Génère un .docx contenant la note explicative destinée au client,
     en langage simple — prête à être envoyée telle quelle."""
     dossier = dict(dossier)
+    texte_note = _rendre_balises_lisibles(texte_note)
     try:
         from docx import Document
         from docx.shared import Pt
@@ -487,6 +539,7 @@ def exporter_texte_libre_word(titre: str, texte: str, note_bas_page: str = "") -
     """Export générique d'un texte libre en Word, sans nécessiter de
     dossier en base — utilisé notamment pour les procès-verbaux, qui
     peuvent être rédigés avant même la création d'une affaire dans l'outil."""
+    texte = _rendre_balises_lisibles(texte)
     try:
         from docx import Document
         from docx.shared import Pt
@@ -529,6 +582,7 @@ def exporter_csv(titre: str, en_tetes: list[str], lignes: list[list[str]]) -> st
     accents à l'ouverture directe du fichier, sans réglage manuel."""
     import csv
 
+    lignes = _nettoyer_balises(lignes)
     EXPORTS_DIR.mkdir(exist_ok=True)
     filename = _nom_fichier(titre, "csv")
     path = EXPORTS_DIR / filename

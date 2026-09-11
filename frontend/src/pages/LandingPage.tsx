@@ -36,14 +36,14 @@ const ARGUMENT_VITRINE: Argument = {
   fondement: "Relevé de badgeuse produit en pièce 4 par l'employeur, faisant état de trois retards de 22 à 41 minutes.",
   raisonnement: {
     probleme_de_droit: "Des retards répétés, même de courte durée, peuvent-ils à eux seuls caractériser une faute grave ?",
-    regle_applicable: "La faute grave suppose un manquement rendant impossible le maintien du salarié dans l'entreprise pendant le préavis. À VÉRIFIER : la qualification retenue pour des retards isolés sans avertissement préalable.",
+    regle_applicable: "La faute grave suppose un manquement rendant impossible le maintien du salarié dans l'entreprise pendant le préavis. [VERIF:la qualification retenue pour des retards isolés sans avertissement préalable]",
     application_aux_faits: "M. Diallo n'a fait l'objet d'aucune sanction en cinq ans d'ancienneté ; les retards coïncident avec un mouvement de grève RER B (pièce 7), ce qui affaiblit le caractère fautif retenu par l'employeur.",
   },
   risque: "Moyen",
   justification_risque: "L'absence d'antécédent et la coïncidence avec la grève fragilisent la qualification de faute grave, sans l'exclure totalement.",
   refutations: [
     { angle: "Factuel", piste: "Produire l'attestation SNCF de perturbation du trafic aux dates visées." },
-    { angle: "Juridique", piste: "À VÉRIFIER : rechercher un arrêt excluant la faute grave en cas de grève des transports." },
+    { angle: "Juridique", piste: "[VERIF:rechercher un arrêt excluant la faute grave en cas de grève des transports]" },
   ],
 };
 
@@ -260,7 +260,7 @@ export default function LandingPage() {
           <p className="mx-auto mt-4 max-w-prose text-sm leading-relaxed text-warmgray sm:text-base">
             Sur les analyses les plus sensibles, l'agent qui rédige n'est jamais le seul juge de sa propre réponse.
             Avant qu'elle n'atteigne l'écran, cinq contrôles indépendants l'examinent chacun sous un angle différent —
-            et chaque affirmation reste marquée <mark className="marker-verify">À VÉRIFIER</mark> tant qu'aucun
+            et chaque affirmation reste balisée <mark className="marker-verify">À VÉRIFIER : ...</mark> tant qu'aucun
             d'eux n'a pu la confirmer.
           </p>
         </div>

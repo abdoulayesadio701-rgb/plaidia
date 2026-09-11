@@ -64,10 +64,26 @@ def _log(message: str) -> None:
 
 
 # --- Contrôle déterministe des citations (couche code de l'agent vérificateur, §4) ---
-# Extraction HEURISTIQUE (regex) de citations juridiques probables -- ce
-# n'est pas un parseur juridique complet, c'est un filet : une citation non
-# détectée ici n'est simplement pas contrôlée déterministiquement, elle
-# n'est jamais pour autant considérée comme fausse (voir _verifier_citations).
+# Balisage structuré des références juridiques (demande explicite de
+# l'utilisateur -- voir analyse.REGLE_BALISAGE_CITATIONS, injectée dans les
+# prompts système qui produisent des citations) : remplace l'ancien
+# marqueur libre "À VÉRIFIER : " par [ART:<numéro>:<code>],
+# [JURISPRUDENCE:<référence>] et [VERIF:<description>]. Les deux premières
+# sont des citations à confronter aux sources ; [VERIF:...] est un aveu
+# explicite d'incertitude du modèle -- jamais recontrôlé, exactement comme
+# l'ancien préfixe "À VÉRIFIER" qu'il remplace (voir _verifier_citations).
+_RE_TAG_ART = re.compile(r"\[ART:([^:\]]+):([A-Z]+)\]")
+_RE_TAG_JURISPRUDENCE = re.compile(r"\[JURISPRUDENCE:([^\]]+)\]")
+_RE_TAG_VERIF = re.compile(r"\[VERIF:([^\]]*)\]")
+_RE_TAG_TOUTES = re.compile(r"\[(?:ART|JURISPRUDENCE|VERIF):[^\]]*\]")
+
+# Extraction HEURISTIQUE (regex) HÉRITÉE, sans balise -- filet de sécurité
+# pour du texte non balisé : documents générés avant ce chantier (stockés
+# tels quels en base, jamais régénérés rétroactivement) ou citation que le
+# modèle aurait malgré tout laissée sans balise. Ce n'est pas un parseur
+# juridique complet : une citation non détectée ici n'est simplement pas
+# contrôlée déterministiquement, elle n'est jamais pour autant considérée
+# comme fausse (voir _verifier_citations).
 _RE_CITATIONS = [
     re.compile(r"\bart(?:icle)?s?\.?\s*[A-Z]{0,2}\.?\s*\d+(?:[-.]\d+){0,3}", re.IGNORECASE),
     re.compile(r"\bCass\.?\s*(?:civ|soc|crim|com|ass\.?\s*pl[ée]n)\.?[^,\n]{0,40},?[^,\n]{0,60}\d{4}", re.IGNORECASE),
@@ -76,13 +92,39 @@ _RE_CITATIONS = [
 ]
 
 
+def _extraire_citations_balisees(texte: str) -> list[dict]:
+    """Extrait les balises [ART:...]/[JURISPRUDENCE:...] présentes dans
+    `texte` -- une entrée par balise, avec sa forme brute (identité utilisée
+    pour le repérage/l'affichage, voir frontend/src/components/RichOutput.tsx)
+    et sa clé de recherche (numéro d'article ou référence de jurisprudence,
+    utilisée pour la confrontation aux sources dans _verifier_citations).
+    Les balises [VERIF:...] ne sont volontairement pas incluses ici : elles
+    ne citent rien à confronter aux sources, voir _extraire_verif."""
+    trouvees = []
+    for m in _RE_TAG_ART.finditer(texte or ""):
+        trouvees.append({"type": "ART", "brut": m.group(0), "cle_recherche": m.group(1).strip()})
+    for m in _RE_TAG_JURISPRUDENCE.finditer(texte or ""):
+        trouvees.append({"type": "JURISPRUDENCE", "brut": m.group(0), "cle_recherche": m.group(1).strip()})
+    return trouvees
+
+
+def _extraire_verif(texte: str) -> list[str]:
+    """Descriptions des balises [VERIF:...] présentes dans `texte`, dans
+    l'ordre d'apparition -- l'équivalent structuré de l'ancien
+    "À VÉRIFIER : <description>" en texte libre."""
+    return [m.group(1).strip() for m in _RE_TAG_VERIF.finditer(texte or "")]
+
+
 def _extraire_citations(texte: str) -> list[str]:
-    """Extraction heuristique des citations probables (articles de loi,
-    références de jurisprudence, numéros de pourvoi/RG) présentes dans un
-    texte généré."""
+    """Filet heuristique hérité (voir le commentaire au-dessus de
+    _RE_CITATIONS) -- n'analyse le texte qu'une fois les balises retirées,
+    pour ne jamais compter deux fois la même citation (le contenu d'une
+    balise [JURISPRUDENCE:Cass. Crim....] correspondrait sinon aussi à ce
+    regex)."""
+    texte_sans_balises = _RE_TAG_TOUTES.sub(" ", texte or "")
     trouvees: set[str] = set()
     for regex in _RE_CITATIONS:
-        for m in regex.finditer(texte or ""):
+        for m in regex.finditer(texte_sans_balises):
             trouvees.add(m.group(0).strip())
     return sorted(trouvees)
 
@@ -92,32 +134,40 @@ def _normaliser(s: str) -> str:
 
 
 def _verifier_citations(texte: str, sources_textes: list[str]) -> list[dict]:
-    """Contrôle déterministe (§4, couche code) : chaque citation extraite de
-    `texte` est cherchée telle quelle (normalisée) dans `sources_textes`
-    (textes des sources réellement fournies au modèle principal -- recherche
-    live, corpus validé, ou le texte source original selon la
-    fonctionnalité). Une citation déjà préfixée par le modèle avec
-    « À VÉRIFIER » n'est pas recontrôlée : le modèle l'a déjà signalée
-    honnêtement, ce n'est pas un cas de citation dissimulée.
+    """Contrôle déterministe (§4, couche code) : chaque citation -- balisée
+    ([ART:...]/[JURISPRUDENCE:...], voie normale depuis ce chantier) ou
+    détectée par le filet heuristique hérité (texte non balisé) -- est
+    cherchée (normalisée) dans `sources_textes` (textes des sources
+    réellement fournies au modèle principal -- recherche live, corpus
+    validé, ou le texte source original selon la fonctionnalité). Une
+    balise [VERIF:...] n'est jamais recontrôlée : c'est un aveu explicite
+    d'incertitude du modèle, pas une citation dissimulée -- exactement
+    comme l'ancien préfixe "À VÉRIFIER" qu'elle remplace (voir
+    _extraire_verif). Pour le filet hérité, la même règle s'applique via le
+    préfixe textuel "à vérifier" resté dans les documents antérieurs à ce
+    chantier.
 
     Ce filtre ne peut jamais être contourné par la couche LLM du
     vérificateur (analyse.verifier_juridiquement), à qui son verdict est
     transmis comme une contrainte, pas une suggestion."""
-    citations = _extraire_citations(texte)
     bloc_source_normalise = _normaliser(" ".join(sources_textes))
-    resultats = []
-    for citation in citations:
+
+    def _statut(cle_recherche: str) -> str:
+        if not bloc_source_normalise:
+            return "AUCUNE_SOURCE"
+        return "VERIFIE" if _normaliser(cle_recherche) in bloc_source_normalise else "NON_VERIFIE"
+
+    resultats = [
+        {"citation": c["brut"], "statut_deterministe": _statut(c["cle_recherche"])}
+        for c in _extraire_citations_balisees(texte)
+    ]
+
+    for citation in _extraire_citations(texte):
         pos = texte.find(citation)
         prefixe = texte[max(0, pos - 40):pos] if pos != -1 else ""
         if "à vérifier" in prefixe.lower() or "a verifier" in prefixe.lower():
             continue
-        if not bloc_source_normalise:
-            statut = "AUCUNE_SOURCE"
-        elif _normaliser(citation) in bloc_source_normalise:
-            statut = "VERIFIE"
-        else:
-            statut = "NON_VERIFIE"
-        resultats.append({"citation": citation, "statut_deterministe": statut})
+        resultats.append({"citation": citation, "statut_deterministe": _statut(citation)})
     return resultats
 
 

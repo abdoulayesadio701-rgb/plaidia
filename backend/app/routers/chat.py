@@ -5,10 +5,12 @@ des conversations (historique, sur le modèle de Claude.ai) déjà exposée par
 db.py côté tkinter.
 
 Toute la logique métier vient telle quelle de analyse.py, recherche_juridique.py
-et db.py. Le marqueur "À VÉRIFIER" n'est jamais touché ici : chaque fragment
-brut renvoyé par analyse.repondre_conversation_stream() est retransmis tel
-quel dans l'événement SSE "delta" — c'est au front de le repérer et de le
-surligner, exactement comme le faisait le tampon de gui.py.
+et db.py. Les balises [ART:...]/[JURISPRUDENCE:...]/[VERIF:...] (voir
+analyse.REGLE_BALISAGE_CITATIONS) ne sont jamais touchées ici : chaque
+fragment brut renvoyé par analyse.repondre_conversation_stream() est
+retransmis tel quel dans l'événement SSE "delta" — c'est au front de les
+repérer et de les rendre visuellement, exactement comme le faisait le
+tampon de gui.py pour l'ancien marqueur "À VÉRIFIER".
 
 Important : une fois le flux SSE démarré (code HTTP 200 déjà envoyé), une
 erreur ne peut plus changer le code de statut HTTP. Elle est donc transmise

@@ -125,7 +125,7 @@ exacte. » Jamais présenté comme une preuve d'exactitude.
 
 ## 8. Recommandations pour la suite
 
-- Injection en place du marqueur « À VÉRIFIER » (via le moteur générique de `chat_actions`) pour les citations `NON_VERIFIE` que le modèle n'a pas déjà signalées lui-même.
+- Injection en place d'une balise `[VERIF:...]` (voir `analyse.REGLE_BALISAGE_CITATIONS`, via le moteur générique de `chat_actions`) pour les citations `NON_VERIFIE` que le modèle n'a pas déjà signalées lui-même.
 - Persistance en base des traces de vérification (`quality_pipeline.EtapeTrace`), actuellement en mémoire seulement.
 - Étalonnage d'un modèle plus rapide/économique pour le garde-fou et la couche LLM du vérificateur, une fois un id de modèle plus léger confirmé disponible côté clé API.
 - Étendre le pipeline conversationnel dynamique au Chat contextuel pour les intentions `explain`/`compare` portant sur une vérification de jurisprudence ou une critique de stratégie.

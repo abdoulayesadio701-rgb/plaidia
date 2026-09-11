@@ -176,6 +176,14 @@
     @apply rounded-sm bg-verify-bg px-1 font-bold text-verify-text;
   }
 
+  /* Référence citée avec confiance ([ART:...]/[JURISPRUDENCE:...], voir
+     analyse.REGLE_BALISAGE_CITATIONS) -- distincte de .marker-verify :
+     ceci n'est pas un avertissement, juste une référence repérable en un
+     coup d'œil, sans la connotation d'alerte du orange/marron ci-dessus. */
+  .marker-citation {
+    @apply rounded-sm bg-gold-500/10 px-1 font-medium text-gold-400;
+  }
+
   .tabs-list {
     @apply flex gap-6 border-b border-gold-600/20;
   }

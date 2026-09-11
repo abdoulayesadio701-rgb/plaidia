@@ -1,8 +1,9 @@
 /**
  * LabeledField — petite légende en majuscules au-dessus d'un texte rendu
- * via RichOutput (donc avec surlignage "À VÉRIFIER"). Motif répété dans
- * ArgumentCard, PlanPlaidoiriePage, SimulateurObjectionsPage... — un seul
- * endroit pour le faire correctement plutôt que copié partout.
+ * via RichOutput (donc avec rendu dédié des balises [ART:...]/
+ * [JURISPRUDENCE:...]/[VERIF:...]). Motif répété dans ArgumentCard,
+ * PlanPlaidoiriePage, SimulateurObjectionsPage... — un seul endroit pour
+ * le faire correctement plutôt que copié partout.
  */
 
 import RichOutput from "./RichOutput";

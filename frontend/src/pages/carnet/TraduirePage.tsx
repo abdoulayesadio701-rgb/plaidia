@@ -47,8 +47,8 @@ export default function TraduirePage() {
         <p className="kicker">Le Carnet</p>
         <h1 className="mt-1 font-serif text-h2 font-semibold text-gold-500">Traduire un texte</h1>
         <p className="mt-2 text-sm text-warmgray">
-          Français → anglais ou anglais → français, détecté automatiquement. Le registre juridique et le marqueur "À VÉRIFIER" sont
-          préservés — utile pour partager une note ou une analyse avec un confrère ou une partie anglophone.
+          Français → anglais ou anglais → français, détecté automatiquement. Le registre juridique et les balises de référence
+          juridique sont préservés — utile pour partager une note ou une analyse avec un confrère ou une partie anglophone.
         </p>
       </div>
 

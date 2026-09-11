@@ -7,6 +7,7 @@
 import { useState } from "react";
 import Logo from "../components/Logo";
 import GothicMotif from "../components/GothicMotif";
+import RichOutput from "../components/RichOutput";
 
 const PALETTE: { title: string; swatches: { name: string; className: string; hex: string }[] }[] = [
   {
@@ -96,9 +97,9 @@ export default function Styleguide() {
               </div>
             ))}
 
-            {/* Marqueur À VÉRIFIER — traité à part, ce n'est pas un token de palette générique */}
+            {/* Balise [VERIF:...] — traitée à part, ce n'est pas un token de palette générique */}
             <div>
-              <h3 className="font-serif text-h4 text-ivory">Marqueur "À VÉRIFIER"</h3>
+              <h3 className="font-serif text-h4 text-ivory">Balise [VERIF:...]</h3>
               <div className="mt-3 max-w-xs overflow-hidden rounded-md border border-gold-600/20">
                 <div className="flex h-16 items-center justify-center bg-verify-bg">
                   <span className="font-bold text-verify-text">À VÉRIFIER</span>
@@ -106,6 +107,20 @@ export default function Styleguide() {
                 <div className="bg-surface px-3 py-2">
                   <p className="font-mono text-xs text-ivory">verify-bg / verify-text</p>
                   <p className="font-mono text-xs text-warmgray">#FFE9B0 / #7A4A00</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Balises [ART:...]/[JURISPRUDENCE:...] — référence citée avec confiance */}
+            <div>
+              <h3 className="font-serif text-h4 text-ivory">Balises [ART:...] / [JURISPRUDENCE:...]</h3>
+              <div className="mt-3 max-w-xs overflow-hidden rounded-md border border-gold-600/20">
+                <div className="flex h-16 items-center justify-center bg-surface">
+                  <span className="marker-citation">art. 1240 du Code civil</span>
+                </div>
+                <div className="bg-surface px-3 py-2">
+                  <p className="font-mono text-xs text-ivory">gold-500/10 / gold-400</p>
+                  <p className="font-mono text-xs text-warmgray">.marker-citation</p>
                 </div>
               </div>
             </div>
@@ -185,18 +200,20 @@ export default function Styleguide() {
           </div>
         </section>
 
-        {/* ---------- Marqueur À VÉRIFIER en contexte ---------- */}
+        {/* ---------- Balises de référence juridique en contexte ---------- */}
         <section aria-labelledby="verify-title">
           <h2 id="verify-title" className="font-serif text-h2 font-semibold text-gold-500">
-            Marqueur "À VÉRIFIER" en contexte
+            Balises de référence juridique en contexte
           </h2>
           <div className="mt-8 max-w-prose rounded-md border border-gold-600/20 bg-surface p-6">
-            <p className="text-body">
-              L'article 1132 du Code civil précise que l'erreur de droit ou de fait est une cause
-              de nullité lorsqu'elle porte sur les qualités essentielles de la prestation due.{" "}
-              <mark className="marker-verify">À VÉRIFIER : l'excusabilité de l'erreur alléguée n'est pas établie par les pièces citées</mark>{" "}
-              — il conviendra de solliciter les pièces précontractuelles avant l'audience.
-            </p>
+            <RichOutput
+              texte={
+                "L'[ART:1132:CCIV] précise que l'erreur de droit ou de fait est une cause de nullité lorsqu'elle porte sur les " +
+                "qualités essentielles de la prestation due. [VERIF:l'excusabilité de l'erreur alléguée n'est pas établie par " +
+                "les pièces citées] — il conviendra de solliciter les pièces précontractuelles avant l'audience."
+              }
+              prose={false}
+            />
           </div>
         </section>
 
