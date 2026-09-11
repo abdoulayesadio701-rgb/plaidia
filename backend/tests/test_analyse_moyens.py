@@ -110,12 +110,8 @@ def test_note_de_coherence_globale_ajoutee_si_non_vide(monkeypatch):
 
 # --- §2c : modèle plus léger pour les étapes de classification -------------
 
-def test_modele_leger_distinct_du_modele_lourd():
-    """MODEL_LEGER (Claude, étapes de classification) et MODEL_LOURD
-    (DeepSeek, agent principal/vérificateur/critique/stratégie combative)
-    restent deux fournisseurs distincts -- voir la demande explicite de
-    changement de fournisseur de modèle."""
-    assert legacy_analyse.MODEL_LEGER != legacy_analyse.MODEL_LOURD
+def test_modele_leger_distinct_du_modele_actif():
+    assert legacy_analyse.MODEL_LEGER != legacy_analyse.MODEL_ACTIF
 
 
 def test_garde_fou_et_intention_utilisent_le_modele_leger(monkeypatch):

@@ -35,16 +35,11 @@ copy .env.example .env         # Windows
 # cp .env.example .env         # macOS/Linux
 ```
 
-Renseignez `ANTHROPIC_API_KEY` **et** `DEEPSEEK_API_KEY` dans `backend/.env`
-pour un usage normal — la première pour les étapes de classification
-(garde-fou, détection d'intention, notions juridiques, modèle Claude
-Haiku), la seconde pour l'agent principal, le vérificateur, le critique et
-le reste de la génération substantielle (DeepSeek). **Si l'une des deux
-est absente** (et qu'aucun `apikey.txt`/`deepseek_apikey.txt` n'existe non
-plus), le serveur bascule automatiquement en **mode démo** : voir la
-section dédiée plus bas — c'est le mode pensé pour un déploiement public
-partagé sur un CV ou avec des amis, sans exposer vos clés personnelles.
-`JUDILIBRE_KEY_ID`
+Renseignez `ANTHROPIC_API_KEY` dans `backend/.env` pour un usage normal.
+**Si elle est absente** (et qu'aucun `apikey.txt` n'existe non plus), le
+serveur bascule automatiquement en **mode démo** : voir la section dédiée
+plus bas — c'est le mode pensé pour un déploiement public partagé sur un
+CV ou avec des amis, sans exposer votre clé personnelle. `JUDILIBRE_KEY_ID`
 et `LEGIFRANCE_CLIENT_ID`/`LEGIFRANCE_CLIENT_SECRET` restent optionnels
 dans tous les cas : sans eux, les routes `/api/jurisprudence/*` qui en
 dépendent renverront une erreur 500 explicite
@@ -146,8 +141,7 @@ Réponse `Content-Type: text/event-stream`, événements nommés :
 
 ## Mode démo (déploiement public — CV, portfolio)
 
-Activé automatiquement si `ANTHROPIC_API_KEY` **ou** `DEEPSEEK_API_KEY`
-(et leurs fichiers `apikey.txt`/`deepseek_apikey.txt` respectifs) sont
+Activé automatiquement si `ANTHROPIC_API_KEY` (et `apikey.txt`) sont
 absents, ou explicitement via `DEMO_MODE=true` dans `.env`. Voir
 `app/demo.py` et `app/demo_data.py`.
 

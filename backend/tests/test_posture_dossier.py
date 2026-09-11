@@ -161,20 +161,38 @@ def test_strategie_combative_absente_ou_vide_retombe_sur_le_texte_generique():
         assert "Procédure" not in sortie["strategie"]
 
 
+class _FakeContenu:
+    def __init__(self, text: str):
+        self.text = text
+
+
+class _FakeResponse:
+    def __init__(self, text: str):
+        self.content = [_FakeContenu(text)]
+
+
+class _FakeClient:
+    def __init__(self, text: str):
+        self.messages = self
+        self._text = text
+
+    def create(self, **kwargs):
+        return _FakeResponse(self._text)
+
+
 def test_generer_strategie_combative_couvre_le_dossier_transmis(monkeypatch):
     """Vérifie la construction du message envoyé au modèle -- le jugement
     réel de l'agent (comme pour les autres agents LLM du fichier) a été
-    vérifié manuellement avec une clé API réelle pendant le développement.
-    generer_strategie_combative est passée à DeepSeek (_appeler_modele_lourd)
-    -- voir le changement de fournisseur de modèle demandé par l'utilisateur."""
+    vérifié manuellement avec une clé API réelle pendant le développement."""
     capture = {}
 
-    def _espion(system, messages, max_tokens):
-        capture["system"] = system
-        capture["message"] = messages[0]["content"]
-        return "{}"
+    class _ClientEspion(_FakeClient):
+        def create(self, **kwargs):
+            capture["system"] = kwargs["system"]
+            capture["message"] = kwargs["messages"][0]["content"]
+            return super().create(**kwargs)
 
-    monkeypatch.setattr(legacy_analyse, "_appeler_modele_lourd", _espion)
+    monkeypatch.setattr(legacy_analyse, "_client", lambda: _ClientEspion("{}"))
     resultat = legacy_analyse.generer_strategie_combative(
         "Faits du dossier.",
         "Défendeur",

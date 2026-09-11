@@ -10,7 +10,6 @@ import re
 import contextvars
 from pathlib import Path
 import anthropic
-import requests
 import paths
 
 KEY_FILE = paths.base_dir() / "apikey.txt"
@@ -86,22 +85,16 @@ def obtenir_cle_api_requete() -> str | None:
 
 
 def cle_api_configuree() -> bool:
-    """True si le serveur dispose d'une clé API Anthropic par défaut
-    (variable d'environnement ou fichier local) -- indépendamment de toute
-    surcharge par requête. Ne couvre que Claude (MODEL_LEGER : garde-fou,
-    détection d'intention, notions juridiques) -- voir
-    cle_api_deepseek_configuree() pour le modèle lourd."""
+    """True si le serveur dispose d'une clé API par défaut (variable
+    d'environnement ou fichier local) -- indépendamment de toute surcharge
+    par requête. Utilisé pour déterminer si le mode démo doit s'activer."""
     return bool(os.environ.get("ANTHROPIC_API_KEY")) or KEY_FILE.exists()
 
-
-def cle_api_deepseek_configuree() -> bool:
-    """Même principe que cle_api_configuree() ci-dessus, pour DeepSeek
-    (MODEL_LOURD : agent principal, vérificateur, critique, validation
-    finale, stratégie combative...). Les deux clés sont nécessaires pour
-    qu'une fonctionnalité réelle (non couverte par une réponse
-    préenregistrée) aboutisse -- voir backend/app/demo.py::mode_demo_serveur,
-    qui exige les deux avant de désactiver le mode démo."""
-    return bool(os.environ.get("DEEPSEEK_API_KEY")) or DEEPSEEK_KEY_FILE.exists()
+# Modèle utilisé pour toutes les analyses — centralisé ici pour pouvoir
+# basculer facilement entre rapidité (Haiku) et profondeur (Sonnet).
+# Retour à Sonnet suite au retour utilisateur : les réponses manquaient
+# de profondeur avec Haiku — la qualité prime sur la vitesse pour cet usage.
+MODEL_ACTIF = "claude-sonnet-4-6"
 
 # Chantier "temps de traitement des générations", §2c : les étapes de simple
 # classification/routage (garde-fou d'entrée, détection d'intention,
@@ -111,9 +104,8 @@ def cle_api_deepseek_configuree() -> bool:
 # latence et du coût. Réservé exclusivement à evaluer_garde_fou_entree,
 # analyser_intention_juridique, interpreter_intention et
 # identifier_notions_juridiques -- jamais à une fonction qui produit du
-# contenu juridique destiné à l'utilisateur final (voir MODEL_LOURD
-# ci-dessous, le modèle de ces dernières depuis le changement de
-# fournisseur demandé par l'utilisateur).
+# contenu juridique destiné à l'utilisateur final (voir MODEL_ACTIF
+# ci-dessus, qui reste le modèle de ces dernières).
 MODEL_LEGER = "claude-haiku-4-5-20251001"
 
 SYSTEM_PROMPT = """Tu es un assistant d'analyse juridique pour avocat francophone (France, espace OHADA...). Ta tâche : analyser des conclusions adverses et préparer une base de réfutation.
@@ -166,88 +158,6 @@ def _client():
             "apikey.txt dans ce dossier contenant uniquement votre clé."
         )
     return anthropic.Anthropic(api_key=api_key)
-
-
-# --- Modèle "lourd" (DeepSeek) -----------------------------------------------
-# À la demande explicite de l'utilisateur : les étapes lourdes (agent
-# principal, vérificateur, critique, validation finale, stratégie
-# combative, et les fonctions de rédaction/extraction substantielles)
-# basculent sur DeepSeek plutôt que Claude -- MODEL_LEGER (garde-fou,
-# détection d'intention, notions juridiques) reste sur Claude via _client()
-# ci-dessus, inchangé. L'API DeepSeek est compatible OpenAI (endpoint REST
-# JSON classique) -- appelée directement via `requests` (déjà une
-# dépendance du projet, voir legifrance.py/judilibre.py) plutôt que
-# d'ajouter le SDK openai comme nouvelle dépendance pour un seul usage.
-DEEPSEEK_KEY_FILE = paths.base_dir() / "deepseek_apikey.txt"
-DEEPSEEK_API_URL = "https://api.deepseek.com/chat/completions"
-MODEL_LOURD = "deepseek-chat"
-
-
-def _cle_api_deepseek() -> str:
-    """Même convention que _client() ci-dessus pour la clé Anthropic :
-    variable d'environnement d'abord, puis fichier local -- pas de
-    surcharge par requête (contrairement à _cle_api_requete) tant qu'aucun
-    besoin d'une clé DeepSeek personnelle par avocat n'a été exprimé."""
-    cle = os.environ.get("DEEPSEEK_API_KEY")
-    if not cle and DEEPSEEK_KEY_FILE.exists():
-        cle = DEEPSEEK_KEY_FILE.read_text(encoding="utf-8").strip()
-    if not cle:
-        raise EnvironmentError(
-            "Clé API DeepSeek introuvable. Soit définissez la variable "
-            "d'environnement DEEPSEEK_API_KEY, soit créez un fichier "
-            "deepseek_apikey.txt dans ce dossier contenant uniquement votre clé."
-        )
-    return cle
-
-
-def _appeler_modele_lourd(system: str, messages: list[dict], max_tokens: int) -> str:
-    """Appelle le modèle « lourd » (DeepSeek) -- remplace
-    `client.messages.create(model=..., ...)` (Anthropic) pour toutes les
-    fonctions listées ci-dessus. Même contrat que l'appel Anthropic
-    remplacé : reçoit un system prompt et l'historique de messages
-    [{"role": "user"/"assistant", "content": "..."}], renvoie le texte brut
-    de la réponse."""
-    reponse = requests.post(
-        DEEPSEEK_API_URL,
-        headers={"Authorization": f"Bearer {_cle_api_deepseek()}", "Content-Type": "application/json"},
-        json={"model": MODEL_LOURD, "max_tokens": max_tokens, "messages": [{"role": "system", "content": system}, *messages]},
-        timeout=90,
-    )
-    reponse.raise_for_status()
-    return reponse.json()["choices"][0]["message"]["content"].strip()
-
-
-def _appeler_modele_lourd_stream(system: str, messages: list[dict], max_tokens: int):
-    """Variante en streaming de _appeler_modele_lourd (voir
-    repondre_conversation_stream) -- générateur qui produit le texte
-    fragment par fragment, au format SSE utilisé par l'API DeepSeek
-    (compatible OpenAI : trames "data: {...}\\n\\n", terminées par
-    "data: [DONE]")."""
-    with requests.post(
-        DEEPSEEK_API_URL,
-        headers={"Authorization": f"Bearer {_cle_api_deepseek()}", "Content-Type": "application/json"},
-        json={
-            "model": MODEL_LOURD,
-            "max_tokens": max_tokens,
-            "messages": [{"role": "system", "content": system}, *messages],
-            "stream": True,
-        },
-        timeout=90,
-        stream=True,
-    ) as reponse:
-        reponse.raise_for_status()
-        for ligne in reponse.iter_lines(decode_unicode=True):
-            if not ligne or not ligne.startswith("data:"):
-                continue
-            donnee = ligne[len("data:"):].strip()
-            if donnee == "[DONE]":
-                break
-            try:
-                fragment = json.loads(donnee)["choices"][0]["delta"].get("content")
-            except (json.JSONDecodeError, KeyError, IndexError):
-                continue
-            if fragment:
-                yield fragment
 
 
 QUESTION_SYSTEM_PROMPT = """Tu es un assistant juridique pour avocat francophone (France, espace OHADA...). Un avocat te pose une question précise sur un cas qu'il prépare (stratégie, argument, point de procédure, jurisprudence applicable, prédiction ou analyse d'un réquisitoire...).
@@ -323,7 +233,14 @@ def repondre_conversation(messages: list[dict], contexte_recherche: str | None =
     if contexte_recherche:
         system += contexte_recherche
 
-    return _appeler_modele_lourd(system, messages, 2800)
+    client = _client()
+    response = client.messages.create(
+        model=MODEL_ACTIF,
+        max_tokens=2800,
+        system=system,
+        messages=messages,
+    )
+    return response.content[0].text.strip()
 
 
 def repondre_conversation_stream(messages: list[dict], contexte_recherche: str | None = None):
@@ -343,7 +260,15 @@ def repondre_conversation_stream(messages: list[dict], contexte_recherche: str |
     if contexte_recherche:
         system += contexte_recherche
 
-    yield from _appeler_modele_lourd_stream(system, messages, 2800)
+    client = _client()
+    with client.messages.stream(
+        model=MODEL_ACTIF,
+        max_tokens=2800,
+        system=system,
+        messages=messages,
+    ) as stream:
+        for texte in stream.text_stream:
+            yield texte
 
 
 PLAN_SYSTEM_PROMPT = """Tu es un assistant qui aide un avocat francophone à structurer sa plaidoirie orale.
@@ -401,7 +326,15 @@ def simuler_objections(contexte_dossier: str, contexte_recherche: str | None = N
     if contexte_recherche:
         system += contexte_recherche
 
-    raw = _appeler_modele_lourd(system, [{"role": "user", "content": f"Contexte du dossier :\n{contexte_dossier}"}], 3800)
+    client = _client()
+    response = client.messages.create(
+        model=MODEL_ACTIF,
+        max_tokens=3800,
+        system=system,
+        messages=[{"role": "user", "content": f"Contexte du dossier :\n{contexte_dossier}"}],
+    )
+
+    raw = response.content[0].text.strip()
     raw = raw.replace("```json", "").replace("```", "").strip()
 
     try:
@@ -465,12 +398,14 @@ Règles impératives :
 
 def construire_chronologie(contexte_affaire: str) -> dict:
     """Construit une chronologie structurée à partir du contenu d'une affaire."""
-    raw = _appeler_modele_lourd(
-        CHRONOLOGIE_SYSTEM_PROMPT + _directive_langue(),
-        [{"role": "user", "content": f"Contenu de l'affaire :\n{contexte_affaire}"}],
-        1800,
+    client = _client()
+    response = client.messages.create(
+        model=MODEL_ACTIF,
+        max_tokens=1800,
+        system=CHRONOLOGIE_SYSTEM_PROMPT + _directive_langue(),
+        messages=[{"role": "user", "content": f"Contenu de l'affaire :\n{contexte_affaire}"}],
     )
-    raw = raw.replace("```json", "").replace("```", "").strip()
+    raw = response.content[0].text.strip().replace("```json", "").replace("```", "").strip()
     try:
         parsed = json.loads(raw)
     except json.JSONDecodeError as e:
@@ -502,12 +437,14 @@ Règles impératives :
 def extraire_elements_cles(texte_document: str) -> dict:
     """Extrait automatiquement dates, noms, références, demandes et
     décisions d'un document juridique."""
-    raw = _appeler_modele_lourd(
-        EXTRACTION_SYSTEM_PROMPT + _directive_langue(),
-        [{"role": "user", "content": f"Document :\n{texte_document}"}],
-        1500,
+    client = _client()
+    response = client.messages.create(
+        model=MODEL_ACTIF,
+        max_tokens=1500,
+        system=EXTRACTION_SYSTEM_PROMPT + _directive_langue(),
+        messages=[{"role": "user", "content": f"Document :\n{texte_document}"}],
     )
-    raw = raw.replace("```json", "").replace("```", "").strip()
+    raw = response.content[0].text.strip().replace("```json", "").replace("```", "").strip()
     try:
         parsed = json.loads(raw)
     except json.JSONDecodeError as e:
@@ -537,12 +474,14 @@ Règles impératives :
 def classifier_document(texte_document: str) -> dict:
     """Classe un document selon sa nature juridique (assignation, jugement,
     ordonnance, conclusions, pièce...)."""
-    raw = _appeler_modele_lourd(
-        CLASSEMENT_SYSTEM_PROMPT + _directive_langue(),
-        [{"role": "user", "content": f"Document :\n{texte_document[:4000]}"}],
-        500,
+    client = _client()
+    response = client.messages.create(
+        model=MODEL_ACTIF,
+        max_tokens=500,
+        system=CLASSEMENT_SYSTEM_PROMPT + _directive_langue(),
+        messages=[{"role": "user", "content": f"Document :\n{texte_document[:4000]}"}],
     )
-    raw = raw.replace("```json", "").replace("```", "").strip()
+    raw = response.content[0].text.strip().replace("```json", "").replace("```", "").strip()
     try:
         parsed = json.loads(raw)
     except json.JSONDecodeError as e:
@@ -588,11 +527,14 @@ Règles impératives :
 def rediger_pv(notes_audience: str) -> str:
     """Structure des notes d'audience brutes en une première version de
     procès-verbal, à relire et compléter par le greffier."""
-    return _appeler_modele_lourd(
-        PV_SYSTEM_PROMPT + _directive_langue(),
-        [{"role": "user", "content": f"Notes prises pendant l'audience :\n{notes_audience}"}],
-        2000,
+    client = _client()
+    response = client.messages.create(
+        model=MODEL_ACTIF,
+        max_tokens=2000,
+        system=PV_SYSTEM_PROMPT + _directive_langue(),
+        messages=[{"role": "user", "content": f"Notes prises pendant l'audience :\n{notes_audience}"}],
     )
+    return response.content[0].text.strip()
 
 
 REQUISITOIRE_SYSTEM_PROMPT = """Tu es un assistant qui aide un greffier francophone à structurer le contenu d'un réquisitoire du ministère public, à partir de son texte.
@@ -620,12 +562,14 @@ def analyser_requisitoire(texte_requisitoire: str) -> dict:
     """Structure le contenu d'un réquisitoire (qualification retenue,
     éléments invoqués, circonstances, peine requise) de façon neutre,
     sans prendre parti — pour le greffier, pas une base de réfutation."""
-    raw = _appeler_modele_lourd(
-        REQUISITOIRE_SYSTEM_PROMPT + _directive_langue(),
-        [{"role": "user", "content": f"Texte du réquisitoire :\n{texte_requisitoire}"}],
-        1800,
+    client = _client()
+    response = client.messages.create(
+        model=MODEL_ACTIF,
+        max_tokens=1800,
+        system=REQUISITOIRE_SYSTEM_PROMPT + _directive_langue(),
+        messages=[{"role": "user", "content": f"Texte du réquisitoire :\n{texte_requisitoire}"}],
     )
-    raw = raw.replace("```json", "").replace("```", "").strip()
+    raw = response.content[0].text.strip().replace("```json", "").replace("```", "").strip()
     try:
         parsed = json.loads(raw)
     except json.JSONDecodeError as e:
@@ -662,12 +606,14 @@ def analyser_rapport_instruction(texte_rapport: str) -> dict:
     """Structure le contenu d'un rapport d'instruction (actes accomplis,
     éléments à charge/à décharge, mesures ordonnées, sens proposé) de
     façon neutre, pour le greffier."""
-    raw = _appeler_modele_lourd(
-        RAPPORT_INSTRUCTION_SYSTEM_PROMPT + _directive_langue(),
-        [{"role": "user", "content": f"Texte du rapport d'instruction :\n{texte_rapport}"}],
-        1800,
+    client = _client()
+    response = client.messages.create(
+        model=MODEL_ACTIF,
+        max_tokens=1800,
+        system=RAPPORT_INSTRUCTION_SYSTEM_PROMPT + _directive_langue(),
+        messages=[{"role": "user", "content": f"Texte du rapport d'instruction :\n{texte_rapport}"}],
     )
-    raw = raw.replace("```json", "").replace("```", "").strip()
+    raw = response.content[0].text.strip().replace("```json", "").replace("```", "").strip()
     try:
         parsed = json.loads(raw)
     except json.JSONDecodeError as e:
@@ -681,13 +627,28 @@ def analyser_rapport_instruction(texte_rapport: str) -> dict:
 def rediger_note_client(contexte_dossier: str) -> str:
     """Rédige une explication en langage simple du dossier, destinée à être
     envoyée directement au client — sans jargon juridique."""
-    return _appeler_modele_lourd(NOTE_CLIENT_SYSTEM_PROMPT, [{"role": "user", "content": f"Éléments du dossier :\n{contexte_dossier}"}], 1500)
+    client = _client()
+    response = client.messages.create(
+        model=MODEL_ACTIF,
+        max_tokens=1500,
+        system=NOTE_CLIENT_SYSTEM_PROMPT,
+        messages=[{"role": "user", "content": f"Éléments du dossier :\n{contexte_dossier}"}],
+    )
+    return response.content[0].text.strip()
 
 
 def resumer_dossier(contexte_dossier: str) -> dict:
     """Produit un résumé synthétique d'un dossier, utile après plusieurs
     imports de documents pour retrouver rapidement l'essentiel."""
-    raw = _appeler_modele_lourd(RESUME_SYSTEM_PROMPT, [{"role": "user", "content": f"Contenu du dossier :\n{contexte_dossier}"}], 2200)
+    client = _client()
+    response = client.messages.create(
+        model=MODEL_ACTIF,
+        max_tokens=2200,
+        system=RESUME_SYSTEM_PROMPT,
+        messages=[{"role": "user", "content": f"Contenu du dossier :\n{contexte_dossier}"}],
+    )
+
+    raw = response.content[0].text.strip()
     raw = raw.replace("```json", "").replace("```", "").strip()
 
     try:
@@ -706,8 +667,16 @@ def generer_plan_plaidoirie(contexte_dossier: str, temps_minutes: int, contexte_
     if contexte_recherche:
         system += contexte_recherche
 
+    client = _client()
     message = f"Temps de parole imparti : {temps_minutes} minutes.\n\nContexte du dossier :\n{contexte_dossier}"
-    raw = _appeler_modele_lourd(system, [{"role": "user", "content": message}], 3200)
+    response = client.messages.create(
+        model=MODEL_ACTIF,
+        max_tokens=3200,
+        system=system,
+        messages=[{"role": "user", "content": message}],
+    )
+
+    raw = response.content[0].text.strip()
     raw = raw.replace("```json", "").replace("```", "").strip()
 
     try:
@@ -742,7 +711,15 @@ def analyser_conclusions(texte: str, contexte_recherche: str | None = None, juri
     if contexte_recherche:
         system += contexte_recherche
 
-    raw = _appeler_modele_lourd(system, [{"role": "user", "content": texte}], 3200)
+    client = _client()
+    response = client.messages.create(
+        model=MODEL_ACTIF,
+        max_tokens=3200,
+        system=system,
+        messages=[{"role": "user", "content": texte}],
+    )
+
+    raw = response.content[0].text.strip()
     raw = raw.replace("```json", "").replace("```", "").strip()
 
     try:
@@ -892,7 +869,14 @@ def reviser_texte(texte_original: str, instruction_revision: str) -> str:
     )
     message = f"Document original :\n{texte_original}\n\nModification demandée :\n{instruction_revision}"
 
-    return _appeler_modele_lourd(system, [{"role": "user", "content": message}], 2000)
+    client = _client()
+    response = client.messages.create(
+        model=MODEL_ACTIF,
+        max_tokens=2000,
+        system=system,
+        messages=[{"role": "user", "content": message}],
+    )
+    return response.content[0].text.strip()
 
 
 TRADUCTION_SYSTEM_PROMPT = """Tu es un traducteur juridique professionnel français ↔ anglais, spécialisé dans les textes de droit et de procédure.
@@ -923,8 +907,14 @@ def traduire_texte(texte: str) -> dict:
     — utilisé pour partager un document généré par Plaid'IA avec une partie
     ou un confrère anglophone, sans passer par un moteur de traduction
     générique moins fiable sur le vocabulaire juridique précis."""
-    raw = _appeler_modele_lourd(TRADUCTION_SYSTEM_PROMPT, [{"role": "user", "content": f"Texte à traduire :\n{texte}"}], 4000)
-    raw = raw.replace("```json", "").replace("```", "").strip()
+    client = _client()
+    response = client.messages.create(
+        model=MODEL_ACTIF,
+        max_tokens=4000,
+        system=TRADUCTION_SYSTEM_PROMPT,
+        messages=[{"role": "user", "content": f"Texte à traduire :\n{texte}"}],
+    )
+    raw = response.content[0].text.strip().replace("```json", "").replace("```", "").strip()
     try:
         parsed = json.loads(raw)
     except json.JSONDecodeError as e:
@@ -988,8 +978,14 @@ def traiter_message_edition(
     messages = list(historique or [])
     messages.append({"role": "user", "content": f"{contexte}\n\nDemande de l'utilisateur :\n{message}"})
 
-    raw = _appeler_modele_lourd(EDITION_SYSTEM_PROMPT, messages, 3000)
-    raw = raw.replace("```json", "").replace("```", "").strip()
+    client = _client()
+    response = client.messages.create(
+        model=MODEL_ACTIF,
+        max_tokens=3000,
+        system=EDITION_SYSTEM_PROMPT,
+        messages=messages,
+    )
+    raw = response.content[0].text.strip().replace("```json", "").replace("```", "").strip()
     try:
         parsed = json.loads(raw)
     except json.JSONDecodeError as e:
@@ -1032,12 +1028,14 @@ def verifier_procedure(contexte_affaire: str) -> dict:
     manquants ou à vérifier, à partir du contenu d'une affaire. Reste
     délibérément prudent — signale des pistes à vérifier, jamais des
     certitudes."""
-    raw = _appeler_modele_lourd(
-        VERIFICATION_PROCEDURALE_SYSTEM_PROMPT + _directive_langue(),
-        [{"role": "user", "content": f"Contenu de l'affaire :\n{contexte_affaire}"}],
-        1800,
+    client = _client()
+    response = client.messages.create(
+        model=MODEL_ACTIF,
+        max_tokens=1800,
+        system=VERIFICATION_PROCEDURALE_SYSTEM_PROMPT + _directive_langue(),
+        messages=[{"role": "user", "content": f"Contenu de l'affaire :\n{contexte_affaire}"}],
     )
-    raw = raw.replace("```json", "").replace("```", "").strip()
+    raw = response.content[0].text.strip().replace("```json", "").replace("```", "").strip()
     try:
         parsed = json.loads(raw)
     except json.JSONDecodeError as e:
@@ -1091,12 +1089,14 @@ def controler_coherence(elements_par_document: list) -> dict:
                 parties.append(f"{cle} : {'; '.join(valeurs)}")
     contenu = "\n".join(parties)
 
-    raw = _appeler_modele_lourd(
-        COHERENCE_SYSTEM_PROMPT + _directive_langue(),
-        [{"role": "user", "content": f"Éléments extraits des documents :\n{contenu}"}],
-        1800,
+    client = _client()
+    response = client.messages.create(
+        model=MODEL_ACTIF,
+        max_tokens=1800,
+        system=COHERENCE_SYSTEM_PROMPT + _directive_langue(),
+        messages=[{"role": "user", "content": f"Éléments extraits des documents :\n{contenu}"}],
     )
-    raw = raw.replace("```json", "").replace("```", "").strip()
+    raw = response.content[0].text.strip().replace("```json", "").replace("```", "").strip()
     try:
         parsed = json.loads(raw)
     except json.JSONDecodeError as e:
@@ -1155,7 +1155,14 @@ def consulter_position_jurisprudence(sujet: str, contexte_recherche: str) -> str
     else:
         system += "\n\nAucun résultat de recherche live disponible — indique-le clairement et n'invente aucune décision."
 
-    return _appeler_modele_lourd(system, [{"role": "user", "content": f"Sujet à traiter :\n{sujet}"}], 1800)
+    client = _client()
+    response = client.messages.create(
+        model=MODEL_ACTIF,
+        max_tokens=1800,
+        system=system,
+        messages=[{"role": "user", "content": f"Sujet à traiter :\n{sujet}"}],
+    )
+    return response.content[0].text.strip()
 
 
 NOTIONS_JURIDIQUES_SYSTEM_PROMPT = """Tu es un assistant qui prépare une recherche de jurisprudence à partir de faits décrits par un avocat francophone. Tu ne réponds pas à la question juridique toi-même — tu prépares seulement la recherche qui va suivre.
@@ -1262,7 +1269,14 @@ def consulter_jurisprudence(question: str, contexte_recherche: str, qualificatio
         consigne += f"\n\nQualification juridique identifiée : {qualification}"
     consigne += f"\n\nObjectif retenu pour cette recherche : {but or 'neutre — aucun objectif précisé'}"
 
-    return _appeler_modele_lourd(system, [{"role": "user", "content": consigne}], 2200)
+    client = _client()
+    response = client.messages.create(
+        model=MODEL_ACTIF,
+        max_tokens=2200,
+        system=system,
+        messages=[{"role": "user", "content": consigne}],
+    )
+    return response.content[0].text.strip()
 
 
 NOTES_INTELLIGENTES_SYSTEM_PROMPT = """Tu aides un professionnel du droit à organiser des notes de travail rapides et informelles liées à un dossier.
@@ -1290,8 +1304,14 @@ Règles impératives :
 def traiter_notes(notes_brutes: str) -> dict:
     """Structure des notes de travail brutes et en extrait les actions à
     faire — sans rien inventer ni omettre du contenu original."""
-    raw = _appeler_modele_lourd(NOTES_INTELLIGENTES_SYSTEM_PROMPT, [{"role": "user", "content": notes_brutes}], 1500)
-    raw = raw.replace("```json", "").replace("```", "").strip()
+    client = _client()
+    response = client.messages.create(
+        model=MODEL_ACTIF,
+        max_tokens=1500,
+        system=NOTES_INTELLIGENTES_SYSTEM_PROMPT,
+        messages=[{"role": "user", "content": notes_brutes}],
+    )
+    raw = response.content[0].text.strip().replace("```json", "").replace("```", "").strip()
     try:
         parsed = json.loads(raw)
     except json.JSONDecodeError as e:
@@ -1387,8 +1407,14 @@ def analyser_style_adverse(texte: str) -> dict:
     langage de couverture, affirmations absolues, voix passive suspecte,
     ruptures de registre. Complète l'analyse juridique classique par un
     angle stylistique, exploitant l'expertise en analyse du discours."""
-    raw = _appeler_modele_lourd(STYLE_ADVERSE_SYSTEM_PROMPT, [{"role": "user", "content": texte}], 2500)
-    raw = raw.replace("```json", "").replace("```", "").strip()
+    client = _client()
+    response = client.messages.create(
+        model=MODEL_ACTIF,
+        max_tokens=2500,
+        system=STYLE_ADVERSE_SYSTEM_PROMPT,
+        messages=[{"role": "user", "content": texte}],
+    )
+    raw = response.content[0].text.strip().replace("```json", "").replace("```", "").strip()
     try:
         parsed = json.loads(raw)
     except json.JSONDecodeError as e:
@@ -1578,8 +1604,14 @@ def verifier_juridiquement(contenu_a_verifier: str, citations_evaluees: list[dic
     if contexte_sources:
         contenu += f"\n\nSources disponibles pour juger la cohérence :\n{contexte_sources}"
 
-    raw = _appeler_modele_lourd(VERIFICATEUR_SYSTEM_PROMPT + _directive_langue(), [{"role": "user", "content": contenu}], 1500)
-    raw = raw.replace("```json", "").replace("```", "").strip()
+    client = _client()
+    response = client.messages.create(
+        model=MODEL_ACTIF,
+        max_tokens=1500,
+        system=VERIFICATEUR_SYSTEM_PROMPT + _directive_langue(),
+        messages=[{"role": "user", "content": contenu}],
+    )
+    raw = response.content[0].text.strip().replace("```json", "").replace("```", "").strip()
     try:
         parsed = json.loads(raw)
     except json.JSONDecodeError:
@@ -1626,8 +1658,14 @@ def critiquer_reponse(contenu_a_critiquer: str, contexte_dossier: str = "") -> d
     contenu = f"Analyse à critiquer :\n{contenu_a_critiquer}"
     if contexte_dossier:
         contenu += f"\n\nContexte du dossier :\n{contexte_dossier}"
-    raw = _appeler_modele_lourd(CRITIQUE_SYSTEM_PROMPT + _directive_langue(), [{"role": "user", "content": contenu}], 1500)
-    raw = raw.replace("```json", "").replace("```", "").strip()
+    client = _client()
+    response = client.messages.create(
+        model=MODEL_ACTIF,
+        max_tokens=1500,
+        system=CRITIQUE_SYSTEM_PROMPT + _directive_langue(),
+        messages=[{"role": "user", "content": contenu}],
+    )
+    raw = response.content[0].text.strip().replace("```json", "").replace("```", "").strip()
     try:
         parsed = json.loads(raw)
     except json.JSONDecodeError:
@@ -1666,8 +1704,14 @@ def valider_finalement(resultat_verification: dict, resultat_critique: dict) -> 
         f"Résultat du vérificateur juridique :\n{json.dumps(resultat_verification, ensure_ascii=False, indent=2)}\n\n"
         f"Résultat de l'agent critique :\n{json.dumps(resultat_critique, ensure_ascii=False, indent=2)}"
     )
-    raw = _appeler_modele_lourd(VALIDATION_FINALE_SYSTEM_PROMPT + _directive_langue(), [{"role": "user", "content": contenu}], 1200)
-    raw = raw.replace("```json", "").replace("```", "").strip()
+    client = _client()
+    response = client.messages.create(
+        model=MODEL_ACTIF,
+        max_tokens=1200,
+        system=VALIDATION_FINALE_SYSTEM_PROMPT + _directive_langue(),
+        messages=[{"role": "user", "content": contenu}],
+    )
+    raw = response.content[0].text.strip().replace("```json", "").replace("```", "").strip()
     try:
         parsed = json.loads(raw)
     except json.JSONDecodeError:
@@ -1741,8 +1785,14 @@ def generer_strategie_combative(
         if lignes:
             message += f"\n\nArguments adverses déjà identifiés (chacun doit recevoir une réponse) :\n{lignes}"
 
-    raw = _appeler_modele_lourd(STRATEGIE_COMBATIVE_SYSTEM_PROMPT + _directive_langue(), [{"role": "user", "content": message}], 3200)
-    raw = raw.replace("```json", "").replace("```", "").strip()
+    client = _client()
+    response = client.messages.create(
+        model=MODEL_ACTIF,
+        max_tokens=3200,
+        system=STRATEGIE_COMBATIVE_SYSTEM_PROMPT + _directive_langue(),
+        messages=[{"role": "user", "content": message}],
+    )
+    raw = response.content[0].text.strip().replace("```json", "").replace("```", "").strip()
     try:
         parsed = json.loads(raw)
     except json.JSONDecodeError:

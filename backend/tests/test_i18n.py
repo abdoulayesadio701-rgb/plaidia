@@ -31,9 +31,7 @@ class _FakeResponse:
 
 class _ClientEspion:
     """Capture le `system` reçu par le dernier appel -- pour vérifier que
-    la directive de langue y a bien été ajoutée, sans appel réseau réel.
-    Utilisé pour les agents restés sur Claude (_client()) : le garde-fou,
-    la détection d'intention, les notions juridiques."""
+    la directive de langue y a bien été ajoutée, sans appel réseau réel."""
 
     def __init__(self, text: str = "{}"):
         self.messages = self
@@ -43,21 +41,6 @@ class _ClientEspion:
     def create(self, **kwargs):
         self.dernier_system = kwargs.get("system")
         return _FakeResponse(self._text)
-
-
-class _ModeleLourdEspion:
-    """Même principe que _ClientEspion, mais pour les agents basculés sur
-    DeepSeek (_appeler_modele_lourd) : l'agent principal, le vérificateur,
-    le critique et la stratégie combative -- voir le changement de
-    fournisseur de modèle demandé par l'utilisateur."""
-
-    def __init__(self, text: str = "{}"):
-        self._text = text
-        self.dernier_system: str | None = None
-
-    def __call__(self, system, messages, max_tokens):
-        self.dernier_system = system
-        return self._text
 
 
 def test_langue_par_defaut_est_le_francais_sans_directive():
@@ -79,8 +62,8 @@ def test_directive_anglaise_ajoutee_au_system_prompt_de_l_agent_principal(monkey
     directive de langue (voir analyse.py, injection systématique sur les
     fonctions utilisées par analyse/plan/simulateur/consultation/greffier/
     chat)."""
-    espion = _ModeleLourdEspion('{"arguments": [], "points_attention": []}')
-    monkeypatch.setattr(legacy_analyse, "_appeler_modele_lourd", espion)
+    espion = _ClientEspion('{"arguments": [], "points_attention": []}')
+    monkeypatch.setattr(legacy_analyse, "_client", lambda: espion)
     jeton = legacy_analyse.definir_langue_requete("en")
     try:
         legacy_analyse.analyser_conclusions("Texte de conclusions à analyser pour ce test.")
@@ -93,34 +76,29 @@ def test_directive_anglaise_ajoutee_au_system_prompt_de_l_agent_principal(monkey
 def test_garde_fou_verificateur_critique_et_strategie_recoivent_la_directive(monkeypatch):
     """Couvre spécifiquement les agents nommés par la consigne : le
     garde-fou, le vérificateur, le critique et la stratégie combative
-    doivent tous produire leurs messages dans la langue choisie. Le
-    garde-fou est resté sur Claude (_client()) ; les trois autres sont
-    passés à DeepSeek (_appeler_modele_lourd) -- voir le changement de
-    fournisseur de modèle demandé par l'utilisateur."""
-    espion_client = _ClientEspion("{}")
-    espion_lourd = _ModeleLourdEspion("{}")
-    monkeypatch.setattr(legacy_analyse, "_client", lambda: espion_client)
-    monkeypatch.setattr(legacy_analyse, "_appeler_modele_lourd", espion_lourd)
+    doivent tous produire leurs messages dans la langue choisie."""
+    espion = _ClientEspion("{}")
+    monkeypatch.setattr(legacy_analyse, "_client", lambda: espion)
     jeton = legacy_analyse.definir_langue_requete("en")
     try:
         legacy_analyse.evaluer_garde_fou_entree("Un texte de plus de vingt-cinq caractères pour dépasser le raccourci.")
-        assert "write your entire response in English" in espion_client.dernier_system
+        assert "write your entire response in English" in espion.dernier_system
 
         legacy_analyse.verifier_juridiquement("texte", [])
-        assert "write your entire response in English" in espion_lourd.dernier_system
+        assert "write your entire response in English" in espion.dernier_system
 
         legacy_analyse.critiquer_reponse("texte à critiquer")
-        assert "write your entire response in English" in espion_lourd.dernier_system
+        assert "write your entire response in English" in espion.dernier_system
 
         legacy_analyse.generer_strategie_combative("contexte", "Défendeur")
-        assert "write your entire response in English" in espion_lourd.dernier_system
+        assert "write your entire response in English" in espion.dernier_system
     finally:
         legacy_analyse.reinitialiser_langue_requete(jeton)
 
 
 def test_francais_ne_reçoit_aucune_directive_ajoutee(monkeypatch):
-    espion = _ModeleLourdEspion('{"arguments": [], "points_attention": []}')
-    monkeypatch.setattr(legacy_analyse, "_appeler_modele_lourd", espion)
+    espion = _ClientEspion('{"arguments": [], "points_attention": []}')
+    monkeypatch.setattr(legacy_analyse, "_client", lambda: espion)
     # Langue par défaut, pas besoin de la positionner explicitement.
     legacy_analyse.analyser_conclusions("Texte de conclusions à analyser pour ce test.")
     assert "LANGUAGE" not in espion.dernier_system
