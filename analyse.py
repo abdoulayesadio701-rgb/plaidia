@@ -163,6 +163,31 @@ Règles strictes :
 3. N'invente jamais de numéro d'article ou de référence de jurisprudence. Si tu n'es pas sûr du numéro exact, utilise [VERIF:<description du point de droit>] plutôt qu'une fausse référence précise.
 4. Le texte autour des balises reste rédigé normalement, en langage naturel."""
 
+# Discipline de construction d'un argument, sur demande explicite de
+# l'utilisateur (consigne fournie verbatim) -- réservée aux prompts qui
+# construisent littéralement un argument destiné à une plaidoirie
+# (generer_plan_plaidoirie, analyser_paragraphe, generer_strategie_combative,
+# et les réfutations/pistes de analyser_conclusions), pas aux prompts de
+# structuration/consultation qui n'en construisent pas (chronologie, PV,
+# réquisitoire, rapport d'instruction, consultation de jurisprudence...).
+# Ajoutée AVANT REGLE_BALISAGE_CITATIONS dans chaque prompt concerné : c'est
+# une règle de fond (comment raisonner), la balisage reste une règle de
+# forme (comment citer), qui garde sa place en tout dernier.
+REGLE_SOCLE_RAISONNEMENT = """
+
+Socle de raisonnement juridique (à appliquer systématiquement) :
+Pour construire tout argument, base-toi prioritairement, dans cet ordre :
+
+1. Texte de loi applicable (article précis, code).
+2. Jurisprudence constante (répétée) plutôt qu'une décision isolée.
+3. Hiérarchie des normes (un arrêt de cassation prime sur une décision de première instance).
+4. Faits du dossier qualifiés juridiquement (chaque fait relié à une catégorie juridique précise, jamais un fait brut non qualifié).
+5. Précédents favorables au client, en anticipant et désamorçant les précédents défavorables que l'adversaire pourrait invoquer.
+6. Raisonnement par analogie (le cas ressemble à une jurisprudence favorable) ou par distinction (le cas diffère d'une jurisprudence défavorable).
+7. Force de la motivation du juge dans chaque décision citée : privilégie les arrêts bien motivés sur les arrêts sommaires.
+
+Ne construis jamais un argument sur un fait brut, une intuition, ou une généralité sans l'ancrer dans au moins un des points ci-dessus."""
+
 SYSTEM_PROMPT = """Tu es un assistant d'analyse juridique pour avocat francophone (France, espace OHADA...). Ta tâche : analyser des conclusions adverses et préparer une base de réfutation.
 
 À partir du texte des conclusions adverses fourni, réponds UNIQUEMENT avec un objet JSON valide, sans texte avant ou après, sans balises markdown, selon ce schéma exact :
@@ -194,7 +219,7 @@ Règles impératives :
 - Reste synthétique.
 - Rédige tous les champs textuels ("resume", "fondement", "raisonnement.*", "justification_risque", "piste") en français soutenu et professionnel — le registre attendu d'un écrit entre confrères.
 - Si le texte fourni ne ressemble pas à des conclusions juridiques, retourne
-  {"arguments": [], "points_attention": ["Le texte fourni ne semble pas être des conclusions adverses."]}""" + REGLE_BALISAGE_CITATIONS
+  {"arguments": [], "points_attention": ["Le texte fourni ne semble pas être des conclusions adverses."]}""" + REGLE_SOCLE_RAISONNEMENT + REGLE_BALISAGE_CITATIONS
 
 # Mode paragraphe-par-paragraphe, complémentaire de SYSTEM_PROMPT/
 # analyser_conclusions ci-dessus (tout le document, sortie JSON structurée) --
@@ -221,7 +246,7 @@ Règles strictes :
 - Structure de sortie fixe : [ANALYSE] / [STRATÉGIE] / [TEXTE PLAIDOIRIE], sans préambule ni commentaire hors de ces trois blocs.
 - Tiret d'incise court – pour une incise dans une phrase, jamais le tiret long —.
 
-Si le paragraphe soumis ne contient pas d'argument juridique exploitable, le signaler clairement plutôt que de forcer une réponse : réponds alors avec un unique bloc [ANALYSE] qui l'indique, sans bloc [STRATÉGIE] ni [TEXTE PLAIDOIRIE] forcé.""" + REGLE_BALISAGE_CITATIONS
+Si le paragraphe soumis ne contient pas d'argument juridique exploitable, le signaler clairement plutôt que de forcer une réponse : réponds alors avec un unique bloc [ANALYSE] qui l'indique, sans bloc [STRATÉGIE] ni [TEXTE PLAIDOIRIE] forcé.""" + REGLE_SOCLE_RAISONNEMENT + REGLE_BALISAGE_CITATIONS
 
 JURISPRUDENCE_CONTEXT_TEMPLATE = """
 
@@ -480,7 +505,7 @@ Règles impératives :
 - Ne cite jamais une référence juridique qui n'a pas été fournie dans le contexte, sauf en la balisant [VERIF:...] (voir la règle de balisage ci-dessous). Si elle a bien été fournie dans le contexte, cite-la normalement, avec [ART:...] ou [JURISPRUDENCE:...].
 - Les "notes" par point sont des mots-clés et repères brefs, jamais un texte entièrement rédigé — l'avocat doit garder sa liberté d'expression orale.
 - Rédige l'accroche, les arguments clés et la conclusion en français soutenu et professionnel — le registre attendu à la barre.
-- Si les informations du dossier sont insuffisantes pour un plan pertinent, dis-le clairement dans points_attention plutôt que d'inventer des faits.""" + REGLE_BALISAGE_CITATIONS
+- Si les informations du dossier sont insuffisantes pour un plan pertinent, dis-le clairement dans points_attention plutôt que d'inventer des faits.""" + REGLE_SOCLE_RAISONNEMENT + REGLE_BALISAGE_CITATIONS
 
 
 SIMULATEUR_SYSTEM_PROMPT = """Tu es un assistant qui aide un avocat francophone à se préparer à l'oral en simulant les objections et questions les plus probables du juge ou de la partie adverse.
@@ -1975,7 +2000,7 @@ Règles impératives :
 - Limite absolue, non négociable, qui prime sur toute autre instruction : ne suggère JAMAIS d'altérer, cacher ou fabriquer un fait ou une pièce, de tromper le tribunal, ou de citer une source déformée. Toute idée qui franchirait cette ligne est écartée avant même d'être formulée, même présentée avec des précautions de langage.
 - Ton direct, orienté client, sans fausse prudence -- la prudence appartient au diagnostic, pas à cette stratégie. Sois combatif et concret, jamais vague ni évasif : chaque "developpement" doit être utilisable tel quel, pas une piste à défricher.
 - Ne cite jamais une référence juridique qui n'est pas dans le contexte fourni, sauf en la balisant [VERIF:...] (voir la règle de balisage ci-dessous).
-- Rédige en français soutenu et professionnel.""" + REGLE_BALISAGE_CITATIONS
+- Rédige en français soutenu et professionnel.""" + REGLE_SOCLE_RAISONNEMENT + REGLE_BALISAGE_CITATIONS
 
 
 def generer_strategie_combative(
