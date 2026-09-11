@@ -106,7 +106,7 @@ MODEL_ACTIF = "claude-sonnet-4-6"
 # identifier_notions_juridiques -- jamais à une fonction qui produit du
 # contenu juridique destiné à l'utilisateur final (voir MODEL_ACTIF
 # ci-dessus, qui reste le modèle de ces dernières).
-MODEL_LEGER = "claude-haiku-4-6"
+MODEL_LEGER = "claude-haiku-4-5-20251001"
 
 SYSTEM_PROMPT = """Tu es un assistant d'analyse juridique pour avocat francophone (France, espace OHADA...). Ta tâche : analyser des conclusions adverses et préparer une base de réfutation.
 
