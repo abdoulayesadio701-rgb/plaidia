@@ -196,6 +196,33 @@ Règles impératives :
 - Si le texte fourni ne ressemble pas à des conclusions juridiques, retourne
   {"arguments": [], "points_attention": ["Le texte fourni ne semble pas être des conclusions adverses."]}""" + REGLE_BALISAGE_CITATIONS
 
+# Mode paragraphe-par-paragraphe, complémentaire de SYSTEM_PROMPT/
+# analyser_conclusions ci-dessus (tout le document, sortie JSON structurée) --
+# celui-ci traite un unique paragraphe et retourne du texte libre balisé en
+# trois blocs fixes, pour un usage plus proche de la relecture manuelle
+# qu'une analyse de conclusions complètes. Numérotation interne (1./2./3.)
+# alignée sur les libellés de "Structure de sortie fixe" ci-dessous
+# (STRATÉGIE, TEXTE PLAIDOIRIE) pour éviter toute divergence de libellé
+# entre la description du contenu attendu et les balises de sortie exigées.
+PARAGRAPHE_SYSTEM_PROMPT = """Tu es l'agent d'analyse et de préparation de plaidoirie de Plaid'IA.
+
+Pour chaque paragraphe des conclusions adverses qui t'est soumis, tu produis en une seule réponse :
+
+1. ANALYSE : identifie l'argument juridique exact soulevé, ses fondements (texte de loi, jurisprudence citée), et sa faiblesse ou son point d'appui principal.
+
+2. STRATÉGIE : détermine la stratégie de réponse la plus pertinente (contestation, nuance, contre-argument, appui sur jurisprudence contraire).
+
+3. TEXTE PLAIDOIRIE : rédige le paragraphe de plaidoirie répondant directement à cet argument, prêt à être intégré ou adapté par l'avocat.
+
+Règles strictes :
+- Zéro hors-sujet toléré : chaque phrase doit se rattacher directement à l'argument analysé, sans digression ni généralité.
+- Chaque affirmation juridique doit être vérifiable (article de loi, arrêt cité) -- jamais d'invention. Si une source est incertaine, le signaler explicitement plutôt que l'affirmer, en la balisant [VERIF:...] (voir la règle de balisage ci-dessous).
+- Ton exigé : rigoureux, pertinent, perspicace -- le niveau d'un avocat expérimenté préparant sa plaidoirie, pas un résumé scolaire.
+- Structure de sortie fixe : [ANALYSE] / [STRATÉGIE] / [TEXTE PLAIDOIRIE], sans préambule ni commentaire hors de ces trois blocs.
+- Tiret d'incise court – pour une incise dans une phrase, jamais le tiret long —.
+
+Si le paragraphe soumis ne contient pas d'argument juridique exploitable, le signaler clairement plutôt que de forcer une réponse : réponds alors avec un unique bloc [ANALYSE] qui l'indique, sans bloc [STRATÉGIE] ni [TEXTE PLAIDOIRIE] forcé.""" + REGLE_BALISAGE_CITATIONS
+
 JURISPRUDENCE_CONTEXT_TEMPLATE = """
 
 Références de jurisprudence déjà validées par l'avocat pour ce domaine (tu peux t'y référer avec confiance si pertinent, sans les inventer ni les modifier) :
@@ -895,6 +922,36 @@ def analyser_conclusions(texte: str, contexte_recherche: str | None = None, juri
     parsed.setdefault("arguments", [])
     parsed.setdefault("points_attention", [])
     return parsed
+
+
+def analyser_paragraphe(paragraphe: str, contexte_recherche: str | None = None) -> str:
+    """
+    Envoie un unique paragraphe des conclusions adverses à Claude et retourne
+    le texte brut de sa réponse, structuré en trois blocs fixes
+    [ANALYSE] / [STRATÉGIE] / [TEXTE PLAIDOIRIE] (voir PARAGRAPHE_SYSTEM_PROMPT).
+
+    Mode complémentaire de analyser_conclusions ci-dessus, pas un
+    remplacement : celle-ci traite tout le document et renvoie du JSON
+    structuré consommé par quality_pipeline.py/ArgumentCard.tsx/export.py --
+    rien de tout cela n'est concerné par cette fonction, qui renvoie du texte
+    libre balisé pour un paragraphe isolé.
+
+    contexte_recherche : bloc de texte optionnel produit par
+    recherche_juridique.formater_contexte_pour_prompt() — résultats live
+    de Légifrance/Judilibre, injectés en contexte pour orienter l'analyse.
+    """
+    system = PARAGRAPHE_SYSTEM_PROMPT + _directive_langue()
+    if contexte_recherche:
+        system += contexte_recherche
+
+    client = _client()
+    response = client.messages.create(
+        model=MODEL_ACTIF,
+        max_tokens=2000,
+        system=system,
+        messages=[{"role": "user", "content": paragraphe}],
+    )
+    return response.content[0].text.strip()
 
 
 # --- Découpe en moyens et analyse parallèle (chantier "temps de traitement", §2e) ---

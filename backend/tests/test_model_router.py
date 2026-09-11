@@ -252,6 +252,21 @@ def test_analyser_conclusions_nappelle_jamais_appeler_modele(monkeypatch):
     legacy_analyse.analyser_conclusions("texte de conclusions")
 
 
+def test_analyser_paragraphe_reste_sur_claude_sans_exception(monkeypatch):
+    """Même verrou que generer_plan_plaidoirie/analyser_conclusions ci-dessus :
+    le mode paragraphe-par-paragraphe est aussi une fonction d'analyse
+    d'arguments juridiques, elle n'a jamais de raison de passer par DeepSeek."""
+    def _echoue_si_appelee(*a, **k):
+        raise AssertionError("_appeler_modele ne doit pas être dans le chemin de analyser_paragraphe")
+
+    monkeypatch.setattr(legacy_analyse, "_appeler_modele", _echoue_si_appelee)
+    fake = _FakeClientClaude("[ANALYSE]\ntexte\n[STRATÉGIE]\ntexte\n[TEXTE PLAIDOIRIE]\ntexte")
+    monkeypatch.setattr(legacy_analyse, "_client", lambda: fake)
+    resultat = legacy_analyse.analyser_paragraphe("Un paragraphe de conclusions adverses.")
+    assert fake.messages.captured["model"] == legacy_analyse.MODEL_ACTIF
+    assert "[ANALYSE]" in resultat
+
+
 # --- Garde dédié DeepSeek (app/demo.py) --------------------------------------
 
 def test_exiger_cle_api_deepseek_leve_503_si_absente(monkeypatch):
