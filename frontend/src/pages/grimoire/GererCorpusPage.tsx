@@ -12,6 +12,8 @@
 
 import { useMemo, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
+import type { TFunction } from "i18next";
 import { jurisprudence as jurisprudenceApi } from "@/api";
 import type { CorpusTexte } from "@/api";
 import { useAppStore } from "@/store/useAppStore";
@@ -28,22 +30,18 @@ import RichOutput from "@/components/RichOutput";
 import ConfirmerModal from "@/components/ConfirmerModal";
 import { SkeletonList } from "@/components/Skeleton";
 
-const ONGLETS = [
-  { id: "attente", label: "En attente" },
-  { id: "valide", label: "Validé" },
-];
-
 export default function GererCorpusPage() {
+  const { t } = useTranslation();
   return (
     <div className="mx-auto max-w-4xl space-y-8">
       <div>
-        <p className="kicker">Le Grimoire</p>
-        <h1 className="mt-1 font-serif text-h2 font-semibold text-gold-500">Gérer le corpus multi-source</h1>
-        <p className="mt-2 text-sm text-warmgray">Textes juridiques hors Légifrance : OHADA, droit de l'Union européenne, droit sénégalais, CEDEAO, CEDH…</p>
+        <p className="kicker">{t("nav.sections.grimoire")}</p>
+        <h1 className="mt-1 font-serif text-h2 font-semibold text-gold-500">{t("nav.grimoire.corpus")}</h1>
+        <p className="mt-2 text-sm text-warmgray">{t("gererCorpus.sousTitre")}</p>
         <p className="mt-1 text-sm text-warmgray">
-          Pour choisir la juridiction active (utilisée par le Chat et « Consulter la jurisprudence »), voir{" "}
+          {t("gererCorpus.pourJuridiction")}{" "}
           <Link to="/app/parametres" className="text-amethyst-400 hover:underline">
-            Paramètres
+            {t("topBar.parametres")}
           </Link>
           .
         </p>
@@ -56,6 +54,7 @@ export default function GererCorpusPage() {
 }
 
 function ImporterTexteSection() {
+  const { t } = useTranslation();
   const pousserToast = useAppStore((s) => s.pousserToast);
   const chargerCompteursAttente = useAppStore((s) => s.chargerCompteursAttente);
   const [ouvert, setOuvert] = useState(false);
@@ -94,12 +93,12 @@ function ImporterTexteSection() {
     setEnCours(true);
     try {
       await jurisprudenceApi.importerTexteCorpus({ ...metaCommune, contenu: contenu.trim() });
-      pousserToast("success", "Texte importé – en attente de validation.");
+      pousserToast("success", t("gererCorpus.texteImporte"));
       reinitialiser();
       setOuvert(false);
       void chargerCompteursAttente();
     } catch (e) {
-      pousserToast("error", e instanceof Error ? e.message : "L'import a échoué.");
+      pousserToast("error", e instanceof Error ? e.message : t("gererCorpus.echecImport"));
     } finally {
       setEnCours(false);
     }
@@ -107,18 +106,18 @@ function ImporterTexteSection() {
 
   const importerFichier = async (fichier: File) => {
     if (!sourceFinale) {
-      pousserToast("error", "Renseignez d'abord la source avant d'importer un fichier.");
+      pousserToast("error", t("gererCorpus.sourceRequise"));
       return;
     }
     setEnCours(true);
     try {
       const resultat = await jurisprudenceApi.importerFichierCorpus(fichier, metaCommune);
-      pousserToast("success", `« ${resultat.reference || fichier.name} » importé – en attente de validation.`);
+      pousserToast("success", t("gererCorpus.fichierImporte", { nom: resultat.reference || fichier.name }));
       reinitialiser();
       setOuvert(false);
       void chargerCompteursAttente();
     } catch (e) {
-      pousserToast("error", e instanceof Error ? e.message : "L'import a échoué.");
+      pousserToast("error", e instanceof Error ? e.message : t("gererCorpus.echecImport"));
     } finally {
       setEnCours(false);
     }
@@ -127,7 +126,7 @@ function ImporterTexteSection() {
   return (
     <section className="card space-y-4 p-6">
       <button type="button" onClick={() => setOuvert((o) => !o)} className="flex w-full items-center justify-between text-left">
-        <h2 className="font-serif text-h3 font-semibold text-gold-500">Importer un texte</h2>
+        <h2 className="font-serif text-h3 font-semibold text-gold-500">{t("gererCorpus.importerTexte")}</h2>
         <span className={`text-warmgray transition-transform duration-200 ${ouvert ? "rotate-180" : ""}`} aria-hidden="true">
           ▾
         </span>
@@ -138,7 +137,7 @@ function ImporterTexteSection() {
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
               <label htmlFor="it-source" className="mb-1.5 block text-sm text-warmgray">
-                Source
+                {t("gererCorpus.source")}
               </label>
               <select id="it-source" className="input" value={source} onChange={(e) => setSource(e.target.value)}>
                 {SOURCES_CORPUS.map((s) => (
@@ -150,7 +149,7 @@ function ImporterTexteSection() {
               {source === "Autre" && (
                 <input
                   className="input mt-2"
-                  placeholder="Nom de la source"
+                  placeholder={t("gererCorpus.nomDeLaSource")}
                   value={sourceLibre}
                   onChange={(e) => setSourceLibre(e.target.value)}
                 />
@@ -158,24 +157,24 @@ function ImporterTexteSection() {
             </div>
             <div>
               <label htmlFor="it-pays" className="mb-1.5 block text-sm text-warmgray">
-                Pays (optionnel)
+                {t("gererCorpus.paysOptionnel")}
               </label>
               <input id="it-pays" className="input" value={pays} onChange={(e) => setPays(e.target.value)} />
             </div>
             <div>
               <label htmlFor="it-type" className="mb-1.5 block text-sm text-warmgray">
-                Type de texte
+                {t("gererCorpus.typeDeTexte")}
               </label>
               <input id="it-type" list="it-types" className="input" value={typeTexte} onChange={(e) => setTypeTexte(e.target.value)} />
               <datalist id="it-types">
-                {TYPES_TEXTE_CORPUS.map((t) => (
-                  <option key={t} value={t} />
+                {TYPES_TEXTE_CORPUS.map((tt) => (
+                  <option key={tt} value={tt} />
                 ))}
               </datalist>
             </div>
             <div>
               <label htmlFor="it-domaine" className="mb-1.5 block text-sm text-warmgray">
-                Domaine
+                {t("modifierDomaine.domaine")}
               </label>
               <input id="it-domaine" list="it-domaines" className="input" value={domaine} onChange={(e) => setDomaine(e.target.value)} />
               <datalist id="it-domaines">
@@ -186,13 +185,13 @@ function ImporterTexteSection() {
             </div>
             <div>
               <label htmlFor="it-reference" className="mb-1.5 block text-sm text-warmgray">
-                Référence
+                {t("collecterJurisprudence.reference")}
               </label>
-              <input id="it-reference" className="input" placeholder="Ex. Acte uniforme OHADA du 15/12/2010" value={reference} onChange={(e) => setReference(e.target.value)} />
+              <input id="it-reference" className="input" placeholder={t("gererCorpus.referencePlaceholder")} value={reference} onChange={(e) => setReference(e.target.value)} />
             </div>
             <div>
               <label htmlFor="it-date" className="mb-1.5 block text-sm text-warmgray">
-                Date du texte
+                {t("gererCorpus.dateDuTexte")}
               </label>
               <input id="it-date" type="date" className="input" value={dateTexte} onChange={(e) => setDateTexte(e.target.value)} />
             </div>
@@ -204,26 +203,26 @@ function ImporterTexteSection() {
                 onClick={() => setModeImport("texte")}
                 className={`rounded-md px-3 py-1.5 font-medium transition-colors ${modeImport === "texte" ? "bg-amethyst-400/15 text-amethyst-400" : "text-warmgray hover:text-ivory"}`}
               >
-                Coller le texte
+                {t("gererCorpus.collerLeTexte")}
               </button>
               <button
                 type="button"
                 onClick={() => setModeImport("fichier")}
                 className={`rounded-md px-3 py-1.5 font-medium transition-colors ${modeImport === "fichier" ? "bg-amethyst-400/15 text-amethyst-400" : "text-warmgray hover:text-ivory"}`}
               >
-                Importer un fichier
+                {t("fileDropZone.libelleBouton").replace("📎 ", "")}
               </button>
             </div>
 
             {modeImport === "texte" ? (
               <>
                 <label htmlFor="it-contenu" className="mb-1.5 block text-sm text-warmgray">
-                  Contenu
+                  {t("gererCorpus.contenu")}
                 </label>
                 <textarea
                   id="it-contenu"
                   className="input min-h-[160px] resize-y"
-                  placeholder="Collez ici le texte intégral (ou l'extrait pertinent) du texte juridique."
+                  placeholder={t("gererCorpus.contenuPlaceholder")}
                   value={contenu}
                   onChange={(e) => setContenu(e.target.value)}
                 />
@@ -234,15 +233,15 @@ function ImporterTexteSection() {
                 loading={enCours}
                 disabled={!sourceFinale}
                 onFichiers={(fichiers) => void importerFichier(fichiers[0])}
-                titre="Déposez le texte juridique ici"
-                description="ou cliquez pour parcourir — PDF, Word, Excel, image ou texte. Renseignez d'abord la source ci-dessus."
+                titre={t("gererCorpus.deposezIci")}
+                description={t("gererCorpus.dropzoneDescription")}
               />
             )}
           </div>
           {modeImport === "texte" && (
             <div className="flex justify-end">
               <Button type="submit" variant="primary" loading={enCours} disabled={contenu.trim() === "" || (source === "Autre" && !sourceLibre.trim())}>
-                Importer
+                {t("gererCorpus.importer")}
               </Button>
             </div>
           )}
@@ -253,6 +252,11 @@ function ImporterTexteSection() {
 }
 
 function GererCorpusSection() {
+  const { t } = useTranslation();
+  const ONGLETS = [
+    { id: "attente", label: t("gererJurisprudence.ongletAttente") },
+    { id: "valide", label: t("gererCorpus.ongletValide") },
+  ];
   const pousserToast = useAppStore((s) => s.pousserToast);
   const chargerCompteursAttente = useAppStore((s) => s.chargerCompteursAttente);
   const chargerSourcesJuridictions = useAppStore((s) => s.chargerSourcesJuridictions);
@@ -285,12 +289,12 @@ function GererCorpusSection() {
     marquerEnCours(item.id, true);
     try {
       await jurisprudenceApi.validerCorpus(item.id);
-      pousserToast("success", `Texte « ${item.reference || item.source} » validé.`);
+      pousserToast("success", t("gererCorpus.texteValide", { ref: item.reference || item.source }));
       reload();
       void chargerCompteursAttente();
       void chargerSourcesJuridictions();
     } catch (e) {
-      pousserToast("error", e instanceof Error ? e.message : "La validation a échoué.");
+      pousserToast("error", e instanceof Error ? e.message : t("gererJurisprudence.echecValidation"));
     } finally {
       marquerEnCours(item.id, false);
     }
@@ -300,11 +304,11 @@ function GererCorpusSection() {
     marquerEnCours(item.id, true);
     try {
       await jurisprudenceApi.rejeterCorpus(item.id);
-      pousserToast("success", `Texte « ${item.reference || item.source} » rejeté.`);
+      pousserToast("success", t("gererCorpus.texteRejete", { ref: item.reference || item.source }));
       reload();
       void chargerCompteursAttente();
     } catch (e) {
-      pousserToast("error", e instanceof Error ? e.message : "Le rejet a échoué.");
+      pousserToast("error", e instanceof Error ? e.message : t("gererJurisprudence.echecRejet"));
     } finally {
       marquerEnCours(item.id, false);
     }
@@ -317,18 +321,19 @@ function GererCorpusSection() {
   // OHADA) : le domaine (ex. le nom complet de l'acte) est le bon niveau de
   // granularité pour valider en bloc sans devoir faire confiance à toute la
   // source d'un coup.
+  const sansDomainePrecise = t("gererCorpus.sansDomainePrecise");
   const groupesParSourceEtDomaine = useMemo(() => {
     if (onglet !== "attente" || !liste) return [];
     const parSource = new Map<string, Map<string, CorpusTexte[]>>();
     for (const item of liste) {
       if (!parSource.has(item.source)) parSource.set(item.source, new Map());
       const parDomaine = parSource.get(item.source)!;
-      const cleDomaine = item.domaine || "(sans domaine précisé)";
+      const cleDomaine = item.domaine || sansDomainePrecise;
       if (!parDomaine.has(cleDomaine)) parDomaine.set(cleDomaine, []);
       parDomaine.get(cleDomaine)!.push(item);
     }
     return [...parSource.entries()].map(([src, parDomaine]) => [src, [...parDomaine.entries()]] as const);
-  }, [onglet, liste]);
+  }, [onglet, liste, sansDomainePrecise]);
 
   const confirmerValidationEnBloc = async () => {
     if (!sourceAValiderEnBloc) return;
@@ -338,14 +343,18 @@ function GererCorpusSection() {
         sourceAValiderEnBloc.source,
         sourceAValiderEnBloc.domaine || undefined
       );
-      const cible = sourceAValiderEnBloc.domaine ? `« ${sourceAValiderEnBloc.domaine} »` : `toute la source « ${sourceAValiderEnBloc.source} »`;
-      pousserToast("success", `${nombre_valide} texte(s) validé(s) pour ${cible}.`);
+      pousserToast(
+        "success",
+        sourceAValiderEnBloc.domaine
+          ? t("gererCorpus.blocValideDomaine", { count: nombre_valide, domaine: sourceAValiderEnBloc.domaine })
+          : t("gererCorpus.blocValideSource", { count: nombre_valide, source: sourceAValiderEnBloc.source })
+      );
       setSourceAValiderEnBloc(null);
       reload();
       void chargerCompteursAttente();
       void chargerSourcesJuridictions();
     } catch (e) {
-      pousserToast("error", e instanceof Error ? e.message : "La validation en bloc a échoué.");
+      pousserToast("error", e instanceof Error ? e.message : t("gererCorpus.echecValidationBloc"));
     } finally {
       setValidationBlocEnCours(false);
     }
@@ -353,23 +362,23 @@ function GererCorpusSection() {
 
   return (
     <section className="space-y-4">
-      <h2 className="font-serif text-h3 font-semibold text-gold-500">Le corpus</h2>
+      <h2 className="font-serif text-h3 font-semibold text-gold-500">{t("gererCorpus.leCorpus")}</h2>
 
       <div className="flex flex-wrap items-center justify-between gap-4">
         <Tabs tabs={ONGLETS} actif={onglet} onChange={setOnglet} />
         {onglet === "valide" && (
           <div className="flex flex-wrap gap-2">
-            <select className="input w-auto" aria-label="Filtrer par source" value={source} onChange={(e) => setSource(e.target.value)}>
-              <option value="">Toutes les sources</option>
+            <select className="input w-auto" aria-label={t("gererCorpus.filtrerParSource")} value={source} onChange={(e) => setSource(e.target.value)}>
+              <option value="">{t("gererCorpus.toutesLesSources")}</option>
               {SOURCES_CORPUS.filter((s) => s !== "Autre").map((s) => (
                 <option key={s} value={s}>
                   {s}
                 </option>
               ))}
             </select>
-            <input className="input w-auto" placeholder="Pays" aria-label="Filtrer par pays" value={pays} onChange={(e) => setPays(e.target.value)} />
-            <select className="input w-auto" aria-label="Filtrer par domaine" value={domaine} onChange={(e) => setDomaine(e.target.value)}>
-              <option value="">Tous les domaines</option>
+            <input className="input w-auto" placeholder={t("gererCorpus.pays")} aria-label={t("gererCorpus.filtrerParPays")} value={pays} onChange={(e) => setPays(e.target.value)} />
+            <select className="input w-auto" aria-label={t("gererJurisprudence.filtrerParDomaine")} value={domaine} onChange={(e) => setDomaine(e.target.value)}>
+              <option value="">{t("gererJurisprudence.tousLesDomaines")}</option>
               {DOMAINES.map((d) => (
                 <option key={d} value={d}>
                   {d}
@@ -386,8 +395,8 @@ function GererCorpusSection() {
 
       {!loading && !error && liste && liste.length === 0 && (
         <EmptyState
-          titre={onglet === "attente" ? "Aucun texte en attente" : "Aucun texte validé"}
-          description={onglet === "attente" ? "Utilisez « Importer un texte » ci-dessus pour en ajouter." : "Validez des textes en attente pour les voir apparaître ici."}
+          titre={onglet === "attente" ? t("gererCorpus.aucunEnAttenteTitre") : t("gererCorpus.aucunValideTitre")}
+          description={onglet === "attente" ? t("gererCorpus.aucunEnAttenteDescription") : t("gererCorpus.aucunValideDescription")}
         />
       )}
 
@@ -399,15 +408,15 @@ function GererCorpusSection() {
               <div key={source} className="space-y-4">
                 <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gold-600/20 pb-2">
                   <p className="text-sm font-semibold text-gold-500">
-                    {source} <span className="font-normal text-warmgray">· {totalSource} en attente</span>
+                    {source} <span className="font-normal text-warmgray">· {t("gererCorpus.enAttenteCount", { count: totalSource })}</span>
                   </p>
                   {groupesDomaine.length > 1 && totalSource > 1 && (
                     <button
                       onClick={() => setSourceAValiderEnBloc({ source, domaine: "", nombre: totalSource })}
                       className="text-xs text-warmgray underline decoration-dotted hover:text-ivory"
-                      title="Valide tous les domaines de cette source en une fois – à réserver aux sources dont chaque lot est fiable"
+                      title={t("gererCorpus.validerToutTitle")}
                     >
-                      Tout valider d'un coup ({totalSource})
+                      {t("gererCorpus.validerToutDunCoup", { count: totalSource })}
                     </button>
                   )}
                 </div>
@@ -420,10 +429,10 @@ function GererCorpusSection() {
                       </p>
                       {items.length > 1 && (
                         <button
-                          onClick={() => setSourceAValiderEnBloc({ source, domaine: domaine === "(sans domaine précisé)" ? "" : domaine, nombre: items.length })}
+                          onClick={() => setSourceAValiderEnBloc({ source, domaine: domaine === sansDomainePrecise ? "" : domaine, nombre: items.length })}
                           className="rounded-md border border-risk-low/40 bg-risk-low/10 px-2.5 py-1 text-xs font-semibold text-risk-low transition-colors hover:bg-risk-low/20"
                         >
-                          ✓ Valider en bloc ({items.length})
+                          ✓ {t("gererCorpus.validerEnBloc", { count: items.length })}
                         </button>
                       )}
                     </div>
@@ -437,6 +446,7 @@ function GererCorpusSection() {
                         onValider={() => void valider(item)}
                         onRejeter={() => void rejeter(item)}
                         afficherActions
+                        t={t}
                       />
                     ))}
                   </div>
@@ -457,6 +467,7 @@ function GererCorpusSection() {
               enCours={false}
               onToggleLire={() => setLigneOuverte(ligneOuverte === item.id ? null : item.id)}
               afficherActions={false}
+              t={t}
             />
           ))}
         </div>
@@ -464,25 +475,21 @@ function GererCorpusSection() {
 
       {sourceAValiderEnBloc && (
         <ConfirmerModal
-          titre="Valider en bloc"
-          texteBouton="Valider en bloc"
+          titre={t("gererCorpus.validerEnBlocTitre")}
+          texteBouton={t("gererCorpus.validerEnBlocTitre")}
           enCours={validationBlocEnCours}
           onFermer={() => setSourceAValiderEnBloc(null)}
           onConfirmer={confirmerValidationEnBloc}
           description={
             sourceAValiderEnBloc.domaine ? (
               <p>
-                Tu confirmes faire confiance à <strong className="text-ivory">« {sourceAValiderEnBloc.domaine} »</strong> (source «{" "}
-                {sourceAValiderEnBloc.source} ») : les <strong className="text-ivory">{sourceAValiderEnBloc.nombre}</strong> textes en
-                attente de ce domaine précis deviennent immédiatement utilisables par l'agent en citation, sans relecture individuelle.
-                Les autres domaines de cette même source, s'il y en a, restent en attente séparément.
+                {t("gererCorpus.confirmationDomaineAvant")} <strong className="text-ivory">« {sourceAValiderEnBloc.domaine} »</strong>{" "}
+                {t("gererCorpus.confirmationDomaineMilieu", { source: sourceAValiderEnBloc.source, nombre: sourceAValiderEnBloc.nombre })}
               </p>
             ) : (
               <p>
-                Tu confirmes faire confiance à <strong className="text-ivory">toute la source « {sourceAValiderEnBloc.source} »</strong>{" "}
-                : les <strong className="text-ivory">{sourceAValiderEnBloc.nombre}</strong> textes en attente, tous domaines confondus,
-                deviennent immédiatement utilisables par l'agent en citation, sans relecture individuelle. Réservé aux sources dont tu es
-                sûr que <em>chaque</em> lot est fiable — pas un import dont certains sous-ensembles restent douteux.
+                {t("gererCorpus.confirmationSourceAvant")} <strong className="text-ivory">{t("gererCorpus.touteLaSource", { source: sourceAValiderEnBloc.source })}</strong>{" "}
+                {t("gererCorpus.confirmationSourceMilieu", { nombre: sourceAValiderEnBloc.nombre })}
               </p>
             )
           }
@@ -500,14 +507,15 @@ interface LigneCorpusProps {
   onValider?: () => void;
   onRejeter?: () => void;
   afficherActions: boolean;
+  t: TFunction;
 }
 
-function LigneCorpus({ item, ouvert, enCours, onToggleLire, onValider, onRejeter, afficherActions }: LigneCorpusProps) {
+function LigneCorpus({ item, ouvert, enCours, onToggleLire, onValider, onRejeter, afficherActions, t }: LigneCorpusProps) {
   return (
     <div className="card space-y-2 p-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-medium text-ivory">{item.reference || "(sans référence)"}</p>
+          <p className="truncate text-sm font-medium text-ivory">{item.reference || t("gererCorpus.sansReference")}</p>
           <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-warmgray">
             <span>{item.source}</span>
             {item.pays && <span>· {item.pays}</span>}
@@ -518,7 +526,7 @@ function LigneCorpus({ item, ouvert, enCours, onToggleLire, onValider, onRejeter
         </div>
         <div className="flex shrink-0 items-center gap-2">
           <button onClick={onToggleLire} className="text-xs text-amethyst-400 hover:underline">
-            {ouvert ? "Masquer" : "Lire"}
+            {ouvert ? t("gererCorpus.masquer") : t("gererCorpus.lire")}
           </button>
           {afficherActions && (
             <>
@@ -527,14 +535,14 @@ function LigneCorpus({ item, ouvert, enCours, onToggleLire, onValider, onRejeter
                 onClick={onValider}
                 className="rounded-md border border-risk-low/40 bg-risk-low/10 px-2.5 py-1 text-xs font-semibold text-risk-low transition-colors hover:bg-risk-low/20 disabled:opacity-40"
               >
-                ✓ Valider
+                ✓ {t("gererJurisprudence.valider")}
               </button>
               <button
                 disabled={enCours}
                 onClick={onRejeter}
                 className="rounded-md border border-risk-high/40 bg-risk-high/10 px-2.5 py-1 text-xs font-semibold text-risk-high transition-colors hover:bg-risk-high/20 disabled:opacity-40"
               >
-                ✕ Rejeter
+                ✕ {t("gererJurisprudence.rejeter")}
               </button>
             </>
           )}

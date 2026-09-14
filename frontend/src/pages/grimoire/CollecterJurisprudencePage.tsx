@@ -6,6 +6,7 @@
  */
 
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { jurisprudence as jurisprudenceApi } from "@/api";
 import { useAppStore } from "@/store/useAppStore";
 import { useLazyAction } from "@/hooks/useLazyAction";
@@ -16,6 +17,7 @@ import ErrorState from "@/components/ErrorState";
 import { SkeletonList } from "@/components/Skeleton";
 
 export default function CollecterJurisprudencePage() {
+  const { t } = useTranslation();
   const chargerCompteursAttente = useAppStore((s) => s.chargerCompteursAttente);
   const [query, setQuery] = useState("");
   const [domaine, setDomaine] = useState("");
@@ -30,20 +32,20 @@ export default function CollecterJurisprudencePage() {
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <div>
-        <p className="kicker">Le Grimoire</p>
-        <h1 className="mt-1 font-serif text-h2 font-semibold text-gold-500">Collecter de la jurisprudence</h1>
-        <p className="mt-2 text-sm text-warmgray">Recherche des décisions via Judilibre — chaque résultat reste en attente de validation manuelle.</p>
+        <p className="kicker">{t("nav.sections.grimoire")}</p>
+        <h1 className="mt-1 font-serif text-h2 font-semibold text-gold-500">{t("nav.grimoire.collecter")}</h1>
+        <p className="mt-2 text-sm text-warmgray">{t("collecterJurisprudence.sousTitre")}</p>
       </div>
 
       <div className="card space-y-4 p-6">
         <div>
           <label htmlFor="cj-query" className="mb-1.5 block text-sm text-warmgray">
-            Mots-clés de recherche
+            {t("collecterJurisprudence.motsClesLabel")}
           </label>
           <input
             id="cj-query"
             className="input"
-            placeholder="Ex. licenciement faute grave absence injustifiée"
+            placeholder={t("collecterJurisprudence.motsClesPlaceholder")}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             disabled={loading}
@@ -51,7 +53,7 @@ export default function CollecterJurisprudencePage() {
         </div>
         <div>
           <label htmlFor="cj-domaine" className="mb-1.5 block text-sm text-warmgray">
-            Domaine (optionnel)
+            {t("collecterJurisprudence.domaineOptionnel")}
           </label>
           <input id="cj-domaine" list="cj-domaines" className="input" value={domaine} onChange={(e) => setDomaine(e.target.value)} disabled={loading} />
           <datalist id="cj-domaines">
@@ -62,7 +64,7 @@ export default function CollecterJurisprudencePage() {
         </div>
         <div className="flex justify-end">
           <Button variant="primary" loading={loading} disabled={!query.trim()} onClick={() => void lancer()}>
-            Collecter
+            {t("collecterJurisprudence.collecter")}
           </Button>
         </div>
       </div>
@@ -74,11 +76,11 @@ export default function CollecterJurisprudencePage() {
       {!loading && !error && data && (
         <div className="space-y-4">
           <p className="text-sm text-warmgray">
-            {data.nombre_collecte} décision{data.nombre_collecte > 1 ? "s" : ""} collectée{data.nombre_collecte > 1 ? "s" : ""}.
+            {t("collecterJurisprudence.nombreCollecte", { count: data.nombre_collecte })}
           </p>
 
           {data.decisions.length === 0 ? (
-            <EmptyState titre="Aucune décision trouvée" description="Essayez d'autres mots-clés, ou élargissez la recherche." />
+            <EmptyState titre={t("collecterJurisprudence.aucuneDecisionTitre")} description={t("collecterJurisprudence.aucuneDecisionDescription")} />
           ) : (
             <>
               <div className="space-y-3">
@@ -86,7 +88,7 @@ export default function CollecterJurisprudencePage() {
                   <div key={i} className="card space-y-2 p-5">
                     <div className="flex items-start justify-between gap-3">
                       <p className="font-serif text-h4 font-semibold text-ivory">{d.reference}</p>
-                      <span className="badge shrink-0 border-gold-500/30 bg-gold-500/10 text-gold-500">En attente</span>
+                      <span className="badge shrink-0 border-gold-500/30 bg-gold-500/10 text-gold-500">{t("collecterJurisprudence.enAttente")}</span>
                     </div>
                     <p className="text-sm text-warmgray">{d.resume}</p>
                     <div className="flex gap-2">
@@ -97,7 +99,7 @@ export default function CollecterJurisprudencePage() {
                 ))}
               </div>
               <p className="rounded-md border border-gold-500/30 bg-gold-500/10 p-4 text-sm text-gold-500">
-                Rendez-vous dans « Gérer la jurisprudence » pour valider ou rejeter ces décisions avant de pouvoir les citer.
+                {t("collecterJurisprudence.rendezVous")}
               </p>
             </>
           )}
@@ -105,7 +107,7 @@ export default function CollecterJurisprudencePage() {
       )}
 
       {!loading && !error && !data && (
-        <EmptyState titre="Prêt à collecter" description="Saisissez des mots-clés ci-dessus pour interroger Judilibre." />
+        <EmptyState titre={t("collecterJurisprudence.pretTitre")} description={t("collecterJurisprudence.pretDescription")} />
       )}
     </div>
   );

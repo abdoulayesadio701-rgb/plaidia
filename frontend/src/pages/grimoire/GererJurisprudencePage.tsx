@@ -6,6 +6,7 @@
  */
 
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { jurisprudence as jurisprudenceApi } from "@/api";
 import type { Jurisprudence } from "@/api";
 import { useAppStore } from "@/store/useAppStore";
@@ -16,12 +17,12 @@ import EmptyState from "@/components/EmptyState";
 import ErrorState from "@/components/ErrorState";
 import { SkeletonList } from "@/components/Skeleton";
 
-const ONGLETS = [
-  { id: "attente", label: "En attente" },
-  { id: "validee", label: "Validée" },
-];
-
 export default function GererJurisprudencePage() {
+  const { t } = useTranslation();
+  const ONGLETS = [
+    { id: "attente", label: t("gererJurisprudence.ongletAttente") },
+    { id: "validee", label: t("gererJurisprudence.ongletValidee") },
+  ];
   const pousserToast = useAppStore((s) => s.pousserToast);
   const chargerCompteursAttente = useAppStore((s) => s.chargerCompteursAttente);
   const [onglet, setOnglet] = useState("attente");
@@ -45,11 +46,11 @@ export default function GererJurisprudencePage() {
     marquerEnCours(item.id, true);
     try {
       await jurisprudenceApi.validerJurisprudence(item.id);
-      pousserToast("success", `« ${item.reference} » validée.`);
+      pousserToast("success", t("gererJurisprudence.validee", { reference: item.reference }));
       reload();
       void chargerCompteursAttente();
     } catch (e) {
-      pousserToast("error", e instanceof Error ? e.message : "La validation a échoué.");
+      pousserToast("error", e instanceof Error ? e.message : t("gererJurisprudence.echecValidation"));
     } finally {
       marquerEnCours(item.id, false);
     }
@@ -59,11 +60,11 @@ export default function GererJurisprudencePage() {
     marquerEnCours(item.id, true);
     try {
       await jurisprudenceApi.rejeterJurisprudence(item.id);
-      pousserToast("success", `« ${item.reference} » rejetée.`);
+      pousserToast("success", t("gererJurisprudence.rejetee", { reference: item.reference }));
       reload();
       void chargerCompteursAttente();
     } catch (e) {
-      pousserToast("error", e instanceof Error ? e.message : "Le rejet a échoué.");
+      pousserToast("error", e instanceof Error ? e.message : t("gererJurisprudence.echecRejet"));
     } finally {
       marquerEnCours(item.id, false);
     }
@@ -72,14 +73,14 @@ export default function GererJurisprudencePage() {
   return (
     <div className="space-y-6">
       <div>
-        <p className="kicker">Le Grimoire</p>
-        <h1 className="mt-1 font-serif text-h2 font-semibold text-gold-500">Gérer la jurisprudence</h1>
+        <p className="kicker">{t("nav.sections.grimoire")}</p>
+        <h1 className="mt-1 font-serif text-h2 font-semibold text-gold-500">{t("nav.grimoire.gerer")}</h1>
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-4">
         <Tabs tabs={ONGLETS} actif={onglet} onChange={setOnglet} />
-        <select className="input w-auto" aria-label="Filtrer par domaine" value={domaineFiltre} onChange={(e) => setDomaineFiltre(e.target.value)}>
-          <option value="">Tous les domaines</option>
+        <select className="input w-auto" aria-label={t("gererJurisprudence.filtrerParDomaine")} value={domaineFiltre} onChange={(e) => setDomaineFiltre(e.target.value)}>
+          <option value="">{t("gererJurisprudence.tousLesDomaines")}</option>
           {DOMAINES.map((d) => (
             <option key={d} value={d}>
               {d}
@@ -94,8 +95,8 @@ export default function GererJurisprudencePage() {
 
       {!loading && !error && liste && liste.length === 0 && (
         <EmptyState
-          titre={onglet === "attente" ? "Aucune référence en attente" : "Aucune référence validée"}
-          description={onglet === "attente" ? "Utilisez « Collecter de la jurisprudence » pour en trouver de nouvelles." : "Validez des références en attente pour les voir apparaître ici."}
+          titre={onglet === "attente" ? t("gererJurisprudence.aucuneEnAttenteTitre") : t("gererJurisprudence.aucuneValideeTitre")}
+          description={onglet === "attente" ? t("gererJurisprudence.aucuneEnAttenteDescription") : t("gererJurisprudence.aucuneValideeDescription")}
         />
       )}
 
@@ -104,11 +105,11 @@ export default function GererJurisprudencePage() {
           <table className="w-full border-collapse text-sm">
             <thead>
               <tr className="border-b border-gold-600/20 bg-surface-2 text-left text-micro uppercase tracking-wide text-warmgray">
-                <th className="px-4 py-3 font-medium">Référence</th>
-                <th className="px-4 py-3 font-medium">Résumé</th>
-                <th className="px-4 py-3 font-medium">Domaine</th>
-                <th className="px-4 py-3 font-medium">Source</th>
-                {onglet === "attente" && <th className="px-4 py-3 font-medium">Actions</th>}
+                <th className="px-4 py-3 font-medium">{t("collecterJurisprudence.reference")}</th>
+                <th className="px-4 py-3 font-medium">{t("collecterJurisprudence.resume")}</th>
+                <th className="px-4 py-3 font-medium">{t("modifierDomaine.domaine")}</th>
+                <th className="px-4 py-3 font-medium">{t("collecterJurisprudence.source")}</th>
+                {onglet === "attente" && <th className="px-4 py-3 font-medium">{t("collecterJurisprudence.actions")}</th>}
               </tr>
             </thead>
             <tbody>
@@ -125,10 +126,10 @@ export default function GererJurisprudencePage() {
                         href={item.source}
                         target="_blank"
                         rel="noopener noreferrer"
-                        title="Ouvrir la page source dans un nouvel onglet"
+                        title={t("richOutput.ouvrirSource")}
                         className="text-gold-500 underline decoration-gold-600/50 underline-offset-2 transition-colors hover:text-gold-400"
                       >
-                        consulter la source ↗
+                        {t("richOutput.consulterSource")}
                       </a>
                     ) : (
                       "—"
@@ -142,14 +143,14 @@ export default function GererJurisprudencePage() {
                           onClick={() => void valider(item)}
                           className="rounded-md border border-risk-low/40 bg-risk-low/10 px-2.5 py-1 text-xs font-semibold text-risk-low transition-colors hover:bg-risk-low/20 disabled:opacity-40"
                         >
-                          ✓ Valider
+                          ✓ {t("gererJurisprudence.valider")}
                         </button>
                         <button
                           disabled={idsEnCours.has(item.id)}
                           onClick={() => void rejeter(item)}
                           className="rounded-md border border-risk-high/40 bg-risk-high/10 px-2.5 py-1 text-xs font-semibold text-risk-high transition-colors hover:bg-risk-high/20 disabled:opacity-40"
                         >
-                          ✕ Rejeter
+                          ✕ {t("gererJurisprudence.rejeter")}
                         </button>
                       </div>
                     </td>
