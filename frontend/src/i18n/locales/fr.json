@@ -36,6 +36,120 @@
     "juridictionActiveAria": "Juridiction active",
     "parametres": "Paramètres"
   },
+  "sidebar": {
+    "navigation": "Navigation",
+    "deplier": "Déplier",
+    "replier": "Replier",
+    "deplierAria": "Déplier la barre latérale",
+    "replierAria": "Replier la barre latérale",
+    "dossierRequis": "Sélectionnez ou créez un dossier pour activer cette action",
+    "signature": "Peser, jamais trancher."
+  },
+  "nav": {
+    "espace": {
+      "avocat": "⚖️ Avocat",
+      "greffier": "🖋️ Greffier"
+    },
+    "sections": {
+      "poserQuestion": "Poser une question",
+      "arsenal": "L'Arsenal",
+      "chemise": "La Chemise",
+      "grimoire": "Le Grimoire",
+      "carnet": "Le Carnet",
+      "affaireEnCours": "Affaire en cours",
+      "documents": "Documents",
+      "rechercheRedaction": "Recherche & rédaction"
+    },
+    "accueil": "Accueil",
+    "parametresPage": "Paramètres",
+    "chat": "Échanger avec l'agent juridique",
+    "arsenal": {
+      "analyser": "Analyser des conclusions adverses",
+      "resumer": "Résumer ce dossier",
+      "plan": "Générer un plan de plaidoirie",
+      "simulateur": "Simuler les objections probables",
+      "rapport-complet": "Rapport complet",
+      "style": "Analyse stylistique des conclusions adverses",
+      "verification-procedurale": "Vérification procédurale"
+    },
+    "chemise": {
+      "historique": "Historique de ce dossier",
+      "dossiers": "Parcourir mes dossiers",
+      "preparer": "Préparer ce dossier"
+    },
+    "grimoire": {
+      "jurisprudence": "Consulter la jurisprudence",
+      "collecter": "Collecter de la jurisprudence",
+      "gerer": "Gérer la jurisprudence",
+      "corpus": "Gérer le corpus multi-source"
+    },
+    "carnet": {
+      "note": "Prendre une note",
+      "notes": "Consulter les notes",
+      "note-client": "Rédiger une note client",
+      "traduire": "Traduire un texte (FR ↔ EN)"
+    },
+    "greffier": {
+      "chronologie": "Chronologie automatique de cette affaire",
+      "verification-procedurale": "Vérification procédurale",
+      "extraction": "Extraction d'éléments clés d'un document",
+      "classement": "Classement automatique d'un document",
+      "coherence": "Contrôle de cohérence entre documents",
+      "requisitoire": "Analyser un réquisitoire",
+      "rapport-instruction": "Rapport d'instruction",
+      "recherche": "Rechercher dans toutes les affaires",
+      "pv-audience": "Rédiger un procès-verbal d'audience"
+    }
+  },
+  "statusBar": {
+    "traitementEnCours": "Traitement en cours",
+    "secondesEcoulees": "{{count}}s écoulées",
+    "pret": "Prêt",
+    "avertissement": "Plaid'IA est un outil d'aide à la préparation — il ne remplace pas l'analyse d'un avocat.",
+    "donneesNonConservees": "Données non conservées en mode démo."
+  },
+  "commandBar": {
+    "dossierRequis": "Sélectionnez ou créez un dossier avant de formuler une commande.",
+    "intentionIncertaine": "Je ne suis pas certain d'avoir bien compris – utilisez la barre latérale, ou reformulez votre demande.",
+    "erreurInterpretation": "Impossible d'interpréter cette commande.",
+    "placeholder": "Indiquez l'action souhaitée, par exemple : « analyser ces conclusions » ou « établir un plan de 10 minutes »…",
+    "envoyer": "Envoyer →"
+  },
+  "demoBanner": {
+    "cleActive": "Votre clé Anthropic personnelle est active pour cette session — réponses générées en direct, comme hors mode démo.",
+    "cleRetiree": "Clé personnelle retirée. Vous repassez en mode démo.",
+    "retirerMaCle": "Retirer ma clé",
+    "modeDemo": "Mode démo",
+    "description": "les résultats sont des exemples préenregistrés sur le dossier fictif « {{dossier}} », indépendants du texte saisi. Rien n'est conservé.",
+    "descriptionSansDossier": "les résultats sont des exemples préenregistrés, indépendants du texte saisi. Rien n'est conservé.",
+    "utiliserMaCle": "Utiliser ma propre clé Anthropic"
+  },
+  "dossierSelecteur": {
+    "aucunDossier": "Aucun dossier sélectionné",
+    "rechercherPlaceholder": "Rechercher un dossier…",
+    "rechercherAria": "Rechercher un dossier",
+    "aucunResultat": "Aucun dossier ne correspond.",
+    "creerAvecNom": "Créer « {{nom}} »",
+    "creerNouveau": "Créer un nouveau dossier"
+  },
+  "epinglesPanel": {
+    "titre": "Épinglés",
+    "typeDossier": "Dossier",
+    "typeAnalyse": "Analyse enregistrée",
+    "desepingler": "Désépingler",
+    "desepinglerAria": "Désépingler {{libelle}}",
+    "vide": "Rien d'épinglé pour l'instant."
+  },
+  "recentsPanel": {
+    "titre": "Récemment consulté",
+    "vider": "Vider",
+    "sansDossier": "Sans dossier",
+    "vide": "Aucune page consultée pour l'instant."
+  },
+  "pagePlaceholder": {
+    "bientotDisponible": "Bientôt disponible",
+    "aVenir": "Cette page sera implémentée dans une prochaine étape."
+  },
   "landing": {
     "kicker": "Assistant IA de préparation de plaidoirie — France & espace OHADA",
     "titre1": "Préparez vos dossiers,",

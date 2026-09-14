@@ -6,6 +6,7 @@
  */
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useAppStore, useDossierActif } from "@/store/useAppStore";
 
 interface DossierSelectorProps {
@@ -13,6 +14,7 @@ interface DossierSelectorProps {
 }
 
 export default function DossierSelector({ onDemanderCreation }: DossierSelectorProps) {
+  const { t } = useTranslation();
   const [ouvert, setOuvert] = useState(false);
   const [recherche, setRecherche] = useState("");
   const conteneurRef = useRef<HTMLDivElement>(null);
@@ -45,7 +47,7 @@ export default function DossierSelector({ onDemanderCreation }: DossierSelectorP
         aria-expanded={ouvert}
       >
         <span className={`truncate text-sm ${dossierActif ? "text-ivory" : "text-muted"}`}>
-          {dossierActif ? dossierActif.nom : "Aucun dossier sélectionné"}
+          {dossierActif ? dossierActif.nom : t("dossierSelecteur.aucunDossier")}
         </span>
         <span className="shrink-0 text-warmgray">▾</span>
       </button>
@@ -56,8 +58,8 @@ export default function DossierSelector({ onDemanderCreation }: DossierSelectorP
             <input
               autoFocus
               className="input"
-              placeholder="Rechercher un dossier…"
-              aria-label="Rechercher un dossier"
+              placeholder={t("dossierSelecteur.rechercherPlaceholder")}
+              aria-label={t("dossierSelecteur.rechercherAria")}
               value={recherche}
               onChange={(e) => setRecherche(e.target.value)}
             />
@@ -81,7 +83,7 @@ export default function DossierSelector({ onDemanderCreation }: DossierSelectorP
               </li>
             ))}
             {resultats.length === 0 && (
-              <li className="px-2.5 py-2 text-sm text-warmgray">Aucun dossier ne correspond.</li>
+              <li className="px-2.5 py-2 text-sm text-warmgray">{t("dossierSelecteur.aucunResultat")}</li>
             )}
           </ul>
           <div className="border-t border-gold-600/15 p-1">
@@ -92,7 +94,7 @@ export default function DossierSelector({ onDemanderCreation }: DossierSelectorP
               }}
               className="block w-full rounded-md px-2.5 py-2 text-left text-sm text-gold-500 transition-colors hover:bg-surface"
             >
-              ＋ Créer{recherche.trim() ? ` « ${recherche.trim()} »` : " un nouveau dossier"}
+              ＋ {recherche.trim() ? t("dossierSelecteur.creerAvecNom", { nom: recherche.trim() }) : t("dossierSelecteur.creerNouveau")}
             </button>
           </div>
         </div>

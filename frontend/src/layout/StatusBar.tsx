@@ -9,10 +9,12 @@
  */
 
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useActivityStore } from "@/store/useActivityStore";
 import { useAppStore } from "@/store/useAppStore";
 
 export default function StatusBar() {
+  const { t } = useTranslation();
   const enCours = useActivityStore((s) => s.enCours);
   const depuis = useActivityStore((s) => s.depuis);
   const demoMode = useAppStore((s) => s.demoMode);
@@ -32,14 +34,15 @@ export default function StatusBar() {
     <footer className="flex h-8 shrink-0 items-center justify-between gap-4 border-t border-gold-600/15 bg-surface-2/80 px-4 text-xs text-warmgray">
       {actif ? (
         <span>
-          ⏳ Traitement en cours{points} <span className="tabular-nums">({secondes}s écoulées)</span>
+          ⏳ {t("statusBar.traitementEnCours")}
+          {points} <span className="tabular-nums">({t("statusBar.secondesEcoulees", { count: secondes })})</span>
         </span>
       ) : (
-        <span>Prêt</span>
+        <span>{t("statusBar.pret")}</span>
       )}
       <span className="truncate text-muted">
-        Plaid'IA est un outil d'aide à la préparation — il ne remplace pas l'analyse d'un avocat.
-        {demoMode && " Données non conservées en mode démo."}
+        {t("statusBar.avertissement")}
+        {demoMode && ` ${t("statusBar.donneesNonConservees")}`}
       </span>
     </footer>
   );

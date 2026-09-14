@@ -10,7 +10,8 @@
  */
 
 import { NavLink } from "react-router-dom";
-import { ESPACE_LABELS, NAVIGATION, type Espace } from "@/config/navigation";
+import { useTranslation } from "react-i18next";
+import { ESPACE_LABELS, NAVIGATION, navKey, type Espace } from "@/config/navigation";
 import { useAppStore } from "@/store/useAppStore";
 import Tooltip from "@/components/Tooltip";
 import justitiaSignature from "@/assets/justitia-banniere.jpg";
@@ -26,6 +27,7 @@ const COMPTEURS_PAR_CHEMIN: Record<string, keyof Pick<ReturnType<typeof useAppSt
 };
 
 export default function Sidebar() {
+  const { t } = useTranslation();
   const espaceActif = useAppStore((s) => s.espaceActif);
   const definirEspace = useAppStore((s) => s.definirEspace);
   const dossierActifId = useAppStore((s) => s.dossierActifId);
@@ -45,12 +47,12 @@ export default function Sidebar() {
       }`}
     >
       <div className="flex items-center justify-between border-b border-gold-600/15 p-3">
-        {!sidebarReplie && <p className="px-1 text-micro text-warmgray">Navigation</p>}
+        {!sidebarReplie && <p className="px-1 text-micro text-warmgray">{t("sidebar.navigation")}</p>}
         <button
           onClick={basculerSidebar}
           className="ml-auto rounded-md p-1.5 text-warmgray transition-colors hover:bg-surface-2 hover:text-ivory"
-          aria-label={sidebarReplie ? "Déplier la barre latérale" : "Replier la barre latérale"}
-          title={sidebarReplie ? "Déplier" : "Replier"}
+          aria-label={sidebarReplie ? t("sidebar.deplierAria") : t("sidebar.replierAria")}
+          title={sidebarReplie ? t("sidebar.deplier") : t("sidebar.replier")}
         >
           {sidebarReplie ? "»" : "«"}
         </button>
@@ -58,18 +60,21 @@ export default function Sidebar() {
 
       {/* Sélecteur d'espace */}
       <div className={`flex gap-1 p-2 ${sidebarReplie ? "flex-col" : ""}`}>
-        {ESPACES.map((espace) => (
-          <button
-            key={espace}
-            onClick={() => definirEspace(espace)}
-            className={`flex-1 rounded-md px-2 py-2 text-sm font-semibold transition-colors ${
-              espaceActif === espace ? "bg-gold-500 text-ink" : "text-warmgray hover:bg-surface-2 hover:text-ivory"
-            }`}
-            title={ESPACE_LABELS[espace]}
-          >
-            {sidebarReplie ? ESPACE_LABELS[espace].slice(0, 2) : ESPACE_LABELS[espace]}
-          </button>
-        ))}
+        {ESPACES.map((espace) => {
+          const libelleEspace = t(`nav.espace.${espace}`, ESPACE_LABELS[espace]);
+          return (
+            <button
+              key={espace}
+              onClick={() => definirEspace(espace)}
+              className={`flex-1 rounded-md px-2 py-2 text-sm font-semibold transition-colors ${
+                espaceActif === espace ? "bg-gold-500 text-ink" : "text-warmgray hover:bg-surface-2 hover:text-ivory"
+              }`}
+              title={libelleEspace}
+            >
+              {sidebarReplie ? libelleEspace.slice(0, 2) : libelleEspace}
+            </button>
+          );
+        })}
       </div>
 
       {/* Sections de l'espace actif */}
@@ -77,13 +82,14 @@ export default function Sidebar() {
         {sections.map((section) => (
           <div key={section.title} className="mt-4 first:mt-2">
             {!sidebarReplie && (
-              <p className="px-2 pb-1.5 text-micro text-warmgray">{section.title}</p>
+              <p className="px-2 pb-1.5 text-micro text-warmgray">{t(section.titleKey, section.title)}</p>
             )}
             <ul className="space-y-0.5">
               {section.items.map((item) => {
                 const desactive = item.requiresDossier && !aUnDossier;
                 const cleCompteur = COMPTEURS_PAR_CHEMIN[item.path];
                 const compteur = cleCompteur ? compteurs[cleCompteur] : 0;
+                const libelleItem = t(navKey(item.path), item.label);
                 const lien = (
                   <NavLink
                     key={item.path}
@@ -102,7 +108,7 @@ export default function Sidebar() {
                       }`
                     }
                   >
-                    <span className="truncate">{sidebarReplie ? item.label.slice(0, 1) : item.label}</span>
+                    <span className="truncate">{sidebarReplie ? libelleItem.slice(0, 1) : libelleItem}</span>
                     {!sidebarReplie && compteur > 0 && (
                       <span className="shrink-0 rounded-pill bg-amethyst-400 px-1.5 py-0.5 text-[.65rem] font-semibold leading-none text-ink">
                         {compteur}
@@ -113,7 +119,7 @@ export default function Sidebar() {
                 return (
                   <li key={item.path}>
                     {desactive && !sidebarReplie ? (
-                      <Tooltip label="Sélectionnez ou créez un dossier pour activer cette action" className="block">
+                      <Tooltip label={t("sidebar.dossierRequis")} className="block">
                         {lien}
                       </Tooltip>
                     ) : (
@@ -132,7 +138,7 @@ export default function Sidebar() {
           <span className="sidebar-signature-photo" aria-hidden="true">
             <img src={justitiaSignature} alt="" />
           </span>
-          <p className="sidebar-signature-text">Peser, jamais trancher.</p>
+          <p className="sidebar-signature-text">{t("sidebar.signature")}</p>
         </div>
       )}
     </aside>

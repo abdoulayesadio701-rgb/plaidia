@@ -8,10 +8,12 @@
  */
 
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useAppStore } from "@/store/useAppStore";
 import ClePersonnelleModal from "@/components/ClePersonnelleModal";
 
 export default function DemoBanner() {
+  const { t } = useTranslation();
   const demoMode = useAppStore((s) => s.demoMode);
   const configurationChargee = useAppStore((s) => s.configurationChargee);
   const dossierDemoNom = useAppStore((s) => s.dossierDemoNom);
@@ -31,25 +33,25 @@ export default function DemoBanner() {
       >
         {clePersonnelleActive ? (
           <>
-            <span>✓ Votre clé Anthropic personnelle est active pour cette session — réponses générées en direct, comme hors mode démo.</span>
+            <span>✓ {t("demoBanner.cleActive")}</span>
             <button
               onClick={() => {
                 definirClePersonnelle(null);
-                pousserToast("info", "Clé personnelle retirée. Vous repassez en mode démo.");
+                pousserToast("info", t("demoBanner.cleRetiree"));
               }}
               className="font-semibold underline underline-offset-2 hover:text-ivory"
             >
-              Retirer ma clé
+              {t("demoBanner.retirerMaCle")}
             </button>
           </>
         ) : (
           <>
             <span>
-              🎭 <strong>Mode démo</strong> — les résultats sont des exemples préenregistrés
-              {dossierDemoNom ? ` sur le dossier fictif « ${dossierDemoNom} »` : ""}, indépendants du texte saisi. Rien n'est conservé.
+              🎭 <strong>{t("demoBanner.modeDemo")}</strong> —{" "}
+              {dossierDemoNom ? t("demoBanner.description", { dossier: dossierDemoNom }) : t("demoBanner.descriptionSansDossier")}
             </span>
             <button onClick={() => setModalOuvert(true)} className="font-semibold underline underline-offset-2 hover:text-ivory">
-              Utiliser ma propre clé Anthropic
+              {t("demoBanner.utiliserMaCle")}
             </button>
           </>
         )}

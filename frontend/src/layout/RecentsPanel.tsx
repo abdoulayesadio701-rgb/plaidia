@@ -8,22 +8,35 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { ecouterChangementsRecents, listerRecents, viderRecents, type ElementRecent } from "@/config/recents";
+import { navKey } from "@/config/navigation";
 import { useAppStore } from "@/store/useAppStore";
 
-function formaterDate(iso: string): string {
+function formaterDate(iso: string, langue: string): string {
   const date = new Date(iso);
   const maintenant = new Date();
   const memeJour = date.toDateString() === maintenant.toDateString();
-  if (memeJour) return date.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
-  return date.toLocaleDateString("fr-FR", { day: "2-digit", month: "short" });
+  const locale = langue === "en" ? "en-GB" : "fr-FR";
+  if (memeJour) return date.toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" });
+  return date.toLocaleDateString(locale, { day: "2-digit", month: "short" });
 }
 
 interface RecentsPanelProps {
   onFermer: () => void;
 }
 
+/** "/" et "/parametres" sont hors de navigation.ts (voir
+ * useSuivreRecents.ts::LIBELLES_HORS_NAVIGATION) -- clés dédiées plutôt que
+ * navKey(), qui ne sait résoudre que des chemins de navigation.ts. */
+function cleLabelRecent(path: string): string {
+  if (path === "/") return "nav.accueil";
+  if (path === "/parametres") return "nav.parametresPage";
+  return navKey(path);
+}
+
 export default function RecentsPanel({ onFermer }: RecentsPanelProps) {
+  const { t, i18n } = useTranslation();
   const [elements, setElements] = useState<ElementRecent[]>(() => listerRecents());
   const conteneurRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
@@ -56,10 +69,10 @@ export default function RecentsPanel({ onFermer }: RecentsPanelProps) {
   return (
     <div ref={conteneurRef} className="absolute right-0 top-full z-30 mt-2 w-80 rounded-md border border-gold-600/25 bg-surface-2 shadow-card">
       <div className="flex items-center justify-between border-b border-gold-600/15 px-3 py-2">
-        <p className="text-xs font-medium text-warmgray">Récemment consulté</p>
+        <p className="text-xs font-medium text-warmgray">{t("recentsPanel.titre")}</p>
         {elements.length > 0 && (
           <button onClick={() => viderRecents()} className="text-xs text-muted hover:text-warmgray">
-            Vider
+            {t("recentsPanel.vider")}
           </button>
         )}
       </div>
@@ -67,15 +80,15 @@ export default function RecentsPanel({ onFermer }: RecentsPanelProps) {
         {elements.map((el) => (
           <li key={el.id}>
             <button onClick={() => ouvrir(el)} className="block w-full rounded-md px-2.5 py-2 text-left text-sm text-ivory transition-colors hover:bg-surface">
-              <span className="block truncate">{el.label}</span>
+              <span className="block truncate">{t(cleLabelRecent(el.path), el.label)}</span>
               <span className="mt-0.5 flex items-center justify-between text-xs text-warmgray">
-                <span className="truncate">{el.dossierNom ?? "Sans dossier"}</span>
-                <span className="shrink-0 tabular-nums">{formaterDate(el.date)}</span>
+                <span className="truncate">{el.dossierNom ?? t("recentsPanel.sansDossier")}</span>
+                <span className="shrink-0 tabular-nums">{formaterDate(el.date, i18n.language)}</span>
               </span>
             </button>
           </li>
         ))}
-        {elements.length === 0 && <li className="px-2.5 py-3 text-sm text-warmgray">Aucune page consultée pour l'instant.</li>}
+        {elements.length === 0 && <li className="px-2.5 py-3 text-sm text-warmgray">{t("recentsPanel.vide")}</li>}
       </ul>
     </div>
   );

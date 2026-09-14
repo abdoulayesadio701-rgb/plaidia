@@ -20,7 +20,18 @@ export interface NavItem {
 
 export interface NavSection {
   title: string;
+  /** Clé i18next (voir navKey ci-dessous) -- `title` sert de defaultValue. */
+  titleKey: string;
   items: NavItem[];
+}
+
+/** Dérive la clé i18next d'un NavItem depuis son path ("/arsenal/analyser"
+ * -> "nav.arsenal.analyser") -- une seule source de vérité (ce fichier)
+ * pour les libellés de navigation, consommée par Sidebar.tsx (et
+ * RecentsPanel.tsx via un ElementRecent.path déjà stocké) plutôt que de
+ * dupliquer les mêmes clés à la main dans chaque composant. */
+export function navKey(path: string): string {
+  return `nav${path.replace(/\//g, ".")}`;
 }
 
 export const ESPACE_LABELS: Record<Espace, string> = {
@@ -32,10 +43,12 @@ export const NAVIGATION: Record<Espace, NavSection[]> = {
   avocat: [
     {
       title: "Poser une question",
+      titleKey: "nav.sections.poserQuestion",
       items: [{ path: "/chat", label: "Échanger avec l'agent juridique", requiresDossier: false }],
     },
     {
       title: "L'Arsenal",
+      titleKey: "nav.sections.arsenal",
       items: [
         { path: "/arsenal/analyser", label: "Analyser des conclusions adverses", requiresDossier: true },
         { path: "/arsenal/resumer", label: "Résumer ce dossier", requiresDossier: true },
@@ -48,6 +61,7 @@ export const NAVIGATION: Record<Espace, NavSection[]> = {
     },
     {
       title: "La Chemise",
+      titleKey: "nav.sections.chemise",
       items: [
         { path: "/chemise/historique", label: "Historique de ce dossier", requiresDossier: true },
         { path: "/chemise/dossiers", label: "Parcourir mes dossiers", requiresDossier: false },
@@ -56,6 +70,7 @@ export const NAVIGATION: Record<Espace, NavSection[]> = {
     },
     {
       title: "Le Grimoire",
+      titleKey: "nav.sections.grimoire",
       items: [
         { path: "/grimoire/jurisprudence", label: "Consulter la jurisprudence", requiresDossier: false },
         { path: "/grimoire/collecter", label: "Collecter de la jurisprudence", requiresDossier: false },
@@ -65,6 +80,7 @@ export const NAVIGATION: Record<Espace, NavSection[]> = {
     },
     {
       title: "Le Carnet",
+      titleKey: "nav.sections.carnet",
       items: [
         { path: "/carnet/note", label: "Prendre une note", requiresDossier: true },
         { path: "/carnet/notes", label: "Consulter les notes", requiresDossier: true },
@@ -76,6 +92,7 @@ export const NAVIGATION: Record<Espace, NavSection[]> = {
   greffier: [
     {
       title: "Affaire en cours",
+      titleKey: "nav.sections.affaireEnCours",
       items: [
         { path: "/greffier/chronologie", label: "Chronologie automatique de cette affaire", requiresDossier: true },
         { path: "/greffier/verification-procedurale", label: "Vérification procédurale", requiresDossier: true },
@@ -83,6 +100,7 @@ export const NAVIGATION: Record<Espace, NavSection[]> = {
     },
     {
       title: "Documents",
+      titleKey: "nav.sections.documents",
       items: [
         { path: "/greffier/extraction", label: "Extraction d'éléments clés d'un document", requiresDossier: false },
         { path: "/greffier/classement", label: "Classement automatique d'un document", requiresDossier: false },
@@ -93,6 +111,7 @@ export const NAVIGATION: Record<Espace, NavSection[]> = {
     },
     {
       title: "Recherche & rédaction",
+      titleKey: "nav.sections.rechercheRedaction",
       items: [
         { path: "/greffier/recherche", label: "Rechercher dans toutes les affaires", requiresDossier: false },
         { path: "/greffier/pv-audience", label: "Rédiger un procès-verbal d'audience", requiresDossier: false },

@@ -43,7 +43,7 @@ import RechercheTransversalePage from "@/pages/greffier/RechercheTransversalePag
 import PvAudiencePage from "@/pages/greffier/PvAudiencePage";
 import VerificationProceduralePage from "@/pages/greffier/VerificationProceduralePage";
 import PagePlaceholder from "@/components/PagePlaceholder";
-import { allNavItems } from "@/config/navigation";
+import { allNavItems, navKey } from "@/config/navigation";
 
 // Pages réellement implémentées, indexées par chemin -- toute route de
 // navigation.ts qui n'y figure pas retombe sur <PagePlaceholder>. Retirer
@@ -82,7 +82,7 @@ const PAGES_IMPLEMENTEES: Record<string, ReactElement> = {
 
 const routesActions = allNavItems().map((item) => ({
   path: item.path.slice(1), // relatif au parent AppLayout ("arsenal/analyser", pas "/arsenal/analyser")
-  element: PAGES_IMPLEMENTEES[item.path] ?? <PagePlaceholder title={item.label} />,
+  element: PAGES_IMPLEMENTEES[item.path] ?? <PagePlaceholder titleKey={navKey(item.path)} titleDefault={item.label} />,
 }));
 
 export const router = createBrowserRouter([

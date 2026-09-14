@@ -7,6 +7,7 @@
 
 import { useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { intention as intentionApi } from "@/api";
 import { useAppStore } from "@/store/useAppStore";
 
@@ -28,6 +29,7 @@ const ROUTES_PAR_ACTION: Record<string, string> = {
 };
 
 export default function CommandBar() {
+  const { t } = useTranslation();
   const [texte, setTexte] = useState("");
   const [enCours, setEnCours] = useState(false);
   const navigate = useNavigate();
@@ -40,7 +42,7 @@ export default function CommandBar() {
     if (!commande) return;
 
     if (dossierActifId === null) {
-      pousserToast("info", "Sélectionnez ou créez un dossier avant de formuler une commande.");
+      pousserToast("info", t("commandBar.dossierRequis"));
       return;
     }
 
@@ -51,14 +53,14 @@ export default function CommandBar() {
 
       const route = ROUTES_PAR_ACTION[intention.action];
       if (intention.confiance === "basse" || !route) {
-        pousserToast("info", "Je ne suis pas certain d'avoir bien compris – utilisez la barre latérale, ou reformulez votre demande.");
+        pousserToast("info", t("commandBar.intentionIncertaine"));
         return;
       }
 
       navigate(`/app${route}`, { state: intention.duree_minutes ? { dureeMinutesPreremplie: intention.duree_minutes } : undefined });
       setTexte("");
     } catch (e) {
-      pousserToast("error", e instanceof Error ? e.message : "Impossible d'interpréter cette commande.");
+      pousserToast("error", e instanceof Error ? e.message : t("commandBar.erreurInterpretation"));
     } finally {
       setEnCours(false);
     }
@@ -71,13 +73,13 @@ export default function CommandBar() {
       </span>
       <input
         className="input flex-1 border-none bg-transparent px-0 focus-visible:shadow-none"
-        placeholder="Indiquez l'action souhaitée, par exemple : « analyser ces conclusions » ou « établir un plan de 10 minutes »…"
+        placeholder={t("commandBar.placeholder")}
         value={texte}
         onChange={(e) => setTexte(e.target.value)}
         disabled={enCours}
       />
       <button type="submit" className="btn-secondary shrink-0 text-xs" disabled={enCours || !texte.trim()}>
-        {enCours ? "…" : "Envoyer →"}
+        {enCours ? "…" : t("commandBar.envoyer")}
       </button>
     </form>
   );

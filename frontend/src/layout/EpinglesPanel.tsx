@@ -8,6 +8,7 @@
 
 import { useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import type { ElementEpingle } from "@/api";
 import { useAppStore } from "@/store/useAppStore";
 
@@ -15,12 +16,12 @@ interface EpinglesPanelProps {
   onFermer: () => void;
 }
 
-const LIBELLE_TYPE: Record<string, string> = {
-  dossier: "Dossier",
-  analyse: "Analyse enregistrée",
-};
-
 export default function EpinglesPanel({ onFermer }: EpinglesPanelProps) {
+  const { t } = useTranslation();
+  const LIBELLE_TYPE: Record<string, string> = {
+    dossier: t("epinglesPanel.typeDossier"),
+    analyse: t("epinglesPanel.typeAnalyse"),
+  };
   const conteneurRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
   const epingles = useAppStore((s) => s.epingles);
@@ -48,7 +49,7 @@ export default function EpinglesPanel({ onFermer }: EpinglesPanelProps) {
   return (
     <div ref={conteneurRef} className="absolute right-0 top-full z-30 mt-2 w-80 rounded-md border border-gold-600/25 bg-surface-2 shadow-card">
       <div className="border-b border-gold-600/15 px-3 py-2">
-        <p className="text-xs font-medium text-warmgray">Épinglés</p>
+        <p className="text-xs font-medium text-warmgray">{t("epinglesPanel.titre")}</p>
       </div>
       <ul className="max-h-80 overflow-y-auto p-1">
         {epingles.map((el) => (
@@ -60,14 +61,14 @@ export default function EpinglesPanel({ onFermer }: EpinglesPanelProps) {
             <button
               onClick={() => void desepinglerElement(el.id)}
               className="shrink-0 rounded-md px-2 py-1 text-xs text-muted hover:text-risk-high"
-              title="Désépingler"
-              aria-label={`Désépingler ${el.libelle}`}
+              title={t("epinglesPanel.desepingler")}
+              aria-label={t("epinglesPanel.desepinglerAria", { libelle: el.libelle })}
             >
               ✕
             </button>
           </li>
         ))}
-        {epingles.length === 0 && <li className="px-2.5 py-3 text-sm text-warmgray">Rien d'épinglé pour l'instant.</li>}
+        {epingles.length === 0 && <li className="px-2.5 py-3 text-sm text-warmgray">{t("epinglesPanel.vide")}</li>}
       </ul>
     </div>
   );

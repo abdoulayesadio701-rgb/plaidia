@@ -36,6 +36,120 @@
     "juridictionActiveAria": "Active jurisdiction",
     "parametres": "Settings"
   },
+  "sidebar": {
+    "navigation": "Navigation",
+    "deplier": "Expand",
+    "replier": "Collapse",
+    "deplierAria": "Expand the sidebar",
+    "replierAria": "Collapse the sidebar",
+    "dossierRequis": "Select or create a case to enable this action",
+    "signature": "Weigh, never decide."
+  },
+  "nav": {
+    "espace": {
+      "avocat": "⚖️ Lawyer",
+      "greffier": "🖋️ Clerk"
+    },
+    "sections": {
+      "poserQuestion": "Ask a question",
+      "arsenal": "The Arsenal",
+      "chemise": "The Case File",
+      "grimoire": "The Grimoire",
+      "carnet": "The Notebook",
+      "affaireEnCours": "Current case",
+      "documents": "Documents",
+      "rechercheRedaction": "Research & drafting"
+    },
+    "accueil": "Home",
+    "parametresPage": "Settings",
+    "chat": "Chat with the legal assistant",
+    "arsenal": {
+      "analyser": "Analyse opposing submissions",
+      "resumer": "Summarise this case",
+      "plan": "Generate a pleading plan",
+      "simulateur": "Simulate likely objections",
+      "rapport-complet": "Full report",
+      "style": "Stylistic analysis of opposing submissions",
+      "verification-procedurale": "Procedural check"
+    },
+    "chemise": {
+      "historique": "History of this case",
+      "dossiers": "Browse my cases",
+      "preparer": "Prepare this case"
+    },
+    "grimoire": {
+      "jurisprudence": "Consult case law",
+      "collecter": "Collect case law",
+      "gerer": "Manage case law",
+      "corpus": "Manage the multi-source corpus"
+    },
+    "carnet": {
+      "note": "Take a note",
+      "notes": "View notes",
+      "note-client": "Draft a client note",
+      "traduire": "Translate a text (FR ↔ EN)"
+    },
+    "greffier": {
+      "chronologie": "Automatic timeline of this case",
+      "verification-procedurale": "Procedural check",
+      "extraction": "Extract key elements from a document",
+      "classement": "Automatic document classification",
+      "coherence": "Consistency check between documents",
+      "requisitoire": "Analyse a closing statement",
+      "rapport-instruction": "Investigation report",
+      "recherche": "Search across all cases",
+      "pv-audience": "Draft a hearing transcript"
+    }
+  },
+  "statusBar": {
+    "traitementEnCours": "Processing",
+    "secondesEcoulees": "{{count}}s elapsed",
+    "pret": "Ready",
+    "avertissement": "Plaid'IA is a preparation aid — it does not replace a lawyer's analysis.",
+    "donneesNonConservees": "Data is not kept in demo mode."
+  },
+  "commandBar": {
+    "dossierRequis": "Select or create a case before entering a command.",
+    "intentionIncertaine": "I'm not sure I understood correctly – use the sidebar, or rephrase your request.",
+    "erreurInterpretation": "Unable to interpret this command.",
+    "placeholder": "Describe what you need, e.g. \"analyse these submissions\" or \"draft a 10-minute plan\"…",
+    "envoyer": "Send →"
+  },
+  "demoBanner": {
+    "cleActive": "Your personal Anthropic key is active for this session — live-generated answers, as outside demo mode.",
+    "cleRetiree": "Personal key removed. You are back in demo mode.",
+    "retirerMaCle": "Remove my key",
+    "modeDemo": "Demo mode",
+    "description": "results are pre-recorded examples on the fictional case « {{dossier}} », independent of the text entered. Nothing is stored.",
+    "descriptionSansDossier": "results are pre-recorded examples, independent of the text entered. Nothing is stored.",
+    "utiliserMaCle": "Use my own Anthropic key"
+  },
+  "dossierSelecteur": {
+    "aucunDossier": "No case selected",
+    "rechercherPlaceholder": "Search for a case…",
+    "rechercherAria": "Search for a case",
+    "aucunResultat": "No case matches.",
+    "creerAvecNom": "Create « {{nom}} »",
+    "creerNouveau": "Create a new case"
+  },
+  "epinglesPanel": {
+    "titre": "Pinned",
+    "typeDossier": "Case",
+    "typeAnalyse": "Saved analysis",
+    "desepingler": "Unpin",
+    "desepinglerAria": "Unpin {{libelle}}",
+    "vide": "Nothing pinned yet."
+  },
+  "recentsPanel": {
+    "titre": "Recently viewed",
+    "vider": "Clear",
+    "sansDossier": "No case",
+    "vide": "No page viewed yet."
+  },
+  "pagePlaceholder": {
+    "bientotDisponible": "Coming soon",
+    "aVenir": "This page will be implemented in a future step."
+  },
   "landing": {
     "kicker": "AI assistant for pleading preparation — France & the OHADA area",
     "titre1": "Prepare your cases,",
