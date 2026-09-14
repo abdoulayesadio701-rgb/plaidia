@@ -14,6 +14,7 @@
  */
 
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { dossiers as dossiersApi, downloadBlob } from "@/api";
 import { useAppStore, useDossierActif } from "@/store/useAppStore";
 import { useImportFichiers } from "@/hooks/useImportFichiers";
@@ -24,6 +25,7 @@ import FileDropZone from "@/components/FileDropZone";
 import FileImportListe from "@/components/FileImportListe";
 
 export default function PreparerDossierPage() {
+  const { t } = useTranslation();
   const dossierActif = useDossierActif();
   const pousserToast = useAppStore((s) => s.pousserToast);
   const [exportEnCours, setExportEnCours] = useState(false);
@@ -41,26 +43,26 @@ export default function PreparerDossierPage() {
       const { blob, filename } = await dossiersApi.exporterFaitsBruts(dossierActif.id);
       downloadBlob(blob, filename ?? `${dossierActif.nom}_faits_bruts.docx`);
     } catch (e) {
-      pousserToast("error", e instanceof Error ? e.message : "Échec de l'export.");
+      pousserToast("error", e instanceof Error ? e.message : t("arsenal.echecExport"));
     } finally {
       setExportEnCours(false);
     }
   };
 
   if (!dossierActif) {
-    return <EmptyState titre="Aucun dossier sélectionné" description="Sélectionnez ou créez un dossier pour y importer des documents." />;
+    return <EmptyState titre={t("preparerDossier.emptyTitre")} description={t("preparerDossier.emptyDescription")} />;
   }
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="kicker">La Chemise</p>
-          <h1 className="mt-1 font-serif text-h2 font-semibold text-gold-500">Préparer ce dossier</h1>
-          <p className="mt-2 text-sm text-warmgray">Dossier actif : {dossierActif.nom}</p>
+          <p className="kicker">{t("nav.sections.chemise")}</p>
+          <h1 className="mt-1 font-serif text-h2 font-semibold text-gold-500">{t("nav.chemise.preparer")}</h1>
+          <p className="mt-2 text-sm text-warmgray">{t("arsenal.dossierActif")} : {dossierActif.nom}</p>
         </div>
         <Button variant="secondary" loading={exportEnCours} onClick={() => void exporter()}>
-          ⬇ Exporter les faits bruts (Word)
+          ⬇ {t("preparerDossier.exporterFaitsBruts")}
         </Button>
       </div>
 
@@ -68,8 +70,8 @@ export default function PreparerDossierPage() {
         extensions={EXTENSIONS_DOCUMENT}
         multiple
         onFichiers={ajouterFichiers}
-        titre="Déposez vos documents ici"
-        description="ou cliquez pour parcourir — PDF, Word, Excel, image ou texte. Chaque document importé est ajouté aux faits du dossier."
+        titre={t("fileDropZone.titre")}
+        description={t("preparerDossier.dropzoneDescription")}
       />
 
       <FileImportListe fichiers={fichiers} onAnnuler={annulerFichier} onRetirer={retirerFichier} onVider={viderListe} />

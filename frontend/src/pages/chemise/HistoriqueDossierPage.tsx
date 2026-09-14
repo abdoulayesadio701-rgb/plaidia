@@ -6,6 +6,7 @@
  */
 
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { analyse as analyseApi, dossiers as dossiersApi } from "@/api";
 import type { StatutDocument } from "@/api";
 import { chat as chatApi } from "@/api";
@@ -19,15 +20,17 @@ import ErrorState from "@/components/ErrorState";
 import { SkeletonList } from "@/components/Skeleton";
 import StatutDocumentMenu, { StatutDocumentBadge } from "@/components/StatutDocument";
 
-function formaterDate(iso: string): string {
+function formaterDate(iso: string, langue: string): string {
   try {
-    return new Date(iso).toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" });
+    const locale = langue === "en" ? "en-GB" : "fr-FR";
+    return new Date(iso).toLocaleDateString(locale, { day: "2-digit", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" });
   } catch {
     return iso;
   }
 }
 
 export default function HistoriqueDossierPage() {
+  const { t, i18n } = useTranslation();
   const dossierActif = useDossierActif();
   const pousserToast = useAppStore((s) => s.pousserToast);
   const [statuts, setStatuts] = useState<Record<number, StatutDocument>>({});
@@ -70,69 +73,69 @@ export default function HistoriqueDossierPage() {
     try {
       await analyseApi.changerStatutConclusion(analyseId, statut);
       setStatuts((precedents) => ({ ...precedents, [analyseId]: statut }));
-      pousserToast("success", `Document passé au statut « ${statut} ».`);
+      pousserToast("success", t("statutDocument.changePousse", { statut: t(`statutDocument.${statut}`, statut) }));
     } catch (e) {
-      pousserToast("error", e instanceof Error ? e.message : "Impossible de changer le statut.");
+      pousserToast("error", e instanceof Error ? e.message : t("arsenal.erreurChangementStatut"));
     } finally {
       setStatutEnCours(null);
     }
   };
 
   if (!dossierActif) {
-    return <EmptyState titre="Aucun dossier sélectionné" description="Sélectionnez ou créez un dossier pour consulter sa fiche et son historique." />;
+    return <EmptyState titre={t("historiqueDossier.emptyTitre")} description={t("historiqueDossier.emptyDescription")} />;
   }
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <div>
-        <p className="kicker">La Chemise</p>
+        <p className="kicker">{t("nav.sections.chemise")}</p>
         <h1 className="mt-1 font-serif text-h2 font-semibold text-gold-500">{dossierActif.nom}</h1>
         <Link to={`/app/chat?dossier_id=${dossierActif.id}`} className="btn-secondary mt-3 inline-flex">
-          Ouvrir le chat de ce dossier
+          {t("historiqueDossier.ouvrirChat")}
         </Link>
       </div>
 
       <div className="card space-y-4 p-6">
         <div className="flex flex-wrap items-center gap-3">
           {dossierActif.domaine && <span className="badge border-gold-600/30 bg-surface-2 text-gold-500">{dossierActif.domaine}</span>}
-          <span className="badge border-gold-600/30 bg-surface-2 text-warmgray">{dossierActif.statut}</span>
-          {dossierActif.numero_dossier && <span className="text-xs text-muted">Réf. {dossierActif.numero_dossier}</span>}
+          <span className="badge border-gold-600/30 bg-surface-2 text-warmgray">{t(`dossierStatut.${dossierActif.statut}`, dossierActif.statut)}</span>
+          {dossierActif.numero_dossier && <span className="text-xs text-muted">{t("dossiersPage.reference")} {dossierActif.numero_dossier}</span>}
           {dossierActif.partie_representee && <span className="badge border-amethyst-400/30 bg-amethyst-400/10 text-amethyst-400">{dossierActif.partie_representee}</span>}
           {dossierActif.stade_procedure && <span className="badge border-gold-600/30 bg-surface-2 text-gold-500">{dossierActif.stade_procedure}</span>}
         </div>
 
         {dossierActif.objectif && (
           <div>
-            <p className="mb-1 text-micro font-medium uppercase tracking-wide text-warmgray">Objectif</p>
+            <p className="mb-1 text-micro font-medium uppercase tracking-wide text-warmgray">{t("modifierDomaine.objectif")}</p>
             <p className="text-sm text-ivory">{dossierActif.objectif}</p>
           </div>
         )}
 
         <div>
-          <p className="mb-1 text-micro font-medium uppercase tracking-wide text-warmgray">Parties</p>
-          <p className="text-sm text-ivory">{dossierActif.parties?.trim() || <span className="text-muted">Non renseignées.</span>}</p>
+          <p className="mb-1 text-micro font-medium uppercase tracking-wide text-warmgray">{t("historiqueDossier.parties")}</p>
+          <p className="text-sm text-ivory">{dossierActif.parties?.trim() || <span className="text-muted">{t("historiqueDossier.partiesNonRenseignees")}</span>}</p>
         </div>
 
         <div>
-          <p className="mb-1 text-micro font-medium uppercase tracking-wide text-warmgray">Faits</p>
+          <p className="mb-1 text-micro font-medium uppercase tracking-wide text-warmgray">{t("historiqueDossier.faits")}</p>
           {dossierActif.faits?.trim() ? (
             <div className="max-h-72 overflow-y-auto whitespace-pre-wrap rounded-md bg-surface-2 p-4 text-sm leading-relaxed text-ivory">
               {dossierActif.faits}
             </div>
           ) : (
             <p className="text-sm text-muted">
-              Aucun fait enregistré — utilisez « Préparer ce dossier » pour en importer.
+              {t("historiqueDossier.aucunFait")}
             </p>
           )}
         </div>
       </div>
 
       <div>
-        <h2 className="mb-3 font-serif text-h3 font-semibold text-gold-500">Documents générés</h2>
+        <h2 className="mb-3 font-serif text-h3 font-semibold text-gold-500">{t("historiqueDossier.documentsGeneres")}</h2>
         {documentsLoading && <SkeletonList count={2} />}
         {!documentsLoading && documentsError && <ErrorState message={documentsError} onRetry={reloadDocuments} />}
         {!documentsLoading && !documentsError && documentsGeneres && documentsGeneres.length === 0 && (
-          <EmptyState titre="Aucun document généré" description="Les plans, simulateurs et consultations produits pour ce dossier apparaîtront ici." />
+          <EmptyState titre={t("historiqueDossier.aucunDocumentTitre")} description={t("historiqueDossier.aucunDocumentDescription")} />
         )}
         {!documentsLoading && !documentsError && documentsGeneres && documentsGeneres.length > 0 && (
           <div className="space-y-2">
@@ -145,7 +148,7 @@ export default function HistoriqueDossierPage() {
                   className="card flex items-center justify-between gap-4 p-4 transition-colors hover:border-gold-500/40"
                 >
                   <div className="min-w-0"><p className="truncate text-sm font-medium text-ivory">{document.titre}</p><p className="text-xs text-muted">{document.feature}</p></div>
-                  <div className="flex shrink-0 items-center gap-2"><StatutDocumentBadge statut={document.statut} /><span className="text-xs text-muted">Rouvrir</span></div>
+                  <div className="flex shrink-0 items-center gap-2"><StatutDocumentBadge statut={document.statut} /><span className="text-xs text-muted">{t("historiqueDossier.rouvrir")}</span></div>
                 </Link>
               );
             })}
@@ -154,7 +157,7 @@ export default function HistoriqueDossierPage() {
       </div>
 
       <div>
-        <h2 className="mb-3 font-serif text-h3 font-semibold text-gold-500">Conversations du dossier</h2>
+        <h2 className="mb-3 font-serif text-h3 font-semibold text-gold-500">{t("historiqueDossier.conversations")}</h2>
 
         {conversationsLoading && <SkeletonList count={2} />}
 
@@ -162,8 +165,8 @@ export default function HistoriqueDossierPage() {
 
         {!conversationsLoading && !conversationsError && conversations && conversations.length === 0 && (
           <EmptyState
-            titre="Aucune conversation rattachée"
-            description="Les nouvelles conversations ouvertes depuis ce dossier apparaîtront ici."
+            titre={t("historiqueDossier.aucuneConversationTitre")}
+            description={t("historiqueDossier.aucuneConversationDescription")}
           />
         )}
 
@@ -176,7 +179,7 @@ export default function HistoriqueDossierPage() {
                 className="card flex items-center justify-between gap-4 p-4 transition-colors hover:border-gold-500/40"
               >
                 <span className="min-w-0 truncate text-sm font-medium text-ivory">{conversation.titre}</span>
-                <span className="shrink-0 text-xs text-muted">{formaterDate(conversation.date_modification)}</span>
+                <span className="shrink-0 text-xs text-muted">{formaterDate(conversation.date_modification, i18n.language)}</span>
               </Link>
             ))}
           </div>
@@ -184,7 +187,7 @@ export default function HistoriqueDossierPage() {
       </div>
 
       <div>
-        <h2 className="mb-3 font-serif text-h3 font-semibold text-gold-500">Historique des analyses</h2>
+        <h2 className="mb-3 font-serif text-h3 font-semibold text-gold-500">{t("historiqueDossier.historiqueAnalyses")}</h2>
 
         {loading && <SkeletonList count={2} />}
 
@@ -192,8 +195,8 @@ export default function HistoriqueDossierPage() {
 
         {!loading && !error && analyses && analyses.length === 0 && (
           <EmptyState
-            titre="Aucune analyse enregistrée"
-            description="Chaque analyse lancée depuis « Analyser des conclusions adverses » est automatiquement archivée ici."
+            titre={t("rapportComplet.aucuneAnalyseTitre")}
+            description={t("historiqueDossier.aucuneAnalyseDescription")}
           />
         )}
 
@@ -206,13 +209,13 @@ export default function HistoriqueDossierPage() {
                 const statut = statuts[a.id] ?? a.statut;
                 return (
                   <div className="flex flex-wrap items-center gap-3">
-                    <span className="text-sm font-medium text-ivory">{formaterDate(a.date)}</span>
+                    <span className="text-sm font-medium text-ivory">{formaterDate(a.date, i18n.language)}</span>
                     <StatutDocumentBadge statut={statut} />
                     <span className="text-xs text-warmgray">
-                      {a.arguments.length} argument{a.arguments.length > 1 ? "s" : ""}
+                      {t("historiqueDossier.nombreArguments", { count: a.arguments.length })}
                     </span>
                     {a.points_attention.length > 0 && (
-                      <span className="badge border-risk-high/30 bg-risk-high/10 text-risk-high">{a.points_attention.length} point(s) d'attention</span>
+                      <span className="badge border-risk-high/30 bg-risk-high/10 text-risk-high">{t("historiqueDossier.nombrePointsAttention", { count: a.points_attention.length })}</span>
                     )}
                   </div>
                 );
@@ -229,7 +232,7 @@ export default function HistoriqueDossierPage() {
                   ))}
                   {a.points_attention.length > 0 && (
                     <div className="rounded-md border border-risk-high/30 bg-risk-high/10 p-4">
-                      <p className="mb-2 text-sm font-semibold text-risk-high">⚠ Points d'attention</p>
+                      <p className="mb-2 text-sm font-semibold text-risk-high">⚠ {t("planTimeline.pointsAttention")}</p>
                       <ul className="space-y-1 text-sm text-ivory">
                         {a.points_attention.map((p, i) => (
                           <li key={i} className="flex gap-2">

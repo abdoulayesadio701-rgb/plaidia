@@ -7,6 +7,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
+import type { TFunction } from "i18next";
 import { dossiers as dossiersApi } from "@/api";
 import type { Dossier } from "@/api";
 import { useAppStore } from "@/store/useAppStore";
@@ -22,15 +24,17 @@ import RechercheDossierResultats from "@/components/RechercheDossierResultats";
 import { SkeletonBlock } from "@/components/Skeleton";
 import justitiaPortrait from "@/assets/justitia-banniere.jpg";
 
-function formaterDate(iso: string): string {
+function formaterDate(iso: string, langue: string): string {
   try {
-    return new Date(iso).toLocaleDateString("fr-FR", { day: "2-digit", month: "short", year: "numeric" });
+    const locale = langue === "en" ? "en-GB" : "fr-FR";
+    return new Date(iso).toLocaleDateString(locale, { day: "2-digit", month: "short", year: "numeric" });
   } catch {
     return iso;
   }
 }
 
 export default function DossiersPage() {
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const dossiers = useAppStore((s) => s.dossiers);
   const dossiersCharges = useAppStore((s) => s.dossiersCharges);
@@ -71,15 +75,16 @@ export default function DossiersPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [terme]);
 
+  const nonClasse = t("dossiersPage.nonClasse");
   const groupes = useMemo(() => {
     const parDomaine = new Map<string, Dossier[]>();
     for (const d of dossiers) {
-      const cle = d.domaine?.trim() || "Non classé";
+      const cle = d.domaine?.trim() || nonClasse;
       if (!parDomaine.has(cle)) parDomaine.set(cle, []);
       parDomaine.get(cle)!.push(d);
     }
-    return [...parDomaine.entries()].sort(([a], [b]) => (a === "Non classé" ? 1 : b === "Non classé" ? -1 : a.localeCompare(b)));
-  }, [dossiers]);
+    return [...parDomaine.entries()].sort(([a], [b]) => (a === nonClasse ? 1 : b === nonClasse ? -1 : a.localeCompare(b)));
+  }, [dossiers, nonClasse]);
 
   const ouvrirDossier = (id: number) => {
     selectionnerDossier(id);
@@ -92,10 +97,10 @@ export default function DossiersPage() {
     try {
       await dossiersApi.supprimerDossier(dossierASupprimer.id);
       retirerDossierLocal(dossierASupprimer.id);
-      pousserToast("success", `Dossier « ${dossierASupprimer.nom} » supprimé.`);
+      pousserToast("success", t("dossiersPage.supprime", { nom: dossierASupprimer.nom }));
       setDossierASupprimer(null);
     } catch (e) {
-      pousserToast("error", e instanceof Error ? e.message : "La suppression a échoué.");
+      pousserToast("error", e instanceof Error ? e.message : t("dossiersPage.echecSuppression"));
     } finally {
       setSuppressionEnCours(false);
     }
@@ -105,18 +110,18 @@ export default function DossiersPage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="kicker">La Chemise</p>
-          <h1 className="mt-1 font-serif text-h2 font-semibold text-gold-500">Mes dossiers</h1>
+          <p className="kicker">{t("nav.sections.chemise")}</p>
+          <h1 className="mt-1 font-serif text-h2 font-semibold text-gold-500">{t("nav.chemise.dossiers")}</h1>
         </div>
         <Button variant="primary" onClick={() => setModalCreation(true)}>
-          ＋ Nouveau dossier
+          ＋ {t("nouveauDossier.titre")}
         </Button>
       </div>
 
       <input
         className="input max-w-xl"
-        placeholder="Rechercher dans tous les dossiers (faits, parties, nom, domaine, analyses)…"
-        aria-label="Rechercher dans tous les dossiers"
+        placeholder={t("dossiersPage.rechercherPlaceholder")}
+        aria-label={t("dossiersPage.rechercherAria")}
         value={terme}
         onChange={(e) => setTerme(e.target.value)}
       />
@@ -152,19 +157,19 @@ export default function DossiersPage() {
                 <img src={justitiaPortrait} alt="" />
                 <div className="wash" />
                 <div className="caption">
-                  <p className="kicker">Avant le premier dossier</p>
+                  <p className="kicker">{t("dossiersPage.avantPremierDossier")}</p>
                   <p className="font-serif text-lg italic leading-snug text-ivory">
-                    « Ne rien avancer sans pouvoir le vérifier. »
+                    {t("dossiersPage.citation")}
                   </p>
                 </div>
               </div>
               <EmptyState
                 className="lg:h-full"
-                titre="Aucun dossier pour l'instant"
-                description="Créez votre premier dossier pour commencer à travailler avec Plaid'IA."
+                titre={t("dossiersPage.aucunDossierTitre")}
+                description={t("dossiersPage.aucunDossierDescription")}
                 action={
                   <Button variant="primary" onClick={() => setModalCreation(true)}>
-                    ＋ Nouveau dossier
+                    ＋ {t("nouveauDossier.titre")}
                   </Button>
                 }
               />
@@ -186,6 +191,8 @@ export default function DossiersPage() {
                       onOuvrir={() => ouvrirDossier(d.id)}
                       onModifierDomaine={() => setDossierAModifier(d)}
                       onSupprimer={() => setDossierASupprimer(d)}
+                      t={t}
+                      langue={i18n.language}
                     />
                   ))}
                 </div>
@@ -198,12 +205,12 @@ export default function DossiersPage() {
       {dossierAModifier && <ModifierDomaineModal dossier={dossierAModifier} onFermer={() => setDossierAModifier(null)} />}
       {dossierASupprimer && (
         <ConfirmerSuppressionModal
-          titre="Supprimer ce dossier"
+          titre={t("dossiersPage.supprimerCeDossier")}
           texteConfirmation={dossierASupprimer.nom}
           description={
             <p>
-              Cette action supprime définitivement le dossier <strong className="text-ivory">{dossierASupprimer.nom}</strong> et
-              toutes ses analyses enregistrées. Elle est irréversible.
+              {t("dossiersPage.confirmationSuppression1")} <strong className="text-ivory">{dossierASupprimer.nom}</strong>{" "}
+              {t("dossiersPage.confirmationSuppression2")}
             </p>
           }
           enCours={suppressionEnCours}
@@ -220,9 +227,11 @@ interface CarteDossierProps {
   onOuvrir: () => void;
   onModifierDomaine: () => void;
   onSupprimer: () => void;
+  t: TFunction;
+  langue: string;
 }
 
-function CarteDossier({ dossier, onOuvrir, onModifierDomaine, onSupprimer }: CarteDossierProps) {
+function CarteDossier({ dossier, onOuvrir, onModifierDomaine, onSupprimer, t, langue }: CarteDossierProps) {
   return (
     <div
       className="card-interactive space-y-3 p-5"
@@ -238,25 +247,25 @@ function CarteDossier({ dossier, onOuvrir, onModifierDomaine, onSupprimer }: Car
     >
       <div className="flex items-start justify-between gap-3">
         <p className="font-serif text-h4 font-semibold text-ivory">{dossier.nom}</p>
-        <span className="badge shrink-0 border-gold-600/30 bg-surface-2 text-warmgray">{dossier.statut}</span>
+        <span className="badge shrink-0 border-gold-600/30 bg-surface-2 text-warmgray">{t(`dossierStatut.${dossier.statut}`, dossier.statut)}</span>
       </div>
-      {dossier.numero_dossier && <p className="text-xs text-muted">Réf. {dossier.numero_dossier}</p>}
+      {dossier.numero_dossier && <p className="text-xs text-muted">{t("dossiersPage.reference")} {dossier.numero_dossier}</p>}
       <div className="flex items-center justify-between gap-3 pt-1">
-        <span className="text-xs text-warmgray">{formaterDate(dossier.date_creation)}</span>
+        <span className="text-xs text-warmgray">{formaterDate(dossier.date_creation, langue)}</span>
         <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
           <PinButton type="dossier" referenceId={dossier.id} libelle={dossier.nom} />
           <button
             onClick={onModifierDomaine}
             className="rounded-md px-2 py-1 text-xs text-gold-500 transition-colors hover:bg-surface-2"
-            title="Modifier le domaine"
+            title={t("dossiersPage.modifierDomaine")}
           >
-            ✎ Domaine
+            ✎ {t("modifierDomaine.domaine")}
           </button>
           <button
             onClick={onSupprimer}
             className="rounded-md px-2 py-1 text-xs text-risk-high transition-colors hover:bg-risk-high/10"
-            title="Supprimer"
-            aria-label="Supprimer ce dossier"
+            title={t("dossiersPage.supprimer")}
+            aria-label={t("dossiersPage.supprimerCeDossierAria")}
           >
             🗑
           </button>
