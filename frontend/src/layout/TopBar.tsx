@@ -11,7 +11,6 @@ import { useAppStore } from "@/store/useAppStore";
 import Logo from "@/components/Logo";
 import Button from "@/components/Button";
 import FullscreenToggle from "@/components/FullscreenToggle";
-import ThemeToggle from "@/components/ThemeToggle";
 import NouveauDossierModal from "@/components/NouveauDossierModal";
 import DossierSelector from "./DossierSelector";
 
@@ -57,7 +56,6 @@ export default function TopBar() {
             ))}
           </select>
           <FullscreenToggle />
-          <ThemeToggle />
           <Link
             to="/app/parametres"
             className="rounded-md p-1.5 text-warmgray transition-colors hover:bg-surface-2 hover:text-ivory"

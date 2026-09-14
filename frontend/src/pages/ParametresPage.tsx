@@ -11,6 +11,7 @@
 
 import { useAppStore } from "@/store/useAppStore";
 import ClePersonnelleForm from "@/components/ClePersonnelleForm";
+import { useTheme } from "@/hooks/useTheme";
 
 const URL_GITHUB = "https://github.com/abdoulayesadio701-rgb/plaidia";
 
@@ -23,9 +24,44 @@ export default function ParametresPage() {
       </div>
 
       <JuridictionSection />
+      <ThemeSection />
       <ClePersonnelleSection />
       <AProposSection />
     </div>
+  );
+}
+
+function ThemeSection() {
+  const { theme, basculerTheme } = useTheme();
+
+  return (
+    <section className="card space-y-3 p-6">
+      <h2 className="font-serif text-h3 font-semibold text-gold-500">Thème</h2>
+      <p className="text-sm text-warmgray">
+        Le thème sombre reprend l'identité « or ancien » d'origine de Plaid'IA. Votre choix est mémorisé sur cet appareil.
+      </p>
+      <div className="flex max-w-xs gap-1 rounded-md bg-surface-2 p-1">
+        {(
+          [
+            { valeur: "light", label: "☀ Clair" },
+            { valeur: "dark", label: "🌙 Sombre" },
+          ] as const
+        ).map(({ valeur, label }) => (
+          <button
+            key={valeur}
+            onClick={() => {
+              if (theme !== valeur) basculerTheme();
+            }}
+            className={`flex-1 rounded-md px-3 py-2 text-sm font-semibold transition-colors ${
+              theme === valeur ? "bg-gold-500 text-ink" : "text-warmgray hover:text-ivory"
+            }`}
+            aria-pressed={theme === valeur}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+    </section>
   );
 }
 
