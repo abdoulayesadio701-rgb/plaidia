@@ -85,7 +85,7 @@ export default function ConnexionPage() {
         <div className="connexion-photo-scrim" />
         <div className="connexion-photo-wash" />
         <div className="relative z-10 flex h-full flex-col justify-end p-12 xl:p-16">
-          <p className="font-mono text-xs uppercase tracking-[0.24em] text-amethyst-400">L'engagement de l'agent IA</p>
+          <p className="font-mono text-xs uppercase tracking-[0.24em] connexion-accent">L'engagement de l'agent IA</p>
           <blockquote className="mt-5 max-w-md font-serif text-3xl font-semibold leading-tight text-white xl:text-4xl">
             « Les hommes naissent et demeurent libres et égaux en droits. »
           </blockquote>
@@ -102,7 +102,7 @@ export default function ConnexionPage() {
         <div className="connexion-photo-scrim" />
         <div className="connexion-photo-wash" />
         <div className="relative z-10 flex h-full flex-col justify-end p-6">
-          <p className="font-mono text-[0.65rem] uppercase tracking-[0.2em] text-amethyst-400">L'engagement de l'agent IA</p>
+          <p className="font-mono text-[0.65rem] uppercase tracking-[0.2em] connexion-accent">L'engagement de l'agent IA</p>
           <p className="mt-1.5 font-serif text-lg font-semibold leading-tight text-white">
             « Libres et égaux en droits. »
           </p>
@@ -113,9 +113,9 @@ export default function ConnexionPage() {
       <div className="connexion-form-panel">
         <div className="w-full max-w-sm">
           <div className="mb-10 flex items-center gap-2.5">
-            <Logo showWordmark={false} iconClassName="h-8 w-8 text-amethyst-400" />
+            <Logo showWordmark={false} iconClassName="h-8 w-8 connexion-accent" />
             <span className="font-display text-2xl font-bold text-white">
-              Plaid<span className="text-amethyst-400">’IA</span>
+              Plaid<span className="connexion-accent">’IA</span>
             </span>
           </div>
 
@@ -197,7 +197,7 @@ export default function ConnexionPage() {
             </Button>
 
             <p className="text-center text-xs text-white/40">
-              <a href="#" className="hover:text-amethyst-400" onClick={(e) => e.preventDefault()}>
+              <a href="#" className="hover:text-[#9b59b6]" onClick={(e) => e.preventDefault()}>
                 Code oublié ? Demander un accès
               </a>
             </p>

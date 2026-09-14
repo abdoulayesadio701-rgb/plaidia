@@ -39,11 +39,11 @@ plus de dégradé violet-noir sous les surfaces.
 
 | Token | Hex | RGB | Usage |
 |---|---|---|---|
-| `gold-300` | `#DEC8E8` | 222 200 232 | Fond de badge violet très pâle, surlignage discret |
-| `gold-400` | `#A968BE` | 169 104 190 | Violet clair — reflets, hover des boutons primaires, icônes actives |
-| `gold-500` | `#8B4BA8` | 139 75 168 | **Couleur principale** — icônes, séparateurs, bouton primaire au repos |
-| `gold-600` | `#66377F` | 102 55 127 | Violet foncé — bordures fines |
-| `gold-700` | `#522C66` | 82 44 102 | État pressé/actif des boutons violets |
+| `gold-300` | `#BEB4C9` | 190 180 201 | Fond de badge violet très pâle, surlignage discret |
+| `gold-400` | `#7A668D` | 122 102 141 | Violet clair — reflets, hover des boutons primaires, icônes actives |
+| `gold-500` | `#5F516F` | 95 81 111 | **Couleur principale** — icônes, séparateurs, bouton primaire au repos |
+| `gold-600` | `#40374C` | 64 55 76 | Violet foncé — bordures fines |
+| `gold-700` | `#2E2837` | 46 40 55 | État pressé/actif des boutons violets |
 
 `gold-500` reste LA couleur de marque et d'action primaire, `gold-400`
 réservé au hover/reflet, `gold-600` aux bordures fines et aux fonds. Les
@@ -54,8 +54,8 @@ titres (h1-h4) utilisent désormais `amethyst-600` (navy), pas `gold-500`
 
 | Token | Hex | RGB | Usage |
 |---|---|---|---|
-| `amethyst-300` | `#D4A8E0` | 212 168 224 | Fond de badge/pastille très pâle |
-| `amethyst-400` | `#9B59B6` | 155 89 182 | **Focus ring**, états actifs, barre de progression, liens |
+| `amethyst-300` | `#AC9ABB` | 172 154 187 | Fond de badge/pastille très pâle |
+| `amethyst-400` | `#6D5D7F` | 109 93 127 | **Focus ring**, états actifs, barre de progression, liens |
 | `amethyst-600` | `#17233C` | 23 35 60 | Navy — titres (h1-h4), ombres portées, dégradés premium |
 | `amethyst-700` | `#111A2D` | 17 26 45 | État pressé des éléments navy |
 
