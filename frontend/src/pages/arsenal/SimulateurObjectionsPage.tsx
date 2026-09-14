@@ -6,6 +6,7 @@
 
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { analyse as analyseApi, downloadBlob } from "@/api";
 import type { SimulateurResultat, StatutDocument } from "@/api";
 import { useAppStore, useDossierActif } from "@/store/useAppStore";
@@ -22,6 +23,7 @@ import StatutDocumentMenu, { StatutDocumentBadge } from "@/components/StatutDocu
 import { useAsync } from "@/hooks/useAsync";
 
 export default function SimulateurObjectionsPage() {
+  const { t } = useTranslation();
   const dossierActif = useDossierActif();
   const [searchParams] = useSearchParams();
   const pousserToast = useAppStore((s) => s.pousserToast);
@@ -50,9 +52,9 @@ export default function SimulateurObjectionsPage() {
     try {
       await analyseApi.changerStatutDocument(data.document_id, statut);
       definirDonnees({ ...data, statut });
-      pousserToast("success", `Document passé au statut « ${statut} ».`);
+      pousserToast("success", t("statutDocument.changePousse", { statut: t(`statutDocument.${statut}`, statut) }));
     } catch (e) {
-      pousserToast("error", e instanceof Error ? e.message : "Impossible de changer le statut.");
+      pousserToast("error", e instanceof Error ? e.message : t("arsenal.erreurChangementStatut"));
     } finally {
       setStatutEnCours(false);
     }
@@ -65,7 +67,7 @@ export default function SimulateurObjectionsPage() {
       const { blob, filename } = await analyseApi.exporterSimulateur(dossierActif.id, data);
       downloadBlob(blob, filename ?? `${dossierActif.nom}_simulateur.docx`);
     } catch (e) {
-      pousserToast("error", e instanceof Error ? e.message : "Échec de l'export.");
+      pousserToast("error", e instanceof Error ? e.message : t("arsenal.echecExport"));
     } finally {
       setExportEnCours(false);
     }
@@ -79,24 +81,24 @@ export default function SimulateurObjectionsPage() {
   const reveler = (i: number) => setRevelees((prev) => new Set(prev).add(i));
 
   if (!dossierActif) {
-    return <EmptyState titre="Aucun dossier sélectionné" description="Sélectionnez ou créez un dossier pour simuler ses objections probables." />;
+    return <EmptyState titre={t("simulateur.emptyTitre")} description={t("simulateur.emptyDescription")} />;
   }
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="kicker">L'Arsenal</p>
-          <h1 className="mt-1 font-serif text-h2 font-semibold text-gold-500">Simuler les objections probables</h1>
-          <p className="mt-2 text-sm text-warmgray">Dossier actif : {dossierActif.nom}</p>
+          <p className="kicker">{t("nav.sections.arsenal")}</p>
+          <h1 className="mt-1 font-serif text-h2 font-semibold text-gold-500">{t("nav.arsenal.simulateur")}</h1>
+          <p className="mt-2 text-sm text-warmgray">{t("arsenal.dossierActif")} : {dossierActif.nom}</p>
         </div>
         {data && (
           <div className="flex flex-wrap gap-2">
             <Button variant="secondary" loading={exportEnCours} onClick={() => void exporter()}>
-              ⬇ Exporter en Word
+              ⬇ {t("arsenal.exporterWord")}
             </Button>
             <Button variant="ghost" loading={loading} onClick={() => void executer()}>
-              🔄 Relancer
+              🔄 {t("simulateur.relancer")}
             </Button>
           </div>
         )}
@@ -104,11 +106,11 @@ export default function SimulateurObjectionsPage() {
 
       {!data && !loading && !error && (
         <EmptyState
-          titre="Prêt à simuler"
-          description="Anticipe les questions et objections les plus probables du juge ou de la partie adverse."
+          titre={t("simulateur.pretTitre")}
+          description={t("simulateur.pretDescription")}
           action={
             <Button variant="primary" onClick={() => void executer()}>
-              Simuler les objections
+              {t("simulateur.simuler")}
             </Button>
           }
         />
@@ -116,11 +118,11 @@ export default function SimulateurObjectionsPage() {
 
       {(loading || documentLoading) && <SkeletonList count={3} />}
 
-      {!loading && !documentLoading && (error || documentError) && <ErrorState message={error ?? documentError ?? "Erreur de chargement."} onRetry={() => void executer()} />}
+      {!loading && !documentLoading && (error || documentError) && <ErrorState message={error ?? documentError ?? t("arsenal.erreurChargement")} onRetry={() => void executer()} />}
 
       {!loading && !documentLoading && !error && !documentError && data && (
         <div className="space-y-5">
-          <div className="flex items-center justify-between gap-3"><div className="flex items-center gap-2"><span className="text-sm text-warmgray">Document sauvegardé</span><StatutDocumentBadge statut={data.statut ?? "Brouillon"} /></div><StatutDocumentMenu statut={data.statut ?? "Brouillon"} loading={statutEnCours} onChange={changerStatut} /></div>
+          <div className="flex items-center justify-between gap-3"><div className="flex items-center gap-2"><span className="text-sm text-warmgray">{t("simulateur.documentSauvegarde")}</span><StatutDocumentBadge statut={data.statut ?? "Brouillon"} /></div><StatutDocumentMenu statut={data.statut ?? "Brouillon"} loading={statutEnCours} onChange={changerStatut} /></div>
           <label className="flex w-fit cursor-pointer items-center gap-2.5 rounded-md border border-gold-600/20 bg-surface px-4 py-2.5 text-sm text-warmgray">
             <button
               type="button"
@@ -135,11 +137,11 @@ export default function SimulateurObjectionsPage() {
                 }`}
               />
             </button>
-            Mode entraînement — masquer les pistes de réponse
+            {t("simulateur.modeEntrainement")}
           </label>
 
           {data.objections.length === 0 ? (
-            <EmptyState titre="Aucune objection identifiée" description="Le contexte actuel du dossier ne permet pas d'anticiper d'objection probable." />
+            <EmptyState titre={t("simulateur.aucuneObjectionTitre")} description={t("simulateur.aucuneObjectionDescription")} />
           ) : (
             <div className="space-y-4">
               {data.objections.map((obj, i) => {
@@ -156,14 +158,14 @@ export default function SimulateurObjectionsPage() {
                       </span>
                     </div>
 
-                    <LabeledField label="Piège" texte={obj.piege} />
+                    <LabeledField label={t("simulateur.piege")} texte={obj.piege} />
 
                     {masquee ? (
                       <Button variant="secondary" onClick={() => reveler(i)}>
-                        👁 Révéler la piste de réponse
+                        👁 {t("simulateur.revelerPiste")}
                       </Button>
                     ) : (
-                      <LabeledField label="Piste de réponse" texte={obj.piste_reponse} />
+                      <LabeledField label={t("simulateur.pisteReponse")} texte={obj.piste_reponse} />
                     )}
                   </div>
                 );
@@ -173,13 +175,13 @@ export default function SimulateurObjectionsPage() {
 
           {data.point_le_plus_faible && (
             <div className="rounded-md border border-risk-high/30 bg-risk-high/10 p-5">
-              <p className="mb-2 text-sm font-semibold text-risk-high">⚠ Point le plus faible du dossier</p>
+              <p className="mb-2 text-sm font-semibold text-risk-high">⚠ {t("simulateur.pointLePlusFaible")}</p>
               <RichOutput texte={data.point_le_plus_faible} prose={false} className="text-sm" />
             </div>
           )}
 
-          {data.diagnostic && <div className="card"><h2 className="mb-2 font-serif text-h4 text-gold-500">Diagnostic</h2><p className="whitespace-pre-wrap text-sm text-warmgray">{data.diagnostic}</p></div>}
-          {data.strategie && <div className="card"><h2 className="mb-2 font-serif text-h4 text-gold-500">Stratégie pour la partie représentée</h2><p className="whitespace-pre-wrap text-sm text-ivory">{data.strategie}</p></div>}
+          {data.diagnostic && <div className="card"><h2 className="mb-2 font-serif text-h4 text-gold-500">{t("arsenal.diagnostic")}</h2><p className="whitespace-pre-wrap text-sm text-warmgray">{data.diagnostic}</p></div>}
+          {data.strategie && <div className="card"><h2 className="mb-2 font-serif text-h4 text-gold-500">{t("arsenal.strategie")}</h2><p className="whitespace-pre-wrap text-sm text-ivory">{data.strategie}</p></div>}
 
           <VerificationPanel verification={data.verification} />
 
@@ -189,7 +191,7 @@ export default function SimulateurObjectionsPage() {
             onMiseAJour={definirDonnees}
             dossierId={dossierActif.id}
             documentId={data.document_id}
-            placeholder="Ex. « Développe la piste de réponse sur l'objection n°2 »…"
+            placeholder={t("simulateur.chatPlaceholder")}
           />
         </div>
       )}

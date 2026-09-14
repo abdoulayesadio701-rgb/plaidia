@@ -5,6 +5,8 @@
  */
 
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
+import type { TFunction } from "i18next";
 import { analyse as analyseApi } from "@/api";
 import type { StyleResultat } from "@/api";
 import { useDossierActif } from "@/store/useAppStore";
@@ -22,14 +24,15 @@ import ChatContextuelPanel from "@/components/chat/ChatContextuelPanel";
 
 type CleSection = "langage_de_couverture" | "affirmations_absolues" | "voix_passive_suspecte" | "ruptures_registre";
 
-const SECTIONS: { key: CleSection; label: string; icone: string }[] = [
-  { key: "langage_de_couverture", label: "Langage de couverture (hedging)", icone: "🗣️" },
-  { key: "affirmations_absolues", label: "Affirmations absolues risquées", icone: "⚠️" },
-  { key: "voix_passive_suspecte", label: "Voix passive suspecte", icone: "👤" },
-  { key: "ruptures_registre", label: "Ruptures de registre", icone: "📉" },
+const SECTIONS: { key: CleSection; cleLabel: string; icone: string }[] = [
+  { key: "langage_de_couverture", cleLabel: "analyseStyle.langageCouverture", icone: "🗣️" },
+  { key: "affirmations_absolues", cleLabel: "analyseStyle.affirmationsAbsolues", icone: "⚠️" },
+  { key: "voix_passive_suspecte", cleLabel: "analyseStyle.voixPassiveSuspecte", icone: "👤" },
+  { key: "ruptures_registre", cleLabel: "analyseStyle.rupturesRegistre", icone: "📉" },
 ];
 
 export default function AnalyseStylePage() {
+  const { t } = useTranslation();
   const dossierActif = useDossierActif();
   const [texte, setTexte] = useState("");
 
@@ -47,16 +50,16 @@ export default function AnalyseStylePage() {
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <div>
-        <p className="kicker">L'Arsenal</p>
-        <h1 className="mt-1 font-serif text-h2 font-semibold text-gold-500">Analyse stylistique des conclusions adverses</h1>
-        <p className="mt-2 text-sm text-warmgray">Analyse la manière dont le texte est rédigé — pas son contenu juridique.</p>
+        <p className="kicker">{t("nav.sections.arsenal")}</p>
+        <h1 className="mt-1 font-serif text-h2 font-semibold text-gold-500">{t("nav.arsenal.style")}</h1>
+        <p className="mt-2 text-sm text-warmgray">{t("analyseStyle.sousTitre")}</p>
       </div>
 
       <div className="card space-y-3 p-6">
         <textarea
           {...dragProps}
           className={`input min-h-[220px] resize-y ${survole ? "ring-2 ring-amethyst-400" : ""}`}
-          placeholder="Collez ici le texte des conclusions adverses à analyser, ou déposez un fichier…"
+          placeholder={t("analyseStyle.placeholder")}
           value={texte}
           onChange={(e) => setTexte(e.target.value)}
           disabled={loading || enImport}
@@ -73,12 +76,12 @@ export default function AnalyseStylePage() {
             />
             <span className="text-xs text-muted">
               {dossierActif
-                ? `Le texte extrait sera aussi ajouté aux faits de « ${dossierActif.nom} ».`
-                : "PDF, Word, Excel, image — le texte extrait est injecté ci-dessus."}
+                ? t("analyseStyle.texteAjouteAuxFaits", { nom: dossierActif.nom })
+                : t("arsenal.formatsAcceptes")}
             </span>
           </div>
           <Button variant="primary" loading={loading} disabled={!texte.trim() || enImport} onClick={() => void executer(texte)}>
-            Analyser le style
+            {t("analyseStyle.analyser")}
           </Button>
         </div>
       </div>
@@ -91,27 +94,27 @@ export default function AnalyseStylePage() {
 
       {!loading && !error && data && (
         <div className="space-y-5">
-          <ResultatStyle data={data} />
+          <ResultatStyle data={data} t={t} />
           <ChatContextuelPanel
             feature="style"
             resultatActuel={data}
             onMiseAJour={definirDonnees}
-            placeholder="Ex. « Pourquoi cette phrase est-elle une affirmation absolue risquée ? »…"
+            placeholder={t("analyseStyle.chatPlaceholder")}
           />
         </div>
       )}
 
       {!loading && !error && !data && (
         <EmptyState
-          titre="Prêt à analyser"
-          description="Collez le texte des conclusions adverses ci-dessus, ou importez un fichier, pour repérer les fragilités de leur rédaction."
+          titre={t("analyserConclusions.pretTitre")}
+          description={t("analyseStyle.pretDescription")}
         />
       )}
     </div>
   );
 }
 
-function ResultatStyle({ data }: { data: StyleResultat }) {
+function ResultatStyle({ data, t }: { data: StyleResultat; t: TFunction }) {
   return (
     <div className="space-y-5">
       {SECTIONS.map((section) => {
@@ -119,10 +122,10 @@ function ResultatStyle({ data }: { data: StyleResultat }) {
         return (
           <div key={section.key} className="card p-6">
             <p className="mb-3 font-serif text-h4 font-semibold text-ivory">
-              {section.icone} {section.label}
+              {section.icone} {t(section.cleLabel)}
             </p>
             {elements.length === 0 ? (
-              <p className="text-sm text-muted">Rien de notable détecté.</p>
+              <p className="text-sm text-muted">{t("analyseStyle.rienDetecte")}</p>
             ) : (
               <ul className="space-y-3">
                 {elements.map((el, i) => (
@@ -139,13 +142,13 @@ function ResultatStyle({ data }: { data: StyleResultat }) {
 
       {data.synthese_strategique && (
         <div className="card border-amethyst-400/30 p-6">
-          <p className="mb-2 text-micro font-medium uppercase tracking-wide text-amethyst-400">💡 Synthèse stratégique</p>
+          <p className="mb-2 text-micro font-medium uppercase tracking-wide text-amethyst-400">💡 {t("analyseStyle.syntheseStrategique")}</p>
           <RichOutput texte={data.synthese_strategique} />
         </div>
       )}
 
       <div className="rounded-md border border-gold-500/30 bg-gold-500/10 p-4 text-sm text-gold-500">
-        ⚡ Outil de réflexion stratégique, pas une preuve juridique.
+        ⚡ {t("analyseStyle.avertissement")}
       </div>
     </div>
   );

@@ -6,6 +6,7 @@
  */
 
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { analyse as analyseApi, downloadBlob } from "@/api";
 import { useAppStore, useDossierActif } from "@/store/useAppStore";
 import { useLazyAction } from "@/hooks/useLazyAction";
@@ -21,13 +22,13 @@ import PlanTimeline from "@/components/PlanTimeline";
 import { SkeletonList } from "@/components/Skeleton";
 import ChatContextuelPanel from "@/components/chat/ChatContextuelPanel";
 
-const ONGLETS = [
-  { id: "analyse", label: "Analyse" },
-  { id: "plan", label: "Plan" },
-  { id: "simulateur", label: "Simulateur" },
-];
-
 export default function RapportCompletPage() {
+  const { t } = useTranslation();
+  const ONGLETS = [
+    { id: "analyse", label: t("rapportComplet.ongletAnalyse") },
+    { id: "plan", label: t("rapportComplet.ongletPlan") },
+    { id: "simulateur", label: t("rapportComplet.ongletSimulateur") },
+  ];
   const dossierActif = useDossierActif();
   const pousserToast = useAppStore((s) => s.pousserToast);
   const [inclurePlan, setInclurePlan] = useState(true);
@@ -46,22 +47,22 @@ export default function RapportCompletPage() {
       const { blob, filename } = await analyseApi.exporterRapportComplet(dossierActif.id, data.analyse ?? null, data.plan ?? null, data.simulateur);
       downloadBlob(blob, filename ?? `${dossierActif.nom}_rapport_complet.docx`);
     } catch (e) {
-      pousserToast("error", e instanceof Error ? e.message : "Échec de l'export.");
+      pousserToast("error", e instanceof Error ? e.message : t("arsenal.echecExport"));
     } finally {
       setExportEnCours(false);
     }
   };
 
   if (!dossierActif) {
-    return <EmptyState titre="Aucun dossier sélectionné" description="Sélectionnez ou créez un dossier pour générer un rapport complet." />;
+    return <EmptyState titre={t("rapportComplet.emptyTitre")} description={t("rapportComplet.emptyDescription")} />;
   }
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <div>
-        <p className="kicker">L'Arsenal</p>
-        <h1 className="mt-1 font-serif text-h2 font-semibold text-gold-500">Rapport complet</h1>
-        <p className="mt-2 text-sm text-warmgray">Dossier actif : {dossierActif.nom}</p>
+        <p className="kicker">{t("nav.sections.arsenal")}</p>
+        <h1 className="mt-1 font-serif text-h2 font-semibold text-gold-500">{t("nav.arsenal.rapport-complet")}</h1>
+        <p className="mt-2 text-sm text-warmgray">{t("arsenal.dossierActif")} : {dossierActif.nom}</p>
       </div>
 
       <div className="card space-y-5 p-6">
@@ -72,19 +73,19 @@ export default function RapportCompletPage() {
             onChange={(e) => setInclurePlan(e.target.checked)}
             className="h-4 w-4 rounded accent-amethyst-400"
           />
-          Inclure un plan de plaidoirie chronométré
+          {t("rapportComplet.inclurePlan")}
         </label>
         {inclurePlan && <DureeSlider valeur={duree} onChange={setDuree} />}
         <div className="flex justify-end">
           <Button variant="primary" loading={loading} onClick={lancer}>
-            Générer le rapport complet
+            {t("rapportComplet.generer")}
           </Button>
         </div>
       </div>
 
       {loading && (
         <div className="space-y-3">
-          <p className="text-sm text-warmgray">Génération du plan et du simulateur en parallèle…</p>
+          <p className="text-sm text-warmgray">{t("rapportComplet.generationEnParallele")}</p>
           <SkeletonList count={2} />
         </div>
       )}
@@ -96,7 +97,7 @@ export default function RapportCompletPage() {
           <div className="flex flex-wrap items-center justify-between gap-3">
             <Tabs tabs={ONGLETS} actif={ongletActif} onChange={setOngletActif} />
             <Button variant="secondary" loading={exportEnCours} onClick={() => void exporter()}>
-              ⬇ Exporter en Word
+              ⬇ {t("arsenal.exporterWord")}
             </Button>
           </div>
 
@@ -108,7 +109,7 @@ export default function RapportCompletPage() {
                 ))}
                 {data.analyse.points_attention.length > 0 && (
                   <div className="rounded-md border border-risk-high/30 bg-risk-high/10 p-5">
-                    <p className="mb-2 text-sm font-semibold text-risk-high">⚠ Points d'attention</p>
+                    <p className="mb-2 text-sm font-semibold text-risk-high">⚠ {t("planTimeline.pointsAttention")}</p>
                     <ul className="space-y-1.5">
                       {data.analyse.points_attention.map((p, i) => (
                         <li key={i} className="flex gap-2">
@@ -128,8 +129,8 @@ export default function RapportCompletPage() {
               </div>
             ) : (
               <EmptyState
-                titre="Aucune analyse enregistrée"
-                description="Ce dossier n'a pas encore d'analyse de conclusions adverses enregistrée – utilisez « Analyser des conclusions adverses » d'abord."
+                titre={t("rapportComplet.aucuneAnalyseTitre")}
+                description={t("rapportComplet.aucuneAnalyseDescription")}
               />
             ))}
 
@@ -146,8 +147,8 @@ export default function RapportCompletPage() {
               </div>
             ) : (
               <EmptyState
-                titre="Aucun plan généré"
-                description="Cochez « Inclure un plan de plaidoirie » ci-dessus puis relancez pour en générer un."
+                titre={t("rapportComplet.aucunPlanTitre")}
+                description={t("rapportComplet.aucunPlanDescription")}
               />
             ))}
 
@@ -164,13 +165,13 @@ export default function RapportCompletPage() {
                       {obj.origine}
                     </span>
                   </div>
-                  <LabeledField label="Piège" texte={obj.piege} />
-                  <LabeledField label="Piste de réponse" texte={obj.piste_reponse} />
+                  <LabeledField label={t("simulateur.piege")} texte={obj.piege} />
+                  <LabeledField label={t("simulateur.pisteReponse")} texte={obj.piste_reponse} />
                 </div>
               ))}
               {data.simulateur.point_le_plus_faible && (
                 <div className="rounded-md border border-risk-high/30 bg-risk-high/10 p-5">
-                  <p className="mb-2 text-sm font-semibold text-risk-high">⚠ Point le plus faible du dossier</p>
+                  <p className="mb-2 text-sm font-semibold text-risk-high">⚠ {t("simulateur.pointLePlusFaible")}</p>
                   <RichOutput texte={data.simulateur.point_le_plus_faible} prose={false} className="text-sm" />
                 </div>
               )}
@@ -187,8 +188,8 @@ export default function RapportCompletPage() {
 
       {!loading && !error && !data && (
         <EmptyState
-          titre="Prêt à générer"
-          description="Lance en parallèle le plan de plaidoirie (optionnel) et le simulateur d'objections, avec la dernière analyse déjà enregistrée pour ce dossier."
+          titre={t("rapportComplet.pretTitre")}
+          description={t("rapportComplet.pretDescription")}
         />
       )}
     </div>

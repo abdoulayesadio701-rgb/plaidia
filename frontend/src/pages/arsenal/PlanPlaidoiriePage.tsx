@@ -13,6 +13,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useLocation, useSearchParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { analyse as analyseApi, downloadBlob } from "@/api";
 import type { PlanResultat, StatutDocument } from "@/api";
 import { useAppStore, useDossierActif } from "@/store/useAppStore";
@@ -34,6 +35,7 @@ interface NavigationState {
 }
 
 export default function PlanPlaidoiriePage() {
+  const { t } = useTranslation();
   const dossierActif = useDossierActif();
   const pousserToast = useAppStore((s) => s.pousserToast);
   const location = useLocation();
@@ -71,9 +73,9 @@ export default function PlanPlaidoiriePage() {
     try {
       await analyseApi.changerStatutDocument(data.document_id, statut);
       definirDonnees({ ...data, statut });
-      pousserToast("success", `Document passé au statut « ${statut} ».`);
+      pousserToast("success", t("statutDocument.changePousse", { statut: t(`statutDocument.${statut}`, statut) }));
     } catch (e) {
-      pousserToast("error", e instanceof Error ? e.message : "Impossible de changer le statut.");
+      pousserToast("error", e instanceof Error ? e.message : t("arsenal.erreurChangementStatut"));
     } finally {
       setStatutEnCours(false);
     }
@@ -86,29 +88,29 @@ export default function PlanPlaidoiriePage() {
       const { blob, filename } = await analyseApi.exporterRapportComplet(dossierActif.id, null, data, null);
       downloadBlob(blob, filename ?? `${dossierActif.nom}_plan.docx`);
     } catch (e) {
-      pousserToast("error", e instanceof Error ? e.message : "Échec de l'export.");
+      pousserToast("error", e instanceof Error ? e.message : t("arsenal.echecExport"));
     } finally {
       setExportEnCours(false);
     }
   };
 
   if (!dossierActif) {
-    return <EmptyState titre="Aucun dossier sélectionné" description="Sélectionnez ou créez un dossier pour générer un plan de plaidoirie." />;
+    return <EmptyState titre={t("planPlaidoirie.emptyTitre")} description={t("planPlaidoirie.emptyDescription")} />;
   }
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <div>
-        <p className="kicker">L'Arsenal</p>
-        <h1 className="mt-1 font-serif text-h2 font-semibold text-gold-500">Générer un plan de plaidoirie</h1>
-        <p className="mt-2 text-sm text-warmgray">Dossier actif : {dossierActif.nom}</p>
+        <p className="kicker">{t("nav.sections.arsenal")}</p>
+        <h1 className="mt-1 font-serif text-h2 font-semibold text-gold-500">{t("nav.arsenal.plan")}</h1>
+        <p className="mt-2 text-sm text-warmgray">{t("arsenal.dossierActif")} : {dossierActif.nom}</p>
       </div>
 
       <div className="card space-y-5 p-6">
         <DureeSlider valeur={duree} onChange={setDuree} />
         <div className="flex justify-end">
           <Button variant="primary" loading={loading} onClick={() => void executer(duree)}>
-            Générer le plan
+            {t("planPlaidoirie.generer")}
           </Button>
         </div>
       </div>
@@ -117,19 +119,19 @@ export default function PlanPlaidoiriePage() {
 
       {loading && <EtapePipelineIndicator etape={etape} />}
 
-      {!loading && !documentLoading && (error || documentError) && <ErrorState message={error ?? documentError ?? "Erreur de chargement."} onRetry={() => void executer(duree)} />}
+      {!loading && !documentLoading && (error || documentError) && <ErrorState message={error ?? documentError ?? t("arsenal.erreurChargement")} onRetry={() => void executer(duree)} />}
 
       {!documentLoading && !error && !documentError && data?.plan && (
         <div className="space-y-6">
           <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2"><p className="text-sm text-warmgray">Plan généré pour {duree} min de parole.</p><StatutDocumentBadge statut={data.statut ?? "Brouillon"} /></div>
-            <div className="flex items-center gap-2"><StatutDocumentMenu statut={data.statut ?? "Brouillon"} loading={statutEnCours} onChange={changerStatut} /><Button variant="secondary" loading={exportEnCours} onClick={() => void exporter()}>⬇ Exporter en Word</Button></div>
+            <div className="flex items-center gap-2"><p className="text-sm text-warmgray">{t("planPlaidoirie.genereePour", { duree })}</p><StatutDocumentBadge statut={data.statut ?? "Brouillon"} /></div>
+            <div className="flex items-center gap-2"><StatutDocumentMenu statut={data.statut ?? "Brouillon"} loading={statutEnCours} onChange={changerStatut} /><Button variant="secondary" loading={exportEnCours} onClick={() => void exporter()}>⬇ {t("arsenal.exporterWord")}</Button></div>
           </div>
 
           <PlanTimeline plan={data} />
 
-          {data.diagnostic && <div className="card"><h2 className="mb-2 font-serif text-h4 text-gold-500">Diagnostic</h2><p className="whitespace-pre-wrap text-sm text-warmgray">{data.diagnostic}</p></div>}
-          {data.strategie && <div className="card"><h2 className="mb-2 font-serif text-h4 text-gold-500">Stratégie pour la partie représentée</h2><p className="whitespace-pre-wrap text-sm text-ivory">{data.strategie}</p></div>}
+          {data.diagnostic && <div className="card"><h2 className="mb-2 font-serif text-h4 text-gold-500">{t("arsenal.diagnostic")}</h2><p className="whitespace-pre-wrap text-sm text-warmgray">{data.diagnostic}</p></div>}
+          {data.strategie && <div className="card"><h2 className="mb-2 font-serif text-h4 text-gold-500">{t("arsenal.strategie")}</h2><p className="whitespace-pre-wrap text-sm text-ivory">{data.strategie}</p></div>}
 
           <VerificationPanel verification={data.verification} />
 
@@ -139,13 +141,13 @@ export default function PlanPlaidoiriePage() {
             onMiseAJour={definirDonnees}
             dossierId={dossierActif.id}
             documentId={data.document_id}
-            placeholder="Ex. « Rends l'accroche plus percutante », « adapte le ton pour une audience pénale »…"
+            placeholder={t("planPlaidoirie.chatPlaceholder")}
           />
         </div>
       )}
 
       {!loading && !error && !data?.plan && (
-        <EmptyState titre="Prêt à générer" description="Réglez le temps de parole ci-dessus puis cliquez sur « Générer le plan »." />
+        <EmptyState titre={t("planPlaidoirie.pretTitre")} description={t("planPlaidoirie.pretDescription")} />
       )}
     </div>
   );
