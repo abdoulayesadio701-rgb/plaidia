@@ -53,31 +53,37 @@ const FONCTIONNALITES = [
     Illustration: IllustrationAnalyser,
     titre: "Analyser des conclusions adverses",
     description: "Chaque argument décomposé en syllogisme – problème de droit, règle applicable, application aux faits – avec niveau de risque et pistes de réfutation.",
+    lien: "/app/arsenal/analyser",
   },
   {
     Illustration: IllustrationChat,
     titre: "Chat juridique",
     description: "Posez une question précise, obtenez une réponse structurée appuyée sur la juridiction active — avec, sur les questions les plus sensibles, une vérification multi-agents avant l'affichage.",
+    lien: "/app/chat",
   },
   {
     Illustration: IllustrationPlan,
     titre: "Plan de plaidoirie chronométré",
     description: "Accroche, points minutés, conclusion – un plan prêt à l'oral, calé sur le temps de parole imparti.",
+    lien: "/app/arsenal/plan",
   },
   {
     Illustration: IllustrationSimulateur,
     titre: "Simulateur d'objections",
     description: "Anticipez les questions pièges du magistrat ou de la partie adverse, avec une piste de réponse pour chacune.",
+    lien: "/app/arsenal/simulateur",
   },
   {
     Illustration: IllustrationChronologie,
     titre: "Chronologie automatique",
     description: "Reconstitue la timeline d'une affaire à partir des pièces du dossier, période couverte et éléments manquants inclus.",
+    lien: "/app/greffier/chronologie",
   },
   {
     Illustration: IllustrationVerification,
     titre: "Vérification procédurale",
     description: "Échéances identifiées avec leur statut, actes de procédure potentiellement manquants, points d'attention.",
+    lien: "/app/arsenal/verification-procedurale",
   },
 ];
 
@@ -207,7 +213,13 @@ export default function LandingPage() {
         </div>
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {FONCTIONNALITES.map((f) => (
-            <div key={f.titre} className="card group overflow-hidden !p-0">
+            // Carte réellement cliquable -- mène à l'espace de travail
+            // correspondant (voir src/config/navigation.ts pour la
+            // correspondance path/requiresDossier). Le survol (zoom léger
+            // de l'illustration) existait déjà avant que la carte ne mène
+            // quelque part ; il devient enfin cohérent avec ce qu'il
+            // suggère.
+            <Link key={f.titre} to={f.lien} className="card group overflow-hidden !p-0">
               <div className="relative aspect-[8/5] overflow-hidden border-b border-gold-600/15 bg-gradient-to-br from-surface-2 to-surface">
                 <f.Illustration className="absolute inset-0 h-full w-full p-7 text-amethyst-600/70 transition-transform duration-300 ease-out group-hover:scale-[1.04]" />
               </div>
@@ -215,7 +227,7 @@ export default function LandingPage() {
                 <h3 className="font-serif text-h3 font-semibold text-ivory">{f.titre}</h3>
                 <p className="text-sm leading-relaxed text-warmgray">{f.description}</p>
               </div>
-            </div>
+            </Link>
           ))}
         </div>
       </section>
