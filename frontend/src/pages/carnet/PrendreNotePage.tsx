@@ -6,6 +6,7 @@
  */
 
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { notes as notesApi } from "@/api";
 import { useAppStore, useDossierActif } from "@/store/useAppStore";
 import { useLazyAction } from "@/hooks/useLazyAction";
@@ -20,6 +21,7 @@ import RichOutput from "@/components/RichOutput";
 import { SkeletonList } from "@/components/Skeleton";
 
 export default function PrendreNotePage() {
+  const { t } = useTranslation();
   const dossierActif = useDossierActif();
   const pousserToast = useAppStore((s) => s.pousserToast);
   const [texte, setTexte] = useState("");
@@ -37,7 +39,7 @@ export default function PrendreNotePage() {
     if (resultat) {
       setTexte("");
       setActionsCochees(new Set());
-      pousserToast("success", "Note enregistrée.");
+      pousserToast("success", t("prendreNote.enregistree"));
     }
   };
 
@@ -50,22 +52,22 @@ export default function PrendreNotePage() {
     });
 
   if (!dossierActif) {
-    return <EmptyState titre="Aucun dossier sélectionné" description="Sélectionnez ou créez un dossier pour y prendre une note." />;
+    return <EmptyState titre={t("prendreNote.emptyTitre")} description={t("prendreNote.emptyDescription")} />;
   }
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <div>
-        <p className="kicker">Le Carnet</p>
-        <h1 className="mt-1 font-serif text-h2 font-semibold text-gold-500">Prendre une note</h1>
-        <p className="mt-2 text-sm text-warmgray">Dossier actif : {dossierActif.nom}</p>
+        <p className="kicker">{t("nav.sections.carnet")}</p>
+        <h1 className="mt-1 font-serif text-h2 font-semibold text-gold-500">{t("nav.carnet.note")}</h1>
+        <p className="mt-2 text-sm text-warmgray">{t("arsenal.dossierActif")} : {dossierActif.nom}</p>
       </div>
 
       <div className="card space-y-3 p-6">
         <textarea
           {...dragProps}
           className={`input min-h-[180px] resize-y ${survole ? "ring-2 ring-amethyst-400" : ""}`}
-          placeholder="Notez librement, en vrac, ou déposez un fichier -- l'agent structure, extrait les actions à faire et les points à retenir."
+          placeholder={t("prendreNote.placeholder")}
           value={texte}
           onChange={(e) => setTexte(e.target.value)}
           disabled={loading || enImport}
@@ -80,10 +82,10 @@ export default function PrendreNotePage() {
               disabled={loading}
               onFichiers={importerFichiers}
             />
-            <span className="text-xs text-muted">Le texte extrait sera aussi ajouté aux faits de « {dossierActif.nom} ».</span>
+            <span className="text-xs text-muted">{t("analyseStyle.texteAjouteAuxFaits", { nom: dossierActif.nom })}</span>
           </div>
           <Button variant="primary" loading={loading} disabled={!texte.trim() || enImport} onClick={() => void soumettre()}>
-            Structurer la note
+            {t("prendreNote.structurer")}
           </Button>
         </div>
       </div>
@@ -97,13 +99,13 @@ export default function PrendreNotePage() {
       {!loading && !error && data && (
         <div className="space-y-5">
           <div className="card p-6">
-            <p className="mb-2 text-micro font-medium uppercase tracking-wide text-amethyst-400">Note</p>
+            <p className="mb-2 text-micro font-medium uppercase tracking-wide text-amethyst-400">{t("prendreNote.note")}</p>
             <RichOutput texte={data.note_structuree || data.note_brute} />
           </div>
 
           {data.actions.length > 0 && (
             <div className="card space-y-3 p-6">
-              <p className="text-micro font-medium uppercase tracking-wide text-gold-500">Actions à faire</p>
+              <p className="text-micro font-medium uppercase tracking-wide text-gold-500">{t("prendreNote.actionsAFaire")}</p>
               <ul className="space-y-2">
                 {data.actions.map((a, i) => (
                   <li key={i}>
@@ -119,13 +121,13 @@ export default function PrendreNotePage() {
                   </li>
                 ))}
               </ul>
-              <p className="text-xs text-muted">Coché localement pour votre suivi -- non enregistré sur le serveur.</p>
+              <p className="text-xs text-muted">{t("prendreNote.cocheLocalement")}</p>
             </div>
           )}
 
           {data.points.length > 0 && (
             <div className="card space-y-2 p-6">
-              <p className="text-micro font-medium uppercase tracking-wide text-gold-500">Points à retenir</p>
+              <p className="text-micro font-medium uppercase tracking-wide text-gold-500">{t("prendreNote.pointsARetenir")}</p>
               <ul className="space-y-1.5">
                 {data.points.map((p, i) => (
                   <li key={i} className="flex gap-2 text-sm text-ivory">
@@ -140,7 +142,7 @@ export default function PrendreNotePage() {
       )}
 
       {!loading && !error && !data && (
-        <EmptyState titre="Prêt à structurer" description="Écrivez votre note ci-dessus, dans l'ordre qui vous vient, puis cliquez sur « Structurer la note »." />
+        <EmptyState titre={t("prendreNote.pretTitre")} description={t("prendreNote.pretDescription")} />
       )}
     </div>
   );

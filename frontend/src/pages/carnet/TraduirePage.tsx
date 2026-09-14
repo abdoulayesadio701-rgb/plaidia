@@ -7,6 +7,7 @@
  */
 
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { analyse as analyseApi } from "@/api";
 import { useLazyAction } from "@/hooks/useLazyAction";
 import { useImportTexte } from "@/hooks/useImportTexte";
@@ -19,9 +20,9 @@ import FileDropZone from "@/components/FileDropZone";
 import RichOutput from "@/components/RichOutput";
 import { SkeletonBlock } from "@/components/Skeleton";
 
-const LABEL_LANGUE: Record<string, string> = { fr: "Français", en: "English" };
-
 export default function TraduirePage() {
+  const { t } = useTranslation();
+  const LABEL_LANGUE: Record<string, string> = { fr: t("traduire.francais"), en: t("traduire.anglais") };
   const [texte, setTexte] = useState("");
   const { data, loading, error, executer } = useLazyAction((t: string) => analyseApi.traduireTexte(t));
   // Page indépendante de tout dossier (requiresDossier: false) --
@@ -44,11 +45,10 @@ export default function TraduirePage() {
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <div>
-        <p className="kicker">Le Carnet</p>
-        <h1 className="mt-1 font-serif text-h2 font-semibold text-gold-500">Traduire un texte</h1>
+        <p className="kicker">{t("nav.sections.carnet")}</p>
+        <h1 className="mt-1 font-serif text-h2 font-semibold text-gold-500">{t("nav.carnet.traduire")}</h1>
         <p className="mt-2 text-sm text-warmgray">
-          Français → anglais ou anglais → français, détecté automatiquement. Le registre juridique et les balises de référence
-          juridique sont préservés — utile pour partager une note ou une analyse avec un confrère ou une partie anglophone.
+          {t("traduire.sousTitre")}
         </p>
       </div>
 
@@ -56,7 +56,7 @@ export default function TraduirePage() {
         <textarea
           {...dragProps}
           className={`input min-h-[200px] resize-y ${survole ? "ring-2 ring-amethyst-400" : ""}`}
-          placeholder="Collez ici le texte à traduire, en français ou en anglais, ou déposez un fichier…"
+          placeholder={t("traduire.placeholder")}
           value={texte}
           onChange={(e) => setTexte(e.target.value)}
           disabled={loading || enImport}
@@ -71,10 +71,10 @@ export default function TraduirePage() {
               disabled={loading}
               onFichiers={importerFichiers}
             />
-            <span className="text-xs text-muted">PDF, Word, Excel, image — le texte extrait est injecté ci-dessus.</span>
+            <span className="text-xs text-muted">{t("arsenal.formatsAcceptes")}</span>
           </div>
           <Button variant="primary" loading={loading} disabled={!texte.trim() || enImport} onClick={() => void executer(texte)}>
-            Traduire
+            {t("traduire.traduire")}
           </Button>
         </div>
       </div>
@@ -96,10 +96,13 @@ export default function TraduirePage() {
         <div className="card space-y-4 p-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <p className="text-micro font-medium uppercase tracking-wide text-amethyst-400">
-              {LABEL_LANGUE[data.langue_detectee] ?? data.langue_detectee} détecté → traduit en {LABEL_LANGUE[data.langue_cible] ?? data.langue_cible}
+              {t("traduire.detecteTraduit", {
+                detectee: LABEL_LANGUE[data.langue_detectee] ?? data.langue_detectee,
+                cible: LABEL_LANGUE[data.langue_cible] ?? data.langue_cible,
+              })}
             </p>
             <button onClick={() => void copier()} className="text-xs text-amethyst-400 hover:underline">
-              Copier la traduction
+              {t("traduire.copierTraduction")}
             </button>
           </div>
           <RichOutput texte={data.texte_traduit} />
@@ -107,7 +110,7 @@ export default function TraduirePage() {
       )}
 
       {!loading && !error && !data && (
-        <EmptyState titre="Prêt à traduire" description="Collez un texte ci-dessus, ou importez un fichier — la langue source est détectée automatiquement." />
+        <EmptyState titre={t("traduire.pretTitre")} description={t("traduire.pretDescription")} />
       )}
     </div>
   );

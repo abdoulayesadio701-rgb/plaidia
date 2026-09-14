@@ -5,6 +5,7 @@
  */
 
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { notes as notesApi, downloadBlob } from "@/api";
 import { useAppStore, useDossierActif } from "@/store/useAppStore";
 import { useLazyAction } from "@/hooks/useLazyAction";
@@ -16,6 +17,7 @@ import { SkeletonList } from "@/components/Skeleton";
 import ChatContextuelPanel from "@/components/chat/ChatContextuelPanel";
 
 export default function NoteClientPage() {
+  const { t } = useTranslation();
   const dossierActif = useDossierActif();
   const pousserToast = useAppStore((s) => s.pousserToast);
   const [exportEnCours, setExportEnCours] = useState(false);
@@ -26,9 +28,9 @@ export default function NoteClientPage() {
     if (!data) return;
     try {
       await navigator.clipboard.writeText(data.texte);
-      pousserToast("success", "Note client copiée dans le presse-papiers.");
+      pousserToast("success", t("noteClient.copiee"));
     } catch {
-      pousserToast("error", "Impossible d'accéder au presse-papiers.");
+      pousserToast("error", t("noteClient.echecPressePapiers"));
     }
   };
 
@@ -39,26 +41,26 @@ export default function NoteClientPage() {
       const { blob, filename } = await notesApi.exporterNoteClient(dossierActif.id, data.texte);
       downloadBlob(blob, filename ?? `${dossierActif.nom}_note_client.docx`);
     } catch (e) {
-      pousserToast("error", e instanceof Error ? e.message : "Échec de l'export.");
+      pousserToast("error", e instanceof Error ? e.message : t("arsenal.echecExport"));
     } finally {
       setExportEnCours(false);
     }
   };
 
   if (!dossierActif) {
-    return <EmptyState titre="Aucun dossier sélectionné" description="Sélectionnez ou créez un dossier pour rédiger sa note client." />;
+    return <EmptyState titre={t("noteClient.emptyTitre")} description={t("noteClient.emptyDescription")} />;
   }
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="kicker">Le Carnet</p>
-          <h1 className="mt-1 font-serif text-h2 font-semibold text-gold-500">Note client</h1>
-          <p className="mt-2 text-sm text-warmgray">Dossier actif : {dossierActif.nom}</p>
+          <p className="kicker">{t("nav.sections.carnet")}</p>
+          <h1 className="mt-1 font-serif text-h2 font-semibold text-gold-500">{t("nav.carnet.note-client")}</h1>
+          <p className="mt-2 text-sm text-warmgray">{t("arsenal.dossierActif")} : {dossierActif.nom}</p>
         </div>
         <Button variant="primary" loading={loading} onClick={() => void executer()}>
-          {data ? "↻ Régénérer" : "Générer la note client"}
+          {data ? `↻ ${t("noteClient.regenerer")}` : t("noteClient.generer")}
         </Button>
       </div>
 
@@ -70,10 +72,10 @@ export default function NoteClientPage() {
         <div className="space-y-4">
           <div className="flex justify-end gap-3">
             <Button variant="secondary" onClick={() => void copier()}>
-              📋 Copier
+              📋 {t("noteClient.copier")}
             </Button>
             <Button variant="secondary" loading={exportEnCours} onClick={() => void exporter()}>
-              ⬇ Exporter en Word
+              ⬇ {t("arsenal.exporterWord")}
             </Button>
           </div>
           <div className="card p-6">
@@ -85,15 +87,15 @@ export default function NoteClientPage() {
             resultatActuel={data}
             onMiseAJour={definirDonnees}
             dossierId={dossierActif.id}
-            placeholder="Ex. « Rends le ton plus rassurant », « fais plus court », « moins technique »…"
+            placeholder={t("noteClient.chatPlaceholder")}
           />
         </div>
       )}
 
       {!loading && !error && !data && (
         <EmptyState
-          titre="Prêt à générer"
-          description="Rédige une synthèse en langage simple des faits, des enjeux et des prochaines étapes du dossier, à destination du client."
+          titre={t("rapportComplet.pretTitre")}
+          description={t("noteClient.pretDescription")}
         />
       )}
     </div>

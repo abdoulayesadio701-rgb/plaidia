@@ -345,6 +345,52 @@
     "masquer": "Masquer",
     "lire": "Lire"
   },
+  "prendreNote": {
+    "enregistree": "Note enregistrée.",
+    "emptyTitre": "Aucun dossier sélectionné",
+    "emptyDescription": "Sélectionnez ou créez un dossier pour y prendre une note.",
+    "placeholder": "Notez librement, en vrac, ou déposez un fichier -- l'agent structure, extrait les actions à faire et les points à retenir.",
+    "structurer": "Structurer la note",
+    "note": "Note",
+    "actionsAFaire": "Actions à faire",
+    "cocheLocalement": "Coché localement pour votre suivi -- non enregistré sur le serveur.",
+    "pointsARetenir": "Points à retenir",
+    "pretTitre": "Prêt à structurer",
+    "pretDescription": "Écrivez votre note ci-dessus, dans l'ordre qui vous vient, puis cliquez sur « Structurer la note »."
+  },
+  "consulterNotes": {
+    "emptyTitre": "Aucun dossier sélectionné",
+    "emptyDescription": "Sélectionnez ou créez un dossier pour consulter ses notes.",
+    "titre": "Notes du dossier",
+    "aucuneNoteTitre": "Aucune note pour l'instant",
+    "aucuneNoteDescription": "Utilisez « Prendre une note » pour commencer à journaliser ce dossier.",
+    "supprimer": "Supprimer",
+    "confirmer": "Confirmer ?",
+    "oui": "Oui",
+    "actions": "Actions"
+  },
+  "noteClient": {
+    "copiee": "Note client copiée dans le presse-papiers.",
+    "echecPressePapiers": "Impossible d'accéder au presse-papiers.",
+    "emptyTitre": "Aucun dossier sélectionné",
+    "emptyDescription": "Sélectionnez ou créez un dossier pour rédiger sa note client.",
+    "regenerer": "Régénérer",
+    "generer": "Générer la note client",
+    "copier": "Copier",
+    "chatPlaceholder": "Ex. « Rends le ton plus rassurant », « fais plus court », « moins technique »…",
+    "pretDescription": "Rédige une synthèse en langage simple des faits, des enjeux et des prochaines étapes du dossier, à destination du client."
+  },
+  "traduire": {
+    "francais": "Français",
+    "anglais": "English",
+    "sousTitre": "Français → anglais ou anglais → français, détecté automatiquement. Le registre juridique et les balises de référence juridique sont préservés — utile pour partager une note ou une analyse avec un confrère ou une partie anglophone.",
+    "placeholder": "Collez ici le texte à traduire, en français ou en anglais, ou déposez un fichier…",
+    "traduire": "Traduire",
+    "detecteTraduit": "{{detectee}} détecté → traduit en {{cible}}",
+    "copierTraduction": "Copier la traduction",
+    "pretTitre": "Prêt à traduire",
+    "pretDescription": "Collez un texte ci-dessus, ou importez un fichier — la langue source est détectée automatiquement."
+  },
   "langue": {
     "selecteurAria": "Choisir la langue de l'interface",
     "fr": "FR",

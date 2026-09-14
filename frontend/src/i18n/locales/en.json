@@ -345,6 +345,52 @@
     "masquer": "Hide",
     "lire": "Read"
   },
+  "prendreNote": {
+    "enregistree": "Note saved.",
+    "emptyTitre": "No case selected",
+    "emptyDescription": "Select or create a case to take a note in it.",
+    "placeholder": "Write freely, brain-dump style, or drop a file -- the assistant structures it, extracts action items and key points.",
+    "structurer": "Structure the note",
+    "note": "Note",
+    "actionsAFaire": "Action items",
+    "cocheLocalement": "Checked locally for your own tracking -- not saved on the server.",
+    "pointsARetenir": "Key points",
+    "pretTitre": "Ready to structure",
+    "pretDescription": "Write your note above, in whatever order it comes to you, then click « Structure the note »."
+  },
+  "consulterNotes": {
+    "emptyTitre": "No case selected",
+    "emptyDescription": "Select or create a case to view its notes.",
+    "titre": "Case notes",
+    "aucuneNoteTitre": "No notes yet",
+    "aucuneNoteDescription": "Use « Take a note » to start logging this case.",
+    "supprimer": "Delete",
+    "confirmer": "Confirm?",
+    "oui": "Yes",
+    "actions": "Actions"
+  },
+  "noteClient": {
+    "copiee": "Client note copied to clipboard.",
+    "echecPressePapiers": "Unable to access the clipboard.",
+    "emptyTitre": "No case selected",
+    "emptyDescription": "Select or create a case to draft its client note.",
+    "regenerer": "Regenerate",
+    "generer": "Generate the client note",
+    "copier": "Copy",
+    "chatPlaceholder": "E.g. \"Make the tone more reassuring\", \"make it shorter\", \"less technical\"…",
+    "pretDescription": "Drafts a plain-language summary of the case's facts, stakes and next steps, for the client."
+  },
+  "traduire": {
+    "francais": "French",
+    "anglais": "English",
+    "sousTitre": "French → English or English → French, detected automatically. Legal register and legal-reference tags are preserved — useful for sharing a note or an analysis with a colleague or an English-speaking party.",
+    "placeholder": "Paste the text to translate here, in French or English, or drop a file…",
+    "traduire": "Translate",
+    "detecteTraduit": "{{detectee}} detected → translated into {{cible}}",
+    "copierTraduction": "Copy the translation",
+    "pretTitre": "Ready to translate",
+    "pretDescription": "Paste a text above, or import a file — the source language is detected automatically."
+  },
   "langue": {
     "selecteurAria": "Choose the interface language",
     "fr": "FR",
