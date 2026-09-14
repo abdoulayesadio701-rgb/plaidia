@@ -6,18 +6,25 @@ ancien et la rigueur d'un bureau feutré, jamais l'univers "fantasy". Le
 sérieux du fond noir doit rester lisible, professionnel, utilisable des
 heures durant par un avocat en train de travailler un dossier.
 
-**Thème clair uniquement** — retheme SaaS violet (dominante violet/mauve,
-cartes blanches sur fond gris très clair, texte presque noir, touches
-bleu nuit). Tous les tokens ci-dessous n'ont qu'une seule définition. Les
-noms de tokens n'ont pas changé (`gold-*` reste la couleur principale,
-`amethyst-*` reste l'accent d'état) — seules leurs valeurs ont été
-retravaillées ; la prose ci-dessous ("or ancien", "fond noir violacé",
-cabinet d'avocat ancien) décrit l'identité précédente et reste à
-réécrire, mais les tableaux de valeurs qui suivent sont à jour.
+**Deux thèmes, clair par défaut** — thème clair choisi par défaut (retheme
+SaaS violet désaturé, dominante violet/mauve sourd, cartes blanches sur
+fond gris très clair, texte presque noir) ; un thème sombre, activable via
+le bouton soleil/lune de la TopBar (voir `useTheme.ts`), restaure
+l'identité "or ancien / noir violacé" d'origine du projet — pas une
+palette inventée pour l'occasion, reprise telle quelle de l'historique
+git d'avant le retheme. Les noms de tokens ne changent jamais entre les
+deux thèmes (`gold-*` reste la couleur principale, `amethyst-*` reste
+l'accent d'état) — seules leurs valeurs sont redéfinies sous `.dark` dans
+`globals.css`. Les tableaux ci-dessous donnent la valeur **clair** de
+chaque token ; voir `globals.css` §Thème sombre pour la valeur sombre
+correspondante. La prose ci-dessous ("or ancien", "fond noir violacé",
+cabinet d'avocat ancien) décrit maintenant le thème sombre, pas une
+identité abandonnée.
 
 Ce fichier est la source de vérité. `tailwind.config.js` et
 `src/styles/globals.css` doivent rester synchronisés avec les valeurs
-listées ici — si vous changez une couleur, changez-la aux trois endroits.
+listées ici — si vous changez une couleur, changez-la aux trois endroits
+(et dans les deux thèmes si le changement doit s'appliquer aux deux).
 
 ---
 

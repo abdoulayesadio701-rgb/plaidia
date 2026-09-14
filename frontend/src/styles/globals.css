@@ -1,15 +1,21 @@
 /**
  * globals.css — Variables CSS du design system Plaid'IA + classes composants.
  *
- * Thème clair permanent (retheme SaaS violet, voir en-tête de commit) :
- * toutes les variables n'ont qu'une seule définition, dans :root, jamais
- * de bascule media/[data-theme]. Les noms de tokens (gold-*, amethyst-*,
- * void, surface, ivory...) sont conservés tels quels pour ne toucher
- * aucune classe Tailwind consommée par les pages -- seules les VALEURS
- * changent ici. Les valeurs sont dupliquées ici et dans
- * tailwind.config.js — DESIGN.md fait foi en cas de divergence, mais ses
- * tableaux de couleurs sont désormais alignés sur ce fichier (sa prose
- * "cabinet d'avocat ancien / fond noir" décrit l'identité précédente).
+ * Deux thèmes, un seul jeu de tokens : les noms (gold-*, amethyst-*, void,
+ * surface, ivory...) ne changent jamais -- seules leurs VALEURS sont
+ * redéfinies sous ".dark" (classe posée sur <html> par useTheme.ts,
+ * persistée en localStorage). Aucune classe "dark:" par composant : toute
+ * page qui consomme un token (bg-gold-500, text-ivory...) s'adapte donc
+ * automatiquement, sans diff dans les composants.
+ *
+ * :root ci-dessous = thème clair, choisi par défaut (retheme SaaS violet
+ * désaturé, voir DESIGN.md). Le bloc ".dark" plus bas restaure l'identité
+ * "or ancien / noir violacé" d'origine du projet (valeurs reprises telles
+ * quelles de l'historique git, avant le retheme) -- pas une palette sombre
+ * inventée pour l'occasion.
+ *
+ * Valeurs dupliquées ici et dans tailwind.config.js — DESIGN.md fait foi
+ * en cas de divergence.
  */
 
 @import url("https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Cormorant+Garamond:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap");
@@ -77,9 +83,44 @@
   --motif-grain: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMDAiIGhlaWdodD0iMjAwIj48ZmlsdGVyIGlkPSJuIj48ZmVUdXJidWxlbmNlIHR5cGU9ImZyYWN0YWxOb2lzZSIgYmFzZUZyZXF1ZW5jeT0iMC44NSIgbnVtT2N0YXZlcz0iMiIgc3RpdGNoVGlsZXM9InN0aXRjaCIvPjxmZUNvbG9yTWF0cml4IHR5cGU9InNhdHVyYXRlIiB2YWx1ZXM9IjAiLz48L2ZpbHRlcj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWx0ZXI9InVybCgjbikiLz48L3N2Zz4=");
 }
 
+/* Thème sombre — identité "or ancien / noir violacé" d'origine du projet,
+   restaurée telle quelle depuis l'historique git (avant le retheme SaaS
+   violet). Posée sur <html class="dark"> par useTheme.ts. Seuls les tokens
+   dont la valeur diffère du clair sont redéfinis ici -- le reste (risk-*,
+   verify-*, shadow) retombe sur :root, inchangé volontairement entre les
+   deux thèmes (voir DESIGN.md §1.5/§1.6). */
+.dark {
+  --color-void: 11 10 15; /* #0B0A0F */
+  --color-surface: 20 17 28; /* #14111C */
+  --color-surface-2: 28 24 38; /* #1C1826 */
+  --color-surface-3: 36 30 51; /* #241E33 */
+
+  --color-gold-300: 240 221 160; /* #F0DDA0 */
+  --color-gold-400: 230 199 106; /* #E6C76A */
+  --color-gold-500: 201 162 39; /* #C9A227 */
+  --color-gold-600: 184 134 11; /* #B8860B */
+  --color-gold-700: 138 101 8; /* #8A6508 */
+
+  --color-amethyst-300: 196 181 253; /* #C4B5FD */
+  --color-amethyst-400: 139 92 246; /* #8B5CF6 */
+  --color-amethyst-600: 110 63 163; /* #6E3FA3 */
+  --color-amethyst-700: 85 49 127; /* #55317F */
+
+  --color-ivory: 237 230 214; /* #EDE6D6 — texte principal, presque blanc */
+  --color-warmgray: 154 146 133; /* #9A9285 */
+  --color-muted: 107 101 88; /* #6B6558 */
+  --color-ink: 11 10 15; /* #0B0A0F — texte sur fond doré (boutons primaires) */
+
+  --color-risk-medium: 201 162 39; /* alias gold-500 -- l'ambre plat du clair (#B8860B) manque de contraste sur ce fond sombre */
+}
+
 @layer base {
   html {
     color-scheme: light;
+  }
+
+  html.dark {
+    color-scheme: dark;
   }
 
   body {
