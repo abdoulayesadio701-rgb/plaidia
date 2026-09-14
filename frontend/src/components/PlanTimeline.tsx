@@ -4,6 +4,7 @@
  * l'onglet "Plan" de RapportCompletPage.
  */
 
+import { useTranslation } from "react-i18next";
 import type { PlanResultat } from "@/api";
 import LabeledField from "./LabeledField";
 import RichOutput from "./RichOutput";
@@ -13,10 +14,11 @@ interface PlanTimelineProps {
 }
 
 export default function PlanTimeline({ plan }: PlanTimelineProps) {
+  const { t } = useTranslation();
   return (
     <div className="space-y-6">
       <div className="card border-amethyst-400/30 p-6">
-        <p className="mb-2 text-micro font-medium uppercase tracking-wide text-amethyst-400">🎤 Accroche</p>
+        <p className="mb-2 text-micro font-medium uppercase tracking-wide text-amethyst-400">🎤 {t("planTimeline.accroche")}</p>
         <RichOutput texte={plan.accroche} />
       </div>
 
@@ -34,8 +36,8 @@ export default function PlanTimeline({ plan }: PlanTimelineProps) {
                     <span className="shrink-0 font-mono text-xs text-amethyst-400">{point.duree_minutes} min</span>
                   )}
                 </div>
-                <LabeledField label="Argument clé" texte={point.argument_cle} />
-                <LabeledField label="Notes" texte={point.notes} />
+                <LabeledField label={t("planTimeline.argumentCle")} texte={point.argument_cle} />
+                <LabeledField label={t("commun.notes")} texte={point.notes} />
               </div>
             </div>
           ))}
@@ -43,13 +45,13 @@ export default function PlanTimeline({ plan }: PlanTimelineProps) {
       )}
 
       <div className="card border-amethyst-400/30 p-6">
-        <p className="mb-2 text-micro font-medium uppercase tracking-wide text-amethyst-400">🎤 Conclusion</p>
+        <p className="mb-2 text-micro font-medium uppercase tracking-wide text-amethyst-400">🎤 {t("planTimeline.conclusion")}</p>
         <RichOutput texte={plan.conclusion} />
       </div>
 
       {plan.points_attention.length > 0 && (
         <div className="rounded-md border border-gold-500/30 bg-gold-500/10 p-5">
-          <p className="mb-2 text-sm font-semibold text-gold-500">Points d'attention</p>
+          <p className="mb-2 text-sm font-semibold text-gold-500">{t("planTimeline.pointsAttention")}</p>
           <ul className="space-y-1.5">
             {plan.points_attention.map((p, i) => (
               <li key={i} className="flex gap-2">

@@ -12,6 +12,7 @@
  */
 
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
+import { useTranslation } from "react-i18next";
 import type { FeatureChatContextuel } from "@/api";
 import { useChatContextuel } from "./useChatContextuel";
 import VersionsHistorique from "./VersionsHistorique";
@@ -34,8 +35,9 @@ export default function ChatContextuelPanel<T>({
   onMiseAJour,
   dossierId,
   documentId,
-  placeholder = "Ex. « Développe le deuxième argument », « rends le ton plus formel »…",
+  placeholder,
 }: ChatContextuelPanelProps<T>) {
+  const { t } = useTranslation();
   const [ouvert, setOuvert] = useState(false);
   const [texte, setTexte] = useState("");
   const { messages, loading, envoyer, reinitialiser } = useChatContextuel(feature, resultatActuel, onMiseAJour, dossierId, documentId);
@@ -66,7 +68,7 @@ export default function ChatContextuelPanel<T>({
         onClick={() => setOuvert(true)}
         className="inline-flex items-center gap-1.5 text-sm font-medium text-amethyst-400 hover:underline"
       >
-        💬 Demander à l'agent
+        💬 {t("chatContextuel.demanderAgent")}
       </button>
     );
   }
@@ -74,16 +76,16 @@ export default function ChatContextuelPanel<T>({
   return (
     <div className="card space-y-3 p-5">
       <div className="flex items-center justify-between">
-        <p className="text-sm font-semibold text-ivory">Demander à l'agent</p>
+        <p className="text-sm font-semibold text-ivory">{t("chatContextuel.demanderAgent")}</p>
         <div className="flex items-center gap-3">
           <VersionsHistorique feature={feature} dossierId={dossierId} documentId={documentId} onRestaurer={onMiseAJour} />
           {messages.length > 0 && (
             <button type="button" onClick={reinitialiser} className="text-xs text-muted hover:text-warmgray">
-              Réinitialiser le fil
+              {t("chatContextuel.reinitialiserFil")}
             </button>
           )}
-          <button type="button" onClick={() => setOuvert(false)} className="text-xs text-muted hover:text-warmgray" aria-label="Replier">
-            Replier
+          <button type="button" onClick={() => setOuvert(false)} className="text-xs text-muted hover:text-warmgray" aria-label={t("sidebar.replier")}>
+            {t("sidebar.replier")}
           </button>
         </div>
       </div>
@@ -104,7 +106,7 @@ export default function ChatContextuelPanel<T>({
           {loading && (
             <div className="flex items-center gap-2 text-xs text-warmgray">
               <span className="h-3 w-3 animate-spin rounded-full border-2 border-gold-600/30 border-t-gold-500" aria-hidden="true" />
-              L'agent réfléchit…
+              {t("chatContextuel.agentReflechit")}
             </div>
           )}
         </div>
@@ -114,14 +116,14 @@ export default function ChatContextuelPanel<T>({
         <textarea
           className="input min-h-[44px] resize-none"
           rows={1}
-          placeholder={placeholder}
+          placeholder={placeholder ?? t("chatContextuel.placeholder")}
           value={texte}
           onChange={(e) => setTexte(e.target.value)}
           onKeyDown={onKeyDown}
           disabled={loading}
         />
         <Button variant="primary" loading={loading} disabled={!texte.trim()} onClick={soumettre}>
-          Envoyer
+          {t("chatContextuel.envoyer")}
         </Button>
       </div>
     </div>

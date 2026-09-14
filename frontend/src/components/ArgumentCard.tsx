@@ -10,6 +10,7 @@
  * `resume`.
  */
 
+import { useTranslation } from "react-i18next";
 import type { Argument } from "@/api";
 import RiskBadge from "./RiskBadge";
 import RichOutput from "./RichOutput";
@@ -21,6 +22,7 @@ interface ArgumentCardProps {
 }
 
 export default function ArgumentCard({ argument, index }: ArgumentCardProps) {
+  const { t } = useTranslation();
   const { resume, fondement, raisonnement, risque, justification_risque, refutations } = argument;
 
   return (
@@ -33,21 +35,21 @@ export default function ArgumentCard({ argument, index }: ArgumentCardProps) {
         <RiskBadge risque={risque} className="shrink-0" />
       </div>
 
-      <LabeledField label="Fondement" texte={fondement} />
+      <LabeledField label={t("argumentCard.fondement")} texte={fondement} />
 
       {raisonnement && (
         <div className="space-y-3 rounded-md bg-surface-2 p-4">
-          <LabeledField label="Problème de droit" texte={raisonnement.probleme_de_droit} />
-          <LabeledField label="Règle applicable" texte={raisonnement.regle_applicable} />
-          <LabeledField label="Application aux faits" texte={raisonnement.application_aux_faits} />
+          <LabeledField label={t("argumentCard.problemeDeDroit")} texte={raisonnement.probleme_de_droit} />
+          <LabeledField label={t("argumentCard.regleApplicable")} texte={raisonnement.regle_applicable} />
+          <LabeledField label={t("argumentCard.applicationAuxFaits")} texte={raisonnement.application_aux_faits} />
         </div>
       )}
 
-      <LabeledField label="Conclusion" texte={justification_risque} />
+      <LabeledField label={t("argumentCard.conclusion")} texte={justification_risque} />
 
       {refutations.length > 0 && (
         <div>
-          <p className="mb-2 text-micro font-medium uppercase tracking-wide text-gold-500">Pistes de réfutation</p>
+          <p className="mb-2 text-micro font-medium uppercase tracking-wide text-gold-500">{t("argumentCard.pistesRefutation")}</p>
           <ul className="space-y-2.5">
             {refutations.map((r, i) => (
               <li key={i} className="flex gap-2.5 text-sm">

@@ -7,17 +7,11 @@
  * routes appellent finalement db.py::rechercher_dans_dossiers.
  */
 
+import { useTranslation } from "react-i18next";
 import type { RechercheDossierResultat } from "@/api";
 import EmptyState from "./EmptyState";
 import ErrorState from "./ErrorState";
 import { SkeletonBlock } from "./Skeleton";
-
-const LABELS_CHAMP: Record<string, string> = {
-  nom: "Nom",
-  domaine: "Domaine",
-  faits: "Faits",
-  parties: "Parties",
-};
 
 /** Met en évidence les occurrences du terme recherché dans un extrait. */
 function surlignerExtrait(extrait: string, terme: string) {
@@ -44,6 +38,13 @@ interface RechercheDossierResultatsProps {
 }
 
 export default function RechercheDossierResultats({ resultats, loading, erreur, terme, onRelancer, onOuvrir }: RechercheDossierResultatsProps) {
+  const { t } = useTranslation();
+  const LABELS_CHAMP: Record<string, string> = {
+    nom: t("rechercheDossier.champNom"),
+    domaine: t("rechercheDossier.champDomaine"),
+    faits: t("rechercheDossier.champFaits"),
+    parties: t("rechercheDossier.champParties"),
+  };
   if (loading) {
     return (
       <div className="space-y-3">
@@ -58,13 +59,11 @@ export default function RechercheDossierResultats({ resultats, loading, erreur, 
   }
   if (erreur) return <ErrorState message={erreur} onRetry={onRelancer} />;
   if (!resultats || resultats.length === 0) {
-    return <EmptyState titre="Aucun résultat" description={`Aucun dossier ne correspond à « ${terme} ».`} />;
+    return <EmptyState titre={t("rechercheDossier.aucunResultat")} description={t("rechercheDossier.aucunResultatDescription", { terme })} />;
   }
   return (
     <div className="space-y-3">
-      <p className="text-sm text-warmgray">
-        {resultats.length} dossier{resultats.length > 1 ? "s" : ""} correspondant{resultats.length > 1 ? "s" : ""} à « {terme} »
-      </p>
+      <p className="text-sm text-warmgray">{t("rechercheDossier.compteurResultats", { count: resultats.length, terme })}</p>
       {resultats.map(({ dossier, extraits }) => (
         <div
           key={dossier.id}

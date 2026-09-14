@@ -7,6 +7,7 @@
  */
 
 import { useState, type ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 import Modal from "./Modal";
 import Button from "./Button";
 
@@ -28,6 +29,7 @@ export default function ConfirmerSuppressionModal({
   onConfirmer,
   enCours = false,
 }: ConfirmerSuppressionModalProps) {
+  const { t } = useTranslation();
   const [saisie, setSaisie] = useState("");
   const correspond = saisie.trim() === texteConfirmation && texteConfirmation.trim() !== "";
 
@@ -45,7 +47,7 @@ export default function ConfirmerSuppressionModal({
         {description && <div className="text-sm text-warmgray">{description}</div>}
         <div>
           <label htmlFor="confirmation-suppression" className="mb-1.5 block text-sm text-warmgray">
-            Tapez <span className="font-mono text-ivory">{texteConfirmation}</span> pour confirmer
+            {t("confirmerSuppression.tapez")} <span className="font-mono text-ivory">{texteConfirmation}</span> {t("confirmerSuppression.pourConfirmer")}
           </label>
           <input
             id="confirmation-suppression"
@@ -58,7 +60,7 @@ export default function ConfirmerSuppressionModal({
         </div>
         <div className="flex justify-end gap-3 pt-2">
           <Button type="button" variant="ghost" onClick={onFermer}>
-            Annuler
+            {t("commun.annuler")}
           </Button>
           <Button
             type="button"
@@ -68,7 +70,7 @@ export default function ConfirmerSuppressionModal({
             loading={enCours}
             onClick={() => void onConfirmer()}
           >
-            Supprimer définitivement
+            {t("confirmerSuppression.supprimerDefinitivement")}
           </Button>
         </div>
       </div>

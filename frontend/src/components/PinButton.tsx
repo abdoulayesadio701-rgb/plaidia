@@ -5,6 +5,7 @@
  * son contenu (voir db.py::epingler et son commentaire).
  */
 
+import { useTranslation } from "react-i18next";
 import { useAppStore, useIdEpingle } from "@/store/useAppStore";
 import type { TypeEpingle } from "@/api";
 
@@ -19,6 +20,7 @@ interface PinButtonProps {
 }
 
 export default function PinButton({ type, referenceId, libelle, dossierId, arreterPropagation = false, className = "" }: PinButtonProps) {
+  const { t } = useTranslation();
   const idEpingle = useIdEpingle(type, referenceId);
   const epinglerElement = useAppStore((s) => s.epinglerElement);
   const desepinglerElement = useAppStore((s) => s.desepinglerElement);
@@ -39,10 +41,10 @@ export default function PinButton({ type, referenceId, libelle, dossierId, arret
       className={`rounded-md px-2 py-1 text-xs transition-colors ${
         estEpingle ? "text-amethyst-400 hover:bg-amethyst-400/10" : "text-warmgray hover:bg-surface-2 hover:text-ivory"
       } ${className}`}
-      title={estEpingle ? "Désépingler" : "Épingler"}
+      title={estEpingle ? t("epinglesPanel.desepingler") : t("pinButton.epingler")}
       aria-pressed={estEpingle}
     >
-      {estEpingle ? "📍 Épinglé" : "📌 Épingler"}
+      {estEpingle ? `📍 ${t("pinButton.epingle")}` : `📌 ${t("pinButton.epingler")}`}
     </button>
   );
 }

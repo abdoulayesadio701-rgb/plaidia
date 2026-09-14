@@ -4,6 +4,7 @@
  */
 
 import { useState, type FormEvent } from "react";
+import { useTranslation } from "react-i18next";
 import { dossiers as dossiersApi } from "@/api";
 import { useAppStore } from "@/store/useAppStore";
 import { useImportTexte } from "@/hooks/useImportTexte";
@@ -24,6 +25,7 @@ interface NouveauDossierModalProps {
 }
 
 export default function NouveauDossierModal({ onFermer, onCree, nomInitial = "" }: NouveauDossierModalProps) {
+  const { t } = useTranslation();
   const [nom, setNom] = useState(nomInitial);
   const [numeroDossier, setNumeroDossier] = useState("");
   const [domaine, setDomaine] = useState("");
@@ -48,7 +50,7 @@ export default function NouveauDossierModal({ onFermer, onCree, nomInitial = "" 
   const soumettre = async (e: FormEvent) => {
     e.preventDefault();
     if (!nom.trim()) {
-      setErreur("Veuillez indiquer un nom pour ce dossier.");
+      setErreur(t("nouveauDossier.nomRequis"));
       return;
     }
     setEnCours(true);
@@ -65,22 +67,22 @@ export default function NouveauDossierModal({ onFermer, onCree, nomInitial = "" 
       });
       ajouterDossierLocal(dossier);
       selectionnerDossier(dossier.id);
-      pousserToast("success", `Dossier « ${dossier.nom} » créé.`);
+      pousserToast("success", t("nouveauDossier.succes", { nom: dossier.nom }));
       onCree?.(dossier.id);
       onFermer();
     } catch (e) {
-      setErreur(e instanceof Error ? e.message : "La création du dossier a échoué.");
+      setErreur(e instanceof Error ? e.message : t("nouveauDossier.echec"));
     } finally {
       setEnCours(false);
     }
   };
 
   return (
-    <Modal titre="Nouveau dossier" onFermer={onFermer}>
+    <Modal titre={t("nouveauDossier.titre")} onFermer={onFermer}>
       <form onSubmit={soumettre} className="space-y-4">
         <div>
           <label htmlFor="nd-nom" className="mb-1.5 block text-sm text-warmgray">
-            Nom du dossier
+            {t("nouveauDossier.nomDossier")}
           </label>
           <input
             id="nd-nom"
@@ -88,39 +90,39 @@ export default function NouveauDossierModal({ onFermer, onCree, nomInitial = "" 
             value={nom}
             onChange={(e) => setNom(e.target.value)}
             autoFocus
-            placeholder="Ex. Martin bail commercial"
+            placeholder={t("nouveauDossier.nomPlaceholder")}
           />
         </div>
         <div>
-          <label htmlFor="nd-partie" className="mb-1.5 block text-sm text-warmgray">Partie représentée (optionnel)</label>
+          <label htmlFor="nd-partie" className="mb-1.5 block text-sm text-warmgray">{t("nouveauDossier.partieRepresentee")}</label>
           <select id="nd-partie" className="input" value={partieRepresentee} onChange={(e) => setPartieRepresentee(e.target.value)}>
-            <option value="">— Non précisée —</option>
+            <option value="">{t("modifierDomaine.nonPreciseeF")}</option>
             {posturesPourDomaine(domaine).map((partie) => <option key={partie} value={partie}>{partie}</option>)}
           </select>
         </div>
         <div>
-          <label htmlFor="nd-stade" className="mb-1.5 block text-sm text-warmgray">Stade (optionnel)</label>
+          <label htmlFor="nd-stade" className="mb-1.5 block text-sm text-warmgray">{t("nouveauDossier.stade")}</label>
           <select id="nd-stade" className="input" value={stadeProcedure} onChange={(e) => setStadeProcedure(e.target.value)}>
-            <option value="">— Non précisé —</option>
+            <option value="">{t("modifierDomaine.nonPrecise")}</option>
             {STADES_PROCEDURE.map((stade) => <option key={stade} value={stade}>{stade}</option>)}
           </select>
         </div>
         <div>
-          <label htmlFor="nd-objectif" className="mb-1.5 block text-sm text-warmgray">Objectif (optionnel)</label>
+          <label htmlFor="nd-objectif" className="mb-1.5 block text-sm text-warmgray">{t("nouveauDossier.objectif")}</label>
           <textarea id="nd-objectif" className="input min-h-[80px] resize-y" value={objectif} onChange={(e) => setObjectif(e.target.value)} />
         </div>
         <div>
           <label htmlFor="nd-numero" className="mb-1.5 block text-sm text-warmgray">
-            Numéro de référence (optionnel)
+            {t("nouveauDossier.numeroReference")}
           </label>
           <input id="nd-numero" className="input" value={numeroDossier} onChange={(e) => setNumeroDossier(e.target.value)} />
         </div>
         <div>
           <label htmlFor="nd-domaine" className="mb-1.5 block text-sm text-warmgray">
-            Domaine
+            {t("modifierDomaine.domaine")}
           </label>
           <select id="nd-domaine" className="input" value={domaine} onChange={(e) => setDomaine(e.target.value)}>
-            <option value="">— Non précisé —</option>
+            <option value="">{t("modifierDomaine.nonPrecise")}</option>
             {DOMAINES.map((d) => (
               <option key={d} value={d}>
                 {d}
@@ -130,13 +132,13 @@ export default function NouveauDossierModal({ onFermer, onCree, nomInitial = "" 
         </div>
         <div>
           <label htmlFor="nd-faits" className="mb-1.5 block text-sm text-warmgray">
-            Faits (optionnel)
+            {t("nouveauDossier.faits")}
           </label>
           <textarea
             {...dragProps}
             id="nd-faits"
             className={`input min-h-[100px] resize-y ${survole ? "ring-2 ring-amethyst-400" : ""}`}
-            placeholder="Décrivez les faits, ou déposez un fichier…"
+            placeholder={t("nouveauDossier.faitsPlaceholder")}
             value={faits}
             onChange={(e) => setFaits(e.target.value)}
             disabled={enCours || enImport}
@@ -150,7 +152,7 @@ export default function NouveauDossierModal({ onFermer, onCree, nomInitial = "" 
               disabled={enCours}
               onFichiers={importerFichiers}
             />
-            <span className="text-xs text-muted">PDF, Word, Excel, image — le texte extrait est injecté ci-dessus.</span>
+            <span className="text-xs text-muted">{t("nouveauDossier.formatsAcceptes")}</span>
           </div>
         </div>
 
@@ -160,10 +162,10 @@ export default function NouveauDossierModal({ onFermer, onCree, nomInitial = "" 
 
         <div className="flex justify-end gap-3 pt-2">
           <Button type="button" variant="ghost" onClick={onFermer}>
-            Annuler
+            {t("commun.annuler")}
           </Button>
           <Button type="submit" variant="primary" loading={enCours}>
-            Créer
+            {t("commun.creer")}
           </Button>
         </div>
       </form>

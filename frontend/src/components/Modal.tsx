@@ -19,6 +19,7 @@
  */
 
 import { useEffect, type ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 
 interface ModalProps {
   titre: string;
@@ -31,6 +32,7 @@ interface ModalProps {
 }
 
 export default function Modal({ titre, onFermer, children, largeurMax = "max-w-md", icone, kicker, titreDefile = false }: ModalProps) {
+  const { t } = useTranslation();
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") onFermer();
@@ -84,7 +86,7 @@ export default function Modal({ titre, onFermer, children, largeurMax = "max-w-m
           <button
             onClick={onFermer}
             className={`shrink-0 rounded-md p-1 text-warmgray hover:bg-surface-2 hover:text-ivory ${icone ? "mt-1.5" : ""}`}
-            aria-label="Fermer"
+            aria-label={t("commun.fermer")}
           >
             ✕
           </button>

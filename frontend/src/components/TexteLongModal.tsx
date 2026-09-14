@@ -19,6 +19,7 @@
  */
 
 import { useEffect, useState, type KeyboardEvent } from "react";
+import { useTranslation } from "react-i18next";
 import { useAppStore } from "@/store/useAppStore";
 import Modal from "./Modal";
 import Button from "./Button";
@@ -68,6 +69,7 @@ function SceauDeCire() {
 }
 
 export default function TexteLongModal({ titre, consigne, onFermer, onValider }: TexteLongModalProps) {
+  const { t, i18n } = useTranslation();
   const [texte, setTexte] = useState("");
   const [pulse, setPulse] = useState(false);
   const pousserToast = useAppStore((s) => s.pousserToast);
@@ -96,7 +98,7 @@ export default function TexteLongModal({ titre, consigne, onFermer, onValider }:
       const contenu = (await navigator.clipboard.readText()).trim();
       if (contenu) setTexte((precedent) => (precedent ? `${precedent}\n${contenu}` : contenu));
     } catch {
-      pousserToast("error", "Lecture du presse-papiers refusée par le navigateur – collez manuellement (Ctrl/Cmd+V) dans la zone.");
+      pousserToast("error", t("texteLongModal.lecturePressePapiersRefusee"));
     }
   };
 
@@ -108,17 +110,17 @@ export default function TexteLongModal({ titre, consigne, onFermer, onValider }:
   };
 
   return (
-    <Modal titre={titre} onFermer={onFermer} largeurMax="max-w-2xl" icone={<SceauDeCire />} kicker="Dépôt de pièce" titreDefile>
+    <Modal titre={titre} onFermer={onFermer} largeurMax="max-w-2xl" icone={<SceauDeCire />} kicker={t("texteLongModal.kicker")} titreDefile>
       <p className="mb-4 text-sm leading-relaxed text-warmgray">{consigne}</p>
 
       <div className="intake-toolbar">
         <button type="button" onClick={() => void collerDepuisPressePapiers()} className="paste-btn">
           <IconePresserPapiers />
-          Coller depuis le presse-papiers
+          {t("texteLongModal.collerDepuisPressePapiers")}
         </button>
         <span className={`char-counter ${pulse ? "pulse" : ""}`}>
           <IconePlume />
-          {texte.length.toLocaleString("fr-FR")} caractère{texte.length > 1 ? "s" : ""}
+          {t("texteLongModal.compteurCaracteres", { count: texte.length, valeur: texte.length.toLocaleString(i18n.language === "en" ? "en-GB" : "fr-FR") })}
         </span>
       </div>
 
@@ -134,9 +136,9 @@ export default function TexteLongModal({ titre, consigne, onFermer, onValider }:
         {texte === "" && (
           <div className="parchment-watermark">
             <p>
-              Déposez le texte ici,
+              {t("texteLongModal.filigrane1")}
               <br />
-              comme une pièce au dossier.
+              {t("texteLongModal.filigrane2")}
             </p>
           </div>
         )}
@@ -146,14 +148,14 @@ export default function TexteLongModal({ titre, consigne, onFermer, onValider }:
         <p className="hidden text-xs text-muted sm:block">
           <kbd className="rounded border border-gold-600/30 px-1.5 py-0.5 font-mono">Ctrl</kbd>
           {" + "}
-          <kbd className="rounded border border-gold-600/30 px-1.5 py-0.5 font-mono">Entrée</kbd> pour insérer
+          <kbd className="rounded border border-gold-600/30 px-1.5 py-0.5 font-mono">{t("texteLongModal.entree")}</kbd> {t("texteLongModal.pourInserer")}
         </p>
         <div className="flex justify-end gap-3">
           <Button variant="ghost" onClick={onFermer}>
-            Annuler
+            {t("commun.annuler")}
           </Button>
           <Button variant="primary" disabled={!texte.trim()} onClick={valider}>
-            Insérer dans la conversation
+            {t("texteLongModal.insererDansConversation")}
           </Button>
         </div>
       </div>

@@ -6,6 +6,7 @@
  * directement, sans interruption inutile.
  */
 
+import { useTranslation } from "react-i18next";
 import Modal from "./Modal";
 import Button from "./Button";
 
@@ -15,22 +16,21 @@ interface ChoixImportModalProps {
 }
 
 export default function ChoixImportModal({ noms, onChoisir }: ChoixImportModalProps) {
-  const sujet = noms.length > 1 ? `ces ${noms.length} fichiers (${noms.join(", ")})` : `« ${noms[0]} »`;
+  const { t } = useTranslation();
+  const sujet = noms.length > 1 ? t("choixImportModal.sujetPluriel", { count: noms.length, noms: noms.join(", ") }) : t("choixImportModal.sujetSingulier", { nom: noms[0] });
   return (
-    <Modal titre="Du texte est déjà présent" onFermer={() => onChoisir("annuler")}>
+    <Modal titre={t("choixImportModal.titre")} onFermer={() => onChoisir("annuler")}>
       <div className="space-y-4">
-        <p className="text-sm text-warmgray">
-          Ce champ contient déjà du texte. Que faire du contenu extrait de {sujet} ?
-        </p>
+        <p className="text-sm text-warmgray">{t("choixImportModal.question", { sujet })}</p>
         <div className="flex flex-wrap justify-end gap-3">
           <Button type="button" variant="ghost" onClick={() => onChoisir("annuler")}>
-            Annuler
+            {t("commun.annuler")}
           </Button>
           <Button type="button" variant="secondary" onClick={() => onChoisir("ajouter")}>
-            Ajouter à la suite
+            {t("choixImportModal.ajouter")}
           </Button>
           <Button type="button" variant="primary" onClick={() => onChoisir("remplacer")}>
-            Remplacer
+            {t("choixImportModal.remplacer")}
           </Button>
         </div>
       </div>

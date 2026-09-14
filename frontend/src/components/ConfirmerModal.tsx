@@ -6,6 +6,7 @@
  * rien faire.
  */
 
+import { useTranslation } from "react-i18next";
 import Modal from "./Modal";
 import Button from "./Button";
 
@@ -21,21 +22,22 @@ interface ConfirmerModalProps {
 export default function ConfirmerModal({
   titre,
   description,
-  texteBouton = "Confirmer",
+  texteBouton,
   onFermer,
   onConfirmer,
   enCours = false,
 }: ConfirmerModalProps) {
+  const { t } = useTranslation();
   return (
     <Modal titre={titre} onFermer={onFermer}>
       <div className="space-y-4">
         <div className="text-sm text-warmgray">{description}</div>
         <div className="flex justify-end gap-3 pt-2">
           <Button type="button" variant="ghost" onClick={onFermer}>
-            Annuler
+            {t("commun.annuler")}
           </Button>
           <Button type="button" variant="primary" loading={enCours} onClick={() => void onConfirmer()}>
-            {texteBouton}
+            {texteBouton ?? t("commun.confirmer")}
           </Button>
         </div>
       </div>

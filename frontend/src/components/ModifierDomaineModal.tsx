@@ -5,6 +5,7 @@
  */
 
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { dossiers as dossiersApi } from "@/api";
 import type { Dossier } from "@/api";
 import { useAppStore } from "@/store/useAppStore";
@@ -19,6 +20,7 @@ interface ModifierDomaineModalProps {
 }
 
 export default function ModifierDomaineModal({ dossier, onFermer }: ModifierDomaineModalProps) {
+  const { t } = useTranslation();
   const [domaine, setDomaine] = useState(dossier.domaine ?? "");
   const [partieRepresentee, setPartieRepresentee] = useState(dossier.partie_representee ?? "");
   const [stadeProcedure, setStadeProcedure] = useState(dossier.stade_procedure ?? "");
@@ -35,24 +37,24 @@ export default function ModifierDomaineModal({ dossier, onFermer }: ModifierDoma
     try {
       const dossierMisAJour = await dossiersApi.modifierPosture(dossier.id, partieRepresentee, stadeProcedure, objectif.trim());
       mettreAJourDossierLocal(dossierMisAJour);
-      pousserToast("success", `Posture du dossier « ${dossier.nom} » mise à jour.`);
+      pousserToast("success", t("modifierDomaine.succes", { nom: dossier.nom }));
       onFermer();
     } catch (e) {
-      setErreur(e instanceof Error ? e.message : "La mise à jour du domaine a échoué.");
+      setErreur(e instanceof Error ? e.message : t("modifierDomaine.echec"));
     } finally {
       setEnCours(false);
     }
   };
 
   return (
-    <Modal titre="Modifier le domaine" onFermer={onFermer} kicker={dossier.nom}>
+    <Modal titre={t("modifierDomaine.titre")} onFermer={onFermer} kicker={dossier.nom}>
       <div className="space-y-4">
         <div>
           <label htmlFor="md-domaine" className="mb-1.5 block text-sm text-warmgray">
-            Domaine
+            {t("modifierDomaine.domaine")}
           </label>
           <select id="md-domaine" className="input" value={domaine} onChange={(e) => setDomaine(e.target.value)} autoFocus>
-            <option value="">— Non précisé —</option>
+            <option value="">{t("modifierDomaine.nonPrecise")}</option>
             {DOMAINES.map((d) => (
               <option key={d} value={d}>
                 {d}
@@ -61,21 +63,21 @@ export default function ModifierDomaineModal({ dossier, onFermer }: ModifierDoma
           </select>
         </div>
         <div>
-          <label htmlFor="md-partie" className="mb-1.5 block text-sm text-warmgray">Partie représentée</label>
+          <label htmlFor="md-partie" className="mb-1.5 block text-sm text-warmgray">{t("modifierDomaine.partieRepresentee")}</label>
           <select id="md-partie" className="input" value={partieRepresentee} onChange={(e) => setPartieRepresentee(e.target.value)}>
-            <option value="">— Non précisée —</option>
+            <option value="">{t("modifierDomaine.nonPreciseeF")}</option>
             {posturesPourDomaine(domaine).map((partie) => <option key={partie} value={partie}>{partie}</option>)}
           </select>
         </div>
         <div>
-          <label htmlFor="md-stade" className="mb-1.5 block text-sm text-warmgray">Stade</label>
+          <label htmlFor="md-stade" className="mb-1.5 block text-sm text-warmgray">{t("modifierDomaine.stade")}</label>
           <select id="md-stade" className="input" value={stadeProcedure} onChange={(e) => setStadeProcedure(e.target.value)}>
-            <option value="">— Non précisé —</option>
+            <option value="">{t("modifierDomaine.nonPrecise")}</option>
             {STADES_PROCEDURE.map((stade) => <option key={stade} value={stade}>{stade}</option>)}
           </select>
         </div>
         <div>
-          <label htmlFor="md-objectif" className="mb-1.5 block text-sm text-warmgray">Objectif</label>
+          <label htmlFor="md-objectif" className="mb-1.5 block text-sm text-warmgray">{t("modifierDomaine.objectif")}</label>
           <textarea id="md-objectif" className="input min-h-[80px] resize-y" value={objectif} onChange={(e) => setObjectif(e.target.value)} />
         </div>
 
@@ -83,10 +85,10 @@ export default function ModifierDomaineModal({ dossier, onFermer }: ModifierDoma
 
         <div className="flex justify-end gap-3 pt-2">
           <Button type="button" variant="ghost" onClick={onFermer}>
-            Annuler
+            {t("commun.annuler")}
           </Button>
           <Button type="button" variant="primary" loading={enCours} onClick={() => void soumettre()}>
-            Enregistrer
+            {t("commun.enregistrer")}
           </Button>
         </div>
       </div>

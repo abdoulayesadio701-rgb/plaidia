@@ -30,6 +30,8 @@
  */
 
 import type { ReactNode } from "react";
+import { useTranslation } from "react-i18next";
+import type { TFunction } from "i18next";
 
 // Marqueur hérité (texte généré avant le chantier de balisage, jamais
 // régénéré rétroactivement) -- voir la balise [VERIF:...] ci-dessous pour
@@ -62,7 +64,7 @@ const SEGMENT_RE =
 // (ex. "...decision/abc123." en fin de ligne) — à laisser hors du lien.
 const PONCTUATION_FINALE_RE = /[.,;:)\]]+$/;
 
-function renderInline(segment: string, keyPrefix: string): ReactNode[] {
+function renderInline(segment: string, keyPrefix: string, t: TFunction): ReactNode[] {
   const parts = segment.split(SEGMENT_RE).filter((p) => p !== "");
   return parts.map((part, i) => {
     const key = `${keyPrefix}-${i}`;
@@ -70,23 +72,26 @@ function renderInline(segment: string, keyPrefix: string): ReactNode[] {
     if (matchVerif) {
       return (
         <mark key={key} className="marker-verify">
-          À VÉRIFIER : {matchVerif[1]}
+          {t("richOutput.aVerifier")} : {matchVerif[1]}
         </mark>
       );
     }
     const matchArt = part.match(RE_TAG_ART);
     if (matchArt) {
       const [, numero, code] = matchArt;
+      // Nom du code (Code civil, Code pénal...) volontairement non traduit
+      // -- une référence juridique citée reste dans sa langue d'origine
+      // (même principe que côté backend, voir analyse._DIRECTIVES_LANGUE).
       return (
-        <span key={key} className="marker-citation" title="Référence citée">
-          art. {numero} du {CODES_LIBELLES[code] ?? code}
+        <span key={key} className="marker-citation" title={t("richOutput.referenceCitee")}>
+          {t("richOutput.articleDu", { numero, code: CODES_LIBELLES[code] ?? code })}
         </span>
       );
     }
     const matchJurisprudence = part.match(RE_TAG_JURISPRUDENCE);
     if (matchJurisprudence) {
       return (
-        <span key={key} className="marker-citation" title="Référence citée">
+        <span key={key} className="marker-citation" title={t("richOutput.referenceCitee")}>
           {matchJurisprudence[1]}
         </span>
       );
@@ -94,7 +99,7 @@ function renderInline(segment: string, keyPrefix: string): ReactNode[] {
     if (part === MARQUEUR) {
       return (
         <mark key={key} className="marker-verify">
-          {MARQUEUR}
+          {t("richOutput.aVerifier")}
         </mark>
       );
     }
@@ -111,9 +116,9 @@ function renderInline(segment: string, keyPrefix: string): ReactNode[] {
             target="_blank"
             rel="noopener noreferrer"
             className="text-gold-500 underline decoration-gold-600/50 underline-offset-2 transition-colors hover:text-gold-400"
-            title="Ouvrir la page source dans un nouvel onglet"
+            title={t("richOutput.ouvrirSource")}
           >
-            consulter la source ↗
+            {t("richOutput.consulterSource")}
           </a>
           {finale}
         </span>
@@ -207,6 +212,7 @@ interface RichOutputProps {
 }
 
 export default function RichOutput({ texte, className = "", prose = true }: RichOutputProps) {
+  const { t } = useTranslation();
   const blocs = parseBlocs(texte);
   return (
     <div className={`${prose ? "max-w-prose" : ""} space-y-3 text-ivory ${className}`}>
@@ -215,7 +221,7 @@ export default function RichOutput({ texte, className = "", prose = true }: Rich
           const Balise = `h${bloc.niveau}` as keyof JSX.IntrinsicElements;
           return (
             <Balise key={i} className={TAILLES_TITRE[bloc.niveau]}>
-              {renderInline(bloc.texte, `t${i}`)}
+              {renderInline(bloc.texte, `t${i}`, t)}
             </Balise>
           );
         }
@@ -224,7 +230,7 @@ export default function RichOutput({ texte, className = "", prose = true }: Rich
           return (
             <ListeBalise key={i} className={`ml-5 space-y-1 text-body leading-relaxed ${bloc.ordonnee ? "list-decimal" : "list-disc"}`}>
               {bloc.items.map((item, j) => (
-                <li key={j}>{renderInline(item, `l${i}-${j}`)}</li>
+                <li key={j}>{renderInline(item, `l${i}-${j}`, t)}</li>
               ))}
             </ListeBalise>
           );
@@ -233,7 +239,7 @@ export default function RichOutput({ texte, className = "", prose = true }: Rich
           <p key={i} className="text-body leading-relaxed">
             {bloc.lignes.map((ligne, j) => (
               <span key={j}>
-                {renderInline(ligne, `p${i}-${j}`)}
+                {renderInline(ligne, `p${i}-${j}`, t)}
                 {j < bloc.lignes.length - 1 && <br />}
               </span>
             ))}

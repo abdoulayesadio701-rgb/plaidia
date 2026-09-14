@@ -5,7 +5,194 @@
     "enregistrer": "Enregistrer",
     "creer": "Créer",
     "chargement": "Chargement…",
-    "reessayer": "Réessayer"
+    "reessayer": "Réessayer",
+    "confirmer": "Confirmer",
+    "notes": "Notes"
+  },
+  "niveauRisque": {
+    "Élevé": "Élevé",
+    "Moyen": "Moyen",
+    "Faible": "Faible"
+  },
+  "niveauConfiance": {
+    "Élevée": "Élevée",
+    "Moyenne": "Moyenne",
+    "Faible": "Faible"
+  },
+  "statutConfiance": {
+    "VERIFIE": "Vérifié",
+    "A_VERIFIER": "À vérifier",
+    "INCERTAIN": "Incertain"
+  },
+  "statutVerification": {
+    "VERIFIE": "vérifié",
+    "PARTIELLEMENT_VERIFIE": "partiellement vérifié",
+    "A_VERIFIER": "à vérifier",
+    "NON_VERIFIE": "non vérifié"
+  },
+  "argumentCard": {
+    "fondement": "Fondement",
+    "problemeDeDroit": "Problème de droit",
+    "regleApplicable": "Règle applicable",
+    "applicationAuxFaits": "Application aux faits",
+    "conclusion": "Conclusion",
+    "pistesRefutation": "Pistes de réfutation"
+  },
+  "choixImportModal": {
+    "titre": "Du texte est déjà présent",
+    "sujetSingulier": "« {{nom}} »",
+    "sujetPluriel": "ces {{count}} fichiers ({{noms}})",
+    "question": "Ce champ contient déjà du texte. Que faire du contenu extrait de {{sujet}} ?",
+    "ajouter": "Ajouter à la suite",
+    "remplacer": "Remplacer"
+  },
+  "clePersonnelle": {
+    "introDemo": "Indiquez votre propre clé API Anthropic pour obtenir des réponses générées en direct, avec votre propre quota, même si ce serveur public est en mode démo.",
+    "introHorsDemo": "Ce serveur utilise déjà sa propre clé Anthropic. Indiquer la vôtre ici n'est utile que si vous voulez utiliser votre propre quota à la place (ex. le serveur a atteint sa limite de débit).",
+    "enregistree": "Clé personnelle enregistrée pour cette session – elle ne sera jamais journalisée par le serveur.",
+    "retireeDemo": "Clé personnelle retirée. Vous repassez en mode démo.",
+    "retiree": "Clé personnelle retirée.",
+    "active": "Votre clé Anthropic personnelle est active pour cette session.",
+    "retirerMaCle": "Retirer ma clé",
+    "garantieStockage": "Stockée uniquement dans ce navigateur (sessionStorage) — jamais sur le serveur.",
+    "garantieEffacement": "Effacée automatiquement à la fermeture de cet onglet.",
+    "garantieJournalisation": "Jamais journalisée : le serveur l'utilise pour vos requêtes sans jamais l'écrire nulle part.",
+    "champLabel": "Clé API (sk-ant-…)",
+    "generezEnUne": "Générez-en une sur",
+    "activer": "Activer",
+    "modalTitre": "Ma propre clé Anthropic",
+    "modalKicker": "Sortir du mode démo"
+  },
+  "confirmerSuppression": {
+    "tapez": "Tapez",
+    "pourConfirmer": "pour confirmer",
+    "supprimerDefinitivement": "Supprimer définitivement"
+  },
+  "dureeSlider": {
+    "label": "Temps de parole imparti"
+  },
+  "fileDropZone": {
+    "titre": "Déposez vos documents ici",
+    "libelleBouton": "📎 Importer un fichier"
+  },
+  "fileImportListe": {
+    "compteur": "{{termines}}/{{total}} documents importés",
+    "viderListe": "Vider la liste",
+    "caracteresExtraits": "{{compte}} caractères extraits",
+    "retirerAria": "Retirer {{nom}} de la liste"
+  },
+  "fullscreenToggle": {
+    "quitterAria": "Quitter le plein écran",
+    "entrerAria": "Passer en plein écran",
+    "quitter": "Quitter le plein écran",
+    "entrer": "Plein écran"
+  },
+  "jaugeConfiance": {
+    "label": "Confiance"
+  },
+  "modifierDomaine": {
+    "succes": "Posture du dossier « {{nom}} » mise à jour.",
+    "echec": "La mise à jour du domaine a échoué.",
+    "titre": "Modifier le domaine",
+    "domaine": "Domaine",
+    "nonPrecise": "— Non précisé —",
+    "partieRepresentee": "Partie représentée",
+    "nonPreciseeF": "— Non précisée —",
+    "stade": "Stade",
+    "objectif": "Objectif"
+  },
+  "nouveauDossier": {
+    "succes": "Dossier « {{nom}} » créé.",
+    "echec": "La création du dossier a échoué.",
+    "nomRequis": "Veuillez indiquer un nom pour ce dossier.",
+    "titre": "Nouveau dossier",
+    "nomDossier": "Nom du dossier",
+    "nomPlaceholder": "Ex. Martin bail commercial",
+    "partieRepresentee": "Partie représentée (optionnel)",
+    "stade": "Stade (optionnel)",
+    "objectif": "Objectif (optionnel)",
+    "numeroReference": "Numéro de référence (optionnel)",
+    "faits": "Faits (optionnel)",
+    "faitsPlaceholder": "Décrivez les faits, ou déposez un fichier…",
+    "formatsAcceptes": "PDF, Word, Excel, image — le texte extrait est injecté ci-dessus."
+  },
+  "planTimeline": {
+    "accroche": "Accroche",
+    "argumentCle": "Argument clé",
+    "conclusion": "Conclusion",
+    "pointsAttention": "Points d'attention"
+  },
+  "rechercheDossier": {
+    "champNom": "Nom",
+    "champDomaine": "Domaine",
+    "champFaits": "Faits",
+    "champParties": "Parties",
+    "aucunResultat": "Aucun résultat",
+    "aucunResultatDescription": "Aucun dossier ne correspond à « {{terme}} ».",
+    "compteurResultats_one": "{{count}} dossier correspondant à « {{terme}} »",
+    "compteurResultats_other": "{{count}} dossiers correspondants à « {{terme}} »"
+  },
+  "rechercheGlobale": {
+    "titre": "Recherche globale",
+    "kicker": "Tous vos dossiers, faits, parties et analyses",
+    "placeholder": "Rechercher un dossier, un fait, une partie, une analyse…",
+    "invite": "Commencez à taper pour rechercher dans tous vos dossiers."
+  },
+  "richOutput": {
+    "aVerifier": "À VÉRIFIER",
+    "referenceCitee": "Référence citée",
+    "articleDu": "art. {{numero}} du {{code}}",
+    "ouvrirSource": "Ouvrir la page source dans un nouvel onglet",
+    "consulterSource": "consulter la source ↗"
+  },
+  "texteLongModal": {
+    "lecturePressePapiersRefusee": "Lecture du presse-papiers refusée par le navigateur – collez manuellement (Ctrl/Cmd+V) dans la zone.",
+    "kicker": "Dépôt de pièce",
+    "collerDepuisPressePapiers": "Coller depuis le presse-papiers",
+    "compteurCaracteres_one": "{{valeur}} caractère",
+    "compteurCaracteres_other": "{{valeur}} caractères",
+    "filigrane1": "Déposez le texte ici,",
+    "filigrane2": "comme une pièce au dossier.",
+    "entree": "Entrée",
+    "pourInserer": "pour insérer",
+    "insererDansConversation": "Insérer dans la conversation"
+  },
+  "toast": {
+    "fermer": "Fermer la notification"
+  },
+  "verificationPanel": {
+    "titre": "Vérification multi-agents",
+    "avertissement": "Plusieurs contrôles indépendants (vérification des sources, contradicteur, validation finale) aident à repérer les erreurs et les incertitudes -- ils ne garantissent pas que cette analyse est exacte.",
+    "masquerDetail": "Masquer le détail",
+    "voirDetail": "Voir le détail du contrôle",
+    "affirmationsControlees": "Affirmations contrôlées",
+    "faiblessesRelevees": "Faiblesses relevées par l'agent critique",
+    "gravite": "Gravité"
+  },
+  "chatContextuel": {
+    "demanderAgent": "Demander à l'agent",
+    "reinitialiserFil": "Réinitialiser le fil",
+    "agentReflechit": "L'agent réfléchit…",
+    "placeholder": "Ex. « Développe le deuxième argument », « rends le ton plus formel »…",
+    "envoyer": "Envoyer"
+  },
+  "versionsHistorique": {
+    "auteurIA": "IA",
+    "auteurRestauration": "Restauration",
+    "restauree": "Version du {{date}} restaurée.",
+    "echecRestauration": "La restauration a échoué.",
+    "versions": "Versions",
+    "vide": "Aucune version enregistrée pour l'instant.",
+    "versionInitiale": "Version initiale",
+    "modification": "Modification",
+    "dejaActuelle": "Déjà la version actuelle",
+    "restaurerCelle": "Restaurer cette version",
+    "actuelle": "Actuelle",
+    "restaurer": "Restaurer"
+  },
+  "pinButton": {
+    "epingler": "Épingler",
+    "epingle": "Épinglé"
   },
   "langue": {
     "selecteurAria": "Choisir la langue de l'interface",

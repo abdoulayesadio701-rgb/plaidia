@@ -10,15 +10,15 @@
  */
 
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { versions as versionsApi } from "@/api";
 import type { VersionDocument } from "@/api";
 import { useAppStore } from "@/store/useAppStore";
 
-const LIBELLE_AUTEUR: Record<string, string> = { ia: "IA", utilisateur: "Restauration" };
-
-function formaterDate(iso: string): string {
+function formaterDate(iso: string, langue: string): string {
   try {
-    return new Date(iso).toLocaleString("fr-FR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
+    const locale = langue === "en" ? "en-GB" : "fr-FR";
+    return new Date(iso).toLocaleString(locale, { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
   } catch {
     return iso;
   }
@@ -32,6 +32,8 @@ interface VersionsHistoriqueProps<T> {
 }
 
 export default function VersionsHistorique<T>({ feature, dossierId, documentId, onRestaurer }: VersionsHistoriqueProps<T>) {
+  const { t, i18n } = useTranslation();
+  const LIBELLE_AUTEUR: Record<string, string> = { ia: t("versionsHistorique.auteurIA"), utilisateur: t("versionsHistorique.auteurRestauration") };
   const [ouvert, setOuvert] = useState(false);
   const [liste, setListe] = useState<VersionDocument[]>([]);
   const [chargement, setChargement] = useState(false);
@@ -59,10 +61,10 @@ export default function VersionsHistorique<T>({ feature, dossierId, documentId, 
     try {
       const restauree = await versionsApi.restaurerVersion(version.id);
       onRestaurer(restauree.contenu as T);
-      pousserToast("success", `Version du ${formaterDate(version.date_creation)} restaurée.`);
+      pousserToast("success", t("versionsHistorique.restauree", { date: formaterDate(version.date_creation, i18n.language) }));
       await charger();
     } catch (e) {
-      pousserToast("error", e instanceof Error ? e.message : "La restauration a échoué.");
+      pousserToast("error", e instanceof Error ? e.message : t("versionsHistorique.echecRestauration"));
     } finally {
       setIdEnCours(null);
     }
@@ -71,29 +73,29 @@ export default function VersionsHistorique<T>({ feature, dossierId, documentId, 
   return (
     <div>
       <button type="button" onClick={() => setOuvert((v) => !v)} className="text-xs text-muted hover:text-warmgray">
-        🔄 Versions{liste.length > 0 ? ` (${liste.length})` : ""}
+        🔄 {t("versionsHistorique.versions")}{liste.length > 0 ? ` (${liste.length})` : ""}
       </button>
 
       {ouvert && (
         <div className="mt-2 space-y-1.5 rounded-md bg-surface-2/60 p-2.5">
-          {chargement && <p className="text-xs text-warmgray">Chargement…</p>}
-          {!chargement && liste.length === 0 && <p className="text-xs text-warmgray">Aucune version enregistrée pour l'instant.</p>}
+          {chargement && <p className="text-xs text-warmgray">{t("commun.chargement")}</p>}
+          {!chargement && liste.length === 0 && <p className="text-xs text-warmgray">{t("versionsHistorique.vide")}</p>}
           {!chargement &&
             liste.map((v, i) => (
               <div key={v.id} className="flex items-center justify-between gap-2 rounded-md bg-surface px-2.5 py-1.5 text-xs">
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-ivory">{v.resume_modification || (i === liste.length - 1 ? "Version initiale" : "Modification")}</p>
+                  <p className="truncate text-ivory">{v.resume_modification || (i === liste.length - 1 ? t("versionsHistorique.versionInitiale") : t("versionsHistorique.modification"))}</p>
                   <p className="text-muted">
-                    {formaterDate(v.date_creation)} · {LIBELLE_AUTEUR[v.auteur] ?? v.auteur}
+                    {formaterDate(v.date_creation, i18n.language)} · {LIBELLE_AUTEUR[v.auteur] ?? v.auteur}
                   </p>
                 </div>
                 <button
                   onClick={() => void restaurer(v)}
                   disabled={idEnCours !== null || i === 0}
                   className="shrink-0 text-amethyst-400 hover:underline disabled:cursor-not-allowed disabled:text-muted disabled:no-underline"
-                  title={i === 0 ? "Déjà la version actuelle" : "Restaurer cette version"}
+                  title={i === 0 ? t("versionsHistorique.dejaActuelle") : t("versionsHistorique.restaurerCelle")}
                 >
-                  {idEnCours === v.id ? "…" : i === 0 ? "Actuelle" : "Restaurer"}
+                  {idEnCours === v.id ? "…" : i === 0 ? t("versionsHistorique.actuelle") : t("versionsHistorique.restaurer")}
                 </button>
               </div>
             ))}

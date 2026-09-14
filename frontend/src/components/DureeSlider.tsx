@@ -4,6 +4,8 @@
  * variable CSS calculée en JS, pas de librairie de slider.
  */
 
+import { useTranslation } from "react-i18next";
+
 interface DureeSliderProps {
   valeur: number;
   onChange: (valeur: number) => void;
@@ -13,13 +15,14 @@ interface DureeSliderProps {
 }
 
 export default function DureeSlider({ valeur, onChange, min = 1, max = 180, id = "duree-slider" }: DureeSliderProps) {
+  const { t } = useTranslation();
   const pourcentage = ((valeur - min) / (max - min)) * 100;
 
   return (
     <div>
       <div className="mb-2 flex items-baseline justify-between">
         <label htmlFor={id} className="text-sm text-warmgray">
-          Temps de parole imparti
+          {t("dureeSlider.label")}
         </label>
         <span className="font-mono text-lg font-semibold text-amethyst-400">{valeur} min</span>
       </div>

@@ -11,12 +11,14 @@
  */
 
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 function pleinEcranSupporte(): boolean {
   return typeof document !== "undefined" && Boolean(document.documentElement.requestFullscreen);
 }
 
 export default function FullscreenToggle() {
+  const { t } = useTranslation();
   const [actif, setActif] = useState(false);
   const [supporte] = useState(pleinEcranSupporte);
 
@@ -41,8 +43,8 @@ export default function FullscreenToggle() {
     <button
       onClick={basculer}
       className="rounded-md p-1.5 text-warmgray transition-colors hover:bg-surface-2 hover:text-ivory"
-      aria-label={actif ? "Quitter le plein écran" : "Passer en plein écran"}
-      title={actif ? "Quitter le plein écran" : "Plein écran"}
+      aria-label={actif ? t("fullscreenToggle.quitterAria") : t("fullscreenToggle.entrerAria")}
+      title={actif ? t("fullscreenToggle.quitter") : t("fullscreenToggle.entrer")}
     >
       {actif ? (
         // Quatre coins repliés vers le centre -- "réduire"

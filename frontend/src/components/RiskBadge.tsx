@@ -4,6 +4,7 @@
  * (accessibilité daltonisme).
  */
 
+import { useTranslation } from "react-i18next";
 import type { NiveauRisque } from "@/api";
 
 const CLASSES_PAR_NIVEAU: Record<string, string> = {
@@ -13,11 +14,15 @@ const CLASSES_PAR_NIVEAU: Record<string, string> = {
 };
 
 interface RiskBadgeProps {
+  /** Valeur fixe renvoyée par le backend (analyse.py) -- toujours l'un de
+   * ces trois tokens français, quelle que soit la langue de l'interface
+   * (voir schémas JSON de analyse.py). */
   risque: NiveauRisque;
   className?: string;
 }
 
 export default function RiskBadge({ risque, className = "" }: RiskBadgeProps) {
+  const { t } = useTranslation();
   const classe = CLASSES_PAR_NIVEAU[risque] ?? "badge";
-  return <span className={`${classe} ${className}`}>{risque}</span>;
+  return <span className={`${classe} ${className}`}>{t(`niveauRisque.${risque}`, risque)}</span>;
 }

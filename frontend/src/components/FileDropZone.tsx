@@ -15,6 +15,7 @@
  */
 
 import { useRef, useState, type DragEvent, type ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 import Button from "./Button";
 
 interface FileDropZoneProps {
@@ -38,12 +39,15 @@ export default function FileDropZone({
   loading = false,
   onFichiers,
   variante = "complete",
-  titre = "Déposez vos documents ici",
+  titre,
   description,
   icone = "📥",
-  libelleBouton = "📎 Importer un fichier",
+  libelleBouton,
   className = "",
 }: FileDropZoneProps) {
+  const { t } = useTranslation();
+  const titreEffectif = titre ?? t("fileDropZone.titre");
+  const libelleBoutonEffectif = libelleBouton ?? t("fileDropZone.libelleBouton");
   const [survole, setSurvole] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const accept = extensions.join(",");
@@ -67,7 +71,7 @@ export default function FileDropZone({
       <>
         {input}
         <Button variant="secondary" loading={loading} disabled={disabled} onClick={() => inputRef.current?.click()} className={className}>
-          {libelleBouton}
+          {libelleBoutonEffectif}
         </Button>
       </>
     );
@@ -100,7 +104,7 @@ export default function FileDropZone({
       <span className="text-3xl" aria-hidden="true">
         {icone}
       </span>
-      <p className="font-serif text-h4 font-semibold text-ivory">{titre}</p>
+      <p className="font-serif text-h4 font-semibold text-ivory">{titreEffectif}</p>
       {description && <p className="max-w-md text-sm text-warmgray">{description}</p>}
       {input}
     </div>

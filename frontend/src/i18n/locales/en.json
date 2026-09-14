@@ -5,7 +5,194 @@
     "enregistrer": "Save",
     "creer": "Create",
     "chargement": "Loading…",
-    "reessayer": "Retry"
+    "reessayer": "Retry",
+    "confirmer": "Confirm",
+    "notes": "Notes"
+  },
+  "niveauRisque": {
+    "Élevé": "High",
+    "Moyen": "Medium",
+    "Faible": "Low"
+  },
+  "niveauConfiance": {
+    "Élevée": "High",
+    "Moyenne": "Medium",
+    "Faible": "Low"
+  },
+  "statutConfiance": {
+    "VERIFIE": "Verified",
+    "A_VERIFIER": "To verify",
+    "INCERTAIN": "Uncertain"
+  },
+  "statutVerification": {
+    "VERIFIE": "verified",
+    "PARTIELLEMENT_VERIFIE": "partially verified",
+    "A_VERIFIER": "to verify",
+    "NON_VERIFIE": "not verified"
+  },
+  "argumentCard": {
+    "fondement": "Basis",
+    "problemeDeDroit": "Legal issue",
+    "regleApplicable": "Applicable rule",
+    "applicationAuxFaits": "Application to the facts",
+    "conclusion": "Conclusion",
+    "pistesRefutation": "Possible rebuttals"
+  },
+  "choixImportModal": {
+    "titre": "Text is already present",
+    "sujetSingulier": "“{{nom}}”",
+    "sujetPluriel": "these {{count}} files ({{noms}})",
+    "question": "This field already contains text. What should be done with the content extracted from {{sujet}}?",
+    "ajouter": "Add after",
+    "remplacer": "Replace"
+  },
+  "clePersonnelle": {
+    "introDemo": "Enter your own Anthropic API key to get live-generated answers, with your own quota, even though this public server is running in demo mode.",
+    "introHorsDemo": "This server already uses its own Anthropic key. Entering yours here is only useful if you want to use your own quota instead (e.g. the server has hit its rate limit).",
+    "enregistree": "Personal key saved for this session – it will never be logged by the server.",
+    "retireeDemo": "Personal key removed. You are back in demo mode.",
+    "retiree": "Personal key removed.",
+    "active": "Your personal Anthropic key is active for this session.",
+    "retirerMaCle": "Remove my key",
+    "garantieStockage": "Stored only in this browser (sessionStorage) — never on the server.",
+    "garantieEffacement": "Automatically erased when this tab is closed.",
+    "garantieJournalisation": "Never logged: the server uses it for your requests without ever writing it anywhere.",
+    "champLabel": "API key (sk-ant-…)",
+    "generezEnUne": "Generate one at",
+    "activer": "Activate",
+    "modalTitre": "My own Anthropic key",
+    "modalKicker": "Exit demo mode"
+  },
+  "confirmerSuppression": {
+    "tapez": "Type",
+    "pourConfirmer": "to confirm",
+    "supprimerDefinitivement": "Delete permanently"
+  },
+  "dureeSlider": {
+    "label": "Allotted speaking time"
+  },
+  "fileDropZone": {
+    "titre": "Drop your documents here",
+    "libelleBouton": "📎 Import a file"
+  },
+  "fileImportListe": {
+    "compteur": "{{termines}}/{{total}} documents imported",
+    "viderListe": "Clear the list",
+    "caracteresExtraits": "{{compte}} characters extracted",
+    "retirerAria": "Remove {{nom}} from the list"
+  },
+  "fullscreenToggle": {
+    "quitterAria": "Exit full screen",
+    "entrerAria": "Enter full screen",
+    "quitter": "Exit full screen",
+    "entrer": "Full screen"
+  },
+  "jaugeConfiance": {
+    "label": "Confidence"
+  },
+  "modifierDomaine": {
+    "succes": "Posture of case « {{nom}} » updated.",
+    "echec": "Updating the domain failed.",
+    "titre": "Edit the domain",
+    "domaine": "Domain",
+    "nonPrecise": "— Not specified —",
+    "partieRepresentee": "Party represented",
+    "nonPreciseeF": "— Not specified —",
+    "stade": "Stage",
+    "objectif": "Objective"
+  },
+  "nouveauDossier": {
+    "succes": "Case « {{nom}} » created.",
+    "echec": "Creating the case failed.",
+    "nomRequis": "Please enter a name for this case.",
+    "titre": "New case",
+    "nomDossier": "Case name",
+    "nomPlaceholder": "E.g. Martin commercial lease",
+    "partieRepresentee": "Party represented (optional)",
+    "stade": "Stage (optional)",
+    "objectif": "Objective (optional)",
+    "numeroReference": "Reference number (optional)",
+    "faits": "Facts (optional)",
+    "faitsPlaceholder": "Describe the facts, or drop a file…",
+    "formatsAcceptes": "PDF, Word, Excel, image — the extracted text is injected above."
+  },
+  "planTimeline": {
+    "accroche": "Hook",
+    "argumentCle": "Key argument",
+    "conclusion": "Conclusion",
+    "pointsAttention": "Points of attention"
+  },
+  "rechercheDossier": {
+    "champNom": "Name",
+    "champDomaine": "Domain",
+    "champFaits": "Facts",
+    "champParties": "Parties",
+    "aucunResultat": "No results",
+    "aucunResultatDescription": "No case matches “{{terme}}”.",
+    "compteurResultats_one": "{{count}} matching case for “{{terme}}”",
+    "compteurResultats_other": "{{count}} matching cases for “{{terme}}”"
+  },
+  "rechercheGlobale": {
+    "titre": "Global search",
+    "kicker": "All your cases, facts, parties and analyses",
+    "placeholder": "Search a case, a fact, a party, an analysis…",
+    "invite": "Start typing to search across all your cases."
+  },
+  "richOutput": {
+    "aVerifier": "TO VERIFY",
+    "referenceCitee": "Cited reference",
+    "articleDu": "art. {{numero}} of the {{code}}",
+    "ouvrirSource": "Open the source page in a new tab",
+    "consulterSource": "view the source ↗"
+  },
+  "texteLongModal": {
+    "lecturePressePapiersRefusee": "Clipboard read refused by the browser – paste manually (Ctrl/Cmd+V) into the field.",
+    "kicker": "Filing a document",
+    "collerDepuisPressePapiers": "Paste from clipboard",
+    "compteurCaracteres_one": "{{valeur}} character",
+    "compteurCaracteres_other": "{{valeur}} characters",
+    "filigrane1": "Drop the text here,",
+    "filigrane2": "like a document filed in the case.",
+    "entree": "Enter",
+    "pourInserer": "to insert",
+    "insererDansConversation": "Insert into the conversation"
+  },
+  "toast": {
+    "fermer": "Close the notification"
+  },
+  "verificationPanel": {
+    "titre": "Multi-agent verification",
+    "avertissement": "Several independent checks (source verification, adversarial critique, final validation) help catch errors and uncertainties -- they do not guarantee that this analysis is accurate.",
+    "masquerDetail": "Hide details",
+    "voirDetail": "View check details",
+    "affirmationsControlees": "Checked statements",
+    "faiblessesRelevees": "Weaknesses flagged by the critic agent",
+    "gravite": "Severity"
+  },
+  "chatContextuel": {
+    "demanderAgent": "Ask the assistant",
+    "reinitialiserFil": "Reset the thread",
+    "agentReflechit": "The assistant is thinking…",
+    "placeholder": "E.g. \"Expand the second argument\", \"make the tone more formal\"…",
+    "envoyer": "Send"
+  },
+  "versionsHistorique": {
+    "auteurIA": "AI",
+    "auteurRestauration": "Restoration",
+    "restauree": "Version from {{date}} restored.",
+    "echecRestauration": "The restoration failed.",
+    "versions": "Versions",
+    "vide": "No version saved yet.",
+    "versionInitiale": "Initial version",
+    "modification": "Edit",
+    "dejaActuelle": "Already the current version",
+    "restaurerCelle": "Restore this version",
+    "actuelle": "Current",
+    "restaurer": "Restore"
+  },
+  "pinButton": {
+    "epingler": "Pin",
+    "epingle": "Pinned"
   },
   "langue": {
     "selecteurAria": "Choose the interface language",

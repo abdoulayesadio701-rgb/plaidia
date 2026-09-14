@@ -10,6 +10,7 @@
 
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { dossiers as dossiersApi } from "@/api";
 import { useLazyAction } from "@/hooks/useLazyAction";
 import { useAppStore } from "@/store/useAppStore";
@@ -21,6 +22,7 @@ interface RechercheGlobaleModalProps {
 }
 
 export default function RechercheGlobaleModal({ onFermer }: RechercheGlobaleModalProps) {
+  const { t } = useTranslation();
   const [terme, setTerme] = useState("");
   const navigate = useNavigate();
   const selectionnerDossier = useAppStore((s) => s.selectionnerDossier);
@@ -44,12 +46,12 @@ export default function RechercheGlobaleModal({ onFermer }: RechercheGlobaleModa
   };
 
   return (
-    <Modal titre="Recherche globale" onFermer={onFermer} largeurMax="max-w-2xl" kicker="Tous vos dossiers, faits, parties et analyses">
+    <Modal titre={t("rechercheGlobale.titre")} onFermer={onFermer} largeurMax="max-w-2xl" kicker={t("rechercheGlobale.kicker")}>
       <div className="space-y-4">
         <input
           autoFocus
           className="input"
-          placeholder="Rechercher un dossier, un fait, une partie, une analyse…"
+          placeholder={t("rechercheGlobale.placeholder")}
           value={terme}
           onChange={(e) => setTerme(e.target.value)}
         />
@@ -66,7 +68,7 @@ export default function RechercheGlobaleModal({ onFermer }: RechercheGlobaleModa
             />
           </div>
         ) : (
-          <p className="py-6 text-center text-sm text-muted">Commencez à taper pour rechercher dans tous vos dossiers.</p>
+          <p className="py-6 text-center text-sm text-muted">{t("rechercheGlobale.invite")}</p>
         )}
       </div>
     </Modal>

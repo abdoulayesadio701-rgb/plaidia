@@ -4,6 +4,7 @@
  * (pousserToast programme le retrait après 6s).
  */
 
+import { useTranslation } from "react-i18next";
 import { useAppStore, type Toast, type ToastType } from "@/store/useAppStore";
 
 // Bordure gauche colorée + icône/texte de la même couleur sur fond surface
@@ -16,6 +17,7 @@ const STYLES: Record<ToastType, { accent: string; text: string; icon: string }> 
 };
 
 function ToastItem({ toast }: { toast: Toast }) {
+  const { t } = useTranslation();
   const retirerToast = useAppStore((s) => s.retirerToast);
   const styles = STYLES[toast.type];
   return (
@@ -30,7 +32,7 @@ function ToastItem({ toast }: { toast: Toast }) {
       <button
         onClick={() => retirerToast(toast.id)}
         className="shrink-0 text-warmgray hover:text-ivory"
-        aria-label="Fermer la notification"
+        aria-label={t("toast.fermer")}
       >
         ✕
       </button>

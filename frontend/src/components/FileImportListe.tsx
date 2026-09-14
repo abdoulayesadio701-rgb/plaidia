@@ -5,6 +5,7 @@
  * PreparerDossierPage, le premier endroit où cette liste a été construite.
  */
 
+import { useTranslation } from "react-i18next";
 import type { FichierSuivi } from "@/hooks/useImportFichiers";
 import { formaterTailleFichier } from "@/config/fichiers";
 
@@ -16,18 +17,18 @@ interface FileImportListeProps {
 }
 
 export default function FileImportListe({ fichiers, onAnnuler, onRetirer, onVider }: FileImportListeProps) {
+  const { t, i18n } = useTranslation();
   if (fichiers.length === 0) return null;
   const nombreTermines = fichiers.filter((f) => f.statut === "termine").length;
+  const locale = i18n.language === "en" ? "en-GB" : "fr-FR";
 
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <p className="text-sm text-warmgray">
-          {nombreTermines}/{fichiers.length} document{fichiers.length > 1 ? "s" : ""} importé{nombreTermines > 1 ? "s" : ""}
-        </p>
+        <p className="text-sm text-warmgray">{t("fileImportListe.compteur", { termines: nombreTermines, total: fichiers.length })}</p>
         {onVider && (
           <button onClick={onVider} className="text-xs text-muted hover:text-warmgray">
-            Vider la liste
+            {t("fileImportListe.viderListe")}
           </button>
         )}
       </div>
@@ -39,7 +40,8 @@ export default function FileImportListe({ fichiers, onAnnuler, onRetirer, onVide
                 <p className="truncate text-sm font-medium text-ivory">{f.nom}</p>
                 <p className="text-xs text-muted">
                   {formaterTailleFichier(f.taille)}
-                  {f.statut === "termine" && f.caracteresExtraits != null && ` · ${f.caracteresExtraits.toLocaleString("fr-FR")} caractères extraits`}
+                  {f.statut === "termine" && f.caracteresExtraits != null &&
+                    ` · ${t("fileImportListe.caracteresExtraits", { compte: f.caracteresExtraits.toLocaleString(locale) })}`}
                   {f.statut === "erreur" && f.erreur && <span className="text-risk-high"> · {f.erreur}</span>}
                 </p>
               </div>
@@ -48,11 +50,11 @@ export default function FileImportListe({ fichiers, onAnnuler, onRetirer, onVide
                 {f.statut === "erreur" && <span className="text-lg text-risk-high">⚠</span>}
                 {f.statut === "en_cours" && (
                   <button onClick={() => onAnnuler(f.id)} className="text-xs text-warmgray hover:text-ivory">
-                    Annuler
+                    {t("commun.annuler")}
                   </button>
                 )}
                 {f.statut !== "en_cours" && (
-                  <button onClick={() => onRetirer(f.id)} className="text-xs text-muted hover:text-ivory" aria-label={`Retirer ${f.nom} de la liste`}>
+                  <button onClick={() => onRetirer(f.id)} className="text-xs text-muted hover:text-ivory" aria-label={t("fileImportListe.retirerAria", { nom: f.nom })}>
                     ✕
                   </button>
                 )}
