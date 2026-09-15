@@ -4,10 +4,12 @@
  * ("Créez ou sélectionnez un dossier ci-dessus pour commencer.").
  */
 
+import { useTranslation } from "react-i18next";
 import { useAppStore, useDossierActif } from "@/store/useAppStore";
 import Logo from "@/components/Logo";
 
 export default function HomePage() {
+  const { t } = useTranslation();
   const dossierActif = useDossierActif();
   const espaceActif = useAppStore((s) => s.espaceActif);
 
@@ -16,17 +18,16 @@ export default function HomePage() {
       <Logo iconClassName="h-10 w-10 text-gold-500" wordmarkClassName="font-display text-3xl font-bold text-gold-500" />
       {dossierActif ? (
         <>
-          <p className="mt-4 text-sm text-warmgray">Dossier actif</p>
+          <p className="mt-4 text-sm text-warmgray">{t("arsenal.dossierActif")}</p>
           <h1 className="font-serif text-h1 font-semibold text-ivory">{dossierActif.nom}</h1>
           {dossierActif.domaine && <p className="text-sm text-warmgray">{dossierActif.domaine}</p>}
           <p className="mt-4 max-w-prose text-sm text-warmgray">
-            Choisissez une action dans la barre latérale ({espaceActif === "avocat" ? "espace Avocat" : "espace Greffier"}),
-            ou décrivez ce que vous voulez faire dans la barre de commande ci-dessus.
+            {t("home.choisissezAction", { espace: espaceActif === "avocat" ? t("home.espaceAvocat") : t("home.espaceGreffier") })}
           </p>
         </>
       ) : (
         <p className="mt-4 max-w-prose text-sm text-warmgray">
-          Créez ou sélectionnez un dossier ci-dessus pour commencer.
+          {t("home.creezOuSelectionnez")}
         </p>
       )}
     </div>

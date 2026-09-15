@@ -9,6 +9,8 @@
 
 import { useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
+import type { TFunction } from "i18next";
 import { useAppStore } from "@/store/useAppStore";
 import Logo from "@/components/Logo";
 import Button from "@/components/Button";
@@ -48,64 +50,59 @@ const ARGUMENT_VITRINE: Argument = {
   ],
 };
 
-const FONCTIONNALITES = [
-  {
-    Illustration: IllustrationAnalyser,
-    titre: "Analyser des conclusions adverses",
-    description: "Chaque argument décomposé en syllogisme – problème de droit, règle applicable, application aux faits – avec niveau de risque et pistes de réfutation.",
-    lien: "/app/arsenal/analyser",
-  },
-  {
-    Illustration: IllustrationChat,
-    titre: "Chat juridique",
-    description: "Posez une question précise, obtenez une réponse structurée appuyée sur la juridiction active — avec, sur les questions les plus sensibles, une vérification multi-agents avant l'affichage.",
-    lien: "/app/chat",
-  },
-  {
-    Illustration: IllustrationPlan,
-    titre: "Plan de plaidoirie chronométré",
-    description: "Accroche, points minutés, conclusion – un plan prêt à l'oral, calé sur le temps de parole imparti.",
-    lien: "/app/arsenal/plan",
-  },
-  {
-    Illustration: IllustrationSimulateur,
-    titre: "Simulateur d'objections",
-    description: "Anticipez les questions pièges du magistrat ou de la partie adverse, avec une piste de réponse pour chacune.",
-    lien: "/app/arsenal/simulateur",
-  },
-  {
-    Illustration: IllustrationChronologie,
-    titre: "Chronologie automatique",
-    description: "Reconstitue la timeline d'une affaire à partir des pièces du dossier, période couverte et éléments manquants inclus.",
-    lien: "/app/greffier/chronologie",
-  },
-  {
-    Illustration: IllustrationVerification,
-    titre: "Vérification procédurale",
-    description: "Échéances identifiées avec leur statut, actes de procédure potentiellement manquants, points d'attention.",
-    lien: "/app/arsenal/verification-procedurale",
-  },
-];
+function fonctionnalites(t: TFunction) {
+  return [
+    {
+      Illustration: IllustrationAnalyser,
+      titre: t("nav.arsenal.analyser"),
+      description: t("landing.descAnalyser"),
+      lien: "/app/arsenal/analyser",
+    },
+    {
+      Illustration: IllustrationChat,
+      titre: t("nav.chat"),
+      description: t("landing.descChat"),
+      lien: "/app/chat",
+    },
+    {
+      Illustration: IllustrationPlan,
+      titre: t("landing.titrePlan"),
+      description: t("landing.descPlan"),
+      lien: "/app/arsenal/plan",
+    },
+    {
+      Illustration: IllustrationSimulateur,
+      titre: t("nav.arsenal.simulateur"),
+      description: t("landing.descSimulateur"),
+      lien: "/app/arsenal/simulateur",
+    },
+    {
+      Illustration: IllustrationChronologie,
+      titre: t("landing.titreChronologie"),
+      description: t("landing.descChronologie"),
+      lien: "/app/greffier/chronologie",
+    },
+    {
+      Illustration: IllustrationVerification,
+      titre: t("nav.arsenal.verification-procedurale"),
+      description: t("landing.descVerification"),
+      lien: "/app/arsenal/verification-procedurale",
+    },
+  ];
+}
 
-const ETAPES = [
-  {
-    numero: "01",
-    titre: "Créez un dossier – ou essayez la démo",
-    description: "Un dossier fictif de droit du travail, déjà rempli, est prêt à explorer sans inscription ni configuration.",
-  },
-  {
-    numero: "02",
-    titre: "Collez vos pièces ou décrivez la situation",
-    description: "Conclusions adverses, notes d'audience, question libre : le format d'entrée s'adapte à ce que vous avez sous la main.",
-  },
-  {
-    numero: "03",
-    titre: "Obtenez une analyse structurée et vérifiable",
-    description: "Chaque réponse signale elle-même ses propres limites – jamais une affirmation présentée comme acquise sans base solide.",
-  },
-];
+function etapes(t: TFunction) {
+  return [
+    { numero: "01", titre: t("landing.etape1Titre"), description: t("landing.etape1Description") },
+    { numero: "02", titre: t("landing.etape2Titre"), description: t("landing.etape2Description") },
+    { numero: "03", titre: t("landing.etape3Titre"), description: t("landing.etape3Description") },
+  ];
+}
 
 export default function LandingPage() {
+  const { t } = useTranslation();
+  const FONCTIONNALITES = fonctionnalites(t);
+  const ETAPES = etapes(t);
   const navigate = useNavigate();
   const chargerConfiguration = useAppStore((s) => s.chargerConfiguration);
   const demoMode = useAppStore((s) => s.demoMode);
@@ -127,13 +124,13 @@ export default function LandingPage() {
         <Logo />
         <nav className="hidden items-center gap-6 text-sm text-warmgray md:flex">
           <a href="#fonctionnalites" className="transition-colors hover:text-ivory">
-            Fonctionnalités
+            {t("landing.navFonctionnalites")}
           </a>
           <a href="#comment-ca-marche" className="transition-colors hover:text-ivory">
-            Comment ça marche
+            {t("landing.navCommentCaMarche")}
           </a>
           <a href="#garde-fou" className="transition-colors hover:text-ivory">
-            Vérification multi-agents
+            {t("landing.navVerification")}
           </a>
         </nav>
         <div className="flex items-center gap-3">
@@ -142,7 +139,7 @@ export default function LandingPage() {
             target="_blank"
             rel="noreferrer"
             className="hidden text-warmgray transition-colors hover:text-ivory sm:inline-flex"
-            aria-label="Code source sur GitHub"
+            aria-label={t("landing.codeSourceGithub")}
             title="GitHub"
           >
             <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true">
@@ -150,7 +147,7 @@ export default function LandingPage() {
             </svg>
           </a>
           <Button variant="primary" onClick={essayerLaDemo}>
-            Essayer la démo →
+            {t("landing.essayerDemo")}
           </Button>
         </div>
       </header>
@@ -161,29 +158,26 @@ export default function LandingPage() {
         <div className="glow -right-24 top-40 h-80 w-80 bg-amethyst-600/25" aria-hidden="true" />
 
         <div className="relative z-10 space-y-6">
-          <p className="kicker">Assistant IA de préparation de plaidoirie — France &amp; espace OHADA</p>
+          <p className="kicker">{t("landing.kicker")}</p>
           <h1 className="font-display text-4xl font-bold leading-[1.1] text-gold-500 sm:text-5xl">
-            Préparez vos dossiers,
+            {t("landing.titre1")}
             <br />
-            pas vos angoisses de dernière minute.
+            {t("landing.titre2")}
           </h1>
           <p className="max-w-prose text-base leading-relaxed text-warmgray sm:text-lg">
-            Plaid'IA analyse des conclusions adverses, chronomètre un plan de plaidoirie, simule les objections du
-            magistrat et vérifie la procédure, avec, sur les analyses les plus sensibles, plusieurs contrôles
-            indépendants qui vérifient chaque réponse avant qu'elle ne s'affiche.
+            {t("landing.description")}
           </p>
           <div className="flex flex-wrap items-center gap-4 pt-2">
             <Button variant="primary" onClick={essayerLaDemo}>
-              Essayer la démo →
+              {t("landing.essayerDemo")}
             </Button>
             <a href={URL_GITHUB} target="_blank" rel="noreferrer" className="btn-secondary">
-              Voir le code sur GitHub
+              {t("landing.voirCodeGithub")}
             </a>
           </div>
           {demoMode && (
             <p className="text-xs text-muted">
-              🎭 Cette instance publique tourne en mode démo — la démo utilise un dossier fictif et des réponses
-              préenregistrées, indépendamment de toute clé API.
+              🎭 {t("landing.modeDemo")}
             </p>
           )}
         </div>
@@ -195,7 +189,7 @@ export default function LandingPage() {
               <span className="window-dot" />
               <span className="window-dot" />
               <span className="window-dot" />
-              <span className="ml-2 text-xs text-warmgray">Analyser des conclusions adverses</span>
+              <span className="ml-2 text-xs text-warmgray">{t("nav.arsenal.analyser")}</span>
             </div>
                 <div className="window-content">
                   <ArgumentCard argument={ARGUMENT_VITRINE} index={0} />
@@ -208,8 +202,8 @@ export default function LandingPage() {
       {/* --- Fonctionnalités -------------------------------------------- */}
       <section id="fonctionnalites" className="relative mx-auto max-w-6xl px-6 py-20">
         <div className="mx-auto mb-12 max-w-2xl text-center">
-          <p className="kicker mx-auto">Ce que fait l'outil</p>
-          <h2 className="mt-2 font-serif text-h1 font-semibold text-gold-500">Six espaces de travail, un même principe : vérifier avant d'affirmer</h2>
+          <p className="kicker mx-auto">{t("landing.ceQueFaitLoutil")}</p>
+          <h2 className="mt-2 font-serif text-h1 font-semibold text-gold-500">{t("landing.sixEspaces")}</h2>
         </div>
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {FONCTIONNALITES.map((f) => (
@@ -235,8 +229,8 @@ export default function LandingPage() {
       {/* --- Comment ça marche ------------------------------------------- */}
       <section id="comment-ca-marche" className="relative mx-auto max-w-6xl px-6 py-20">
         <div className="mx-auto mb-12 max-w-2xl text-center">
-          <p className="kicker mx-auto">Prise en main</p>
-          <h2 className="mt-2 font-serif text-h1 font-semibold text-gold-500">Comment ça marche</h2>
+          <p className="kicker mx-auto">{t("landing.priseEnMain")}</p>
+          <h2 className="mt-2 font-serif text-h1 font-semibold text-gold-500">{t("landing.navCommentCaMarche")}</h2>
         </div>
         <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
           {ETAPES.map((e) => (
@@ -251,16 +245,16 @@ export default function LandingPage() {
 
       {/* --- Bandeau photographique --------------------------------------- */}
       <section className="banner-photo">
-        <img src={justitiaBanniere} alt="Statue de la Justice tenant une balance, en contre-plongée" />
+        <img src={justitiaBanniere} alt={t("landing.altJustitia")} />
         <div className="banner-scrim" aria-hidden="true" />
         <div className="banner-wash" aria-hidden="true" />
         <div className="banner-edgefade" aria-hidden="true" />
         <div className="relative z-10 mx-auto w-full max-w-6xl px-6 sm:px-10">
-          <p className="kicker">Ce que l'outil ne fera jamais</p>
+          <p className="kicker">{t("landing.ceQueLoutilNeFeraJamais")}</p>
           <h2 className="mt-3 max-w-xl font-display text-3xl font-bold leading-tight text-ivory sm:text-4xl">
-            Peser chaque argument,
+            {t("landing.peserChaqueArgument")}
             <br />
-            <span className="text-gold-500">jamais trancher à votre place.</span>
+            <span className="text-gold-500">{t("landing.jamaisTrancher")}</span>
           </h2>
         </div>
       </section>
@@ -268,13 +262,11 @@ export default function LandingPage() {
       {/* --- Garde-fou anti-hallucination : architecture multi-agents ----- */}
       <section id="garde-fou" className="relative mx-auto max-w-5xl px-6 py-20">
         <div className="mx-auto max-w-2xl text-center">
-          <p className="kicker mx-auto">Plusieurs garde-fous, un même objectif</p>
-          <h2 className="mt-2 font-serif text-h1 font-semibold text-gold-500">Vérifier avant d'affirmer</h2>
+          <p className="kicker mx-auto">{t("landing.plusieursGardeFous")}</p>
+          <h2 className="mt-2 font-serif text-h1 font-semibold text-gold-500">{t("landing.verifierAvantAffirmer")}</h2>
           <p className="mx-auto mt-4 max-w-prose text-sm leading-relaxed text-warmgray sm:text-base">
-            Sur les analyses les plus sensibles, l'agent qui rédige n'est jamais le seul juge de sa propre réponse.
-            Avant qu'elle n'atteigne l'écran, cinq contrôles indépendants l'examinent chacun sous un angle différent —
-            et chaque affirmation reste balisée <mark className="marker-verify">À VÉRIFIER : ...</mark> tant qu'aucun
-            d'eux n'a pu la confirmer.
+            {t("landing.gardeFouIntro1")}{" "}
+            <mark className="marker-verify">{t("richOutput.aVerifier")} : ...</mark> {t("landing.gardeFouIntro2")}
           </p>
         </div>
 
@@ -282,38 +274,38 @@ export default function LandingPage() {
           {[
             {
               icone: "🛡",
-              titre: "Sécurité",
-              texte: "Contrôle la demande — hors-sujet, ambiguë ou manipulatrice — avant qu'elle n'atteigne un agent d'analyse.",
+              titre: t("landing.etapeSecuriteTitre"),
+              texte: t("landing.etapeSecuriteTexte"),
               photo: gardeFouSecurite,
-              photoAlt: "Armure métallique ancienne, faiblement éclairée dans la pénombre",
+              photoAlt: t("landing.etapeSecuritePhotoAlt"),
             },
             {
               icone: "🎯",
-              titre: "Intention",
-              texte: "Comprend ce qui est réellement demandé, et détermine si la question appelle une vérification approfondie.",
+              titre: t("landing.etapeIntentionTitre"),
+              texte: t("landing.etapeIntentionTexte"),
               photo: gardeFouIntention,
-              photoAlt: "Fléchette plantée au centre d'une cible, sur fond sombre",
+              photoAlt: t("landing.etapeIntentionPhotoAlt"),
             },
             {
               icone: "📚",
-              titre: "Vérification juridique",
-              texte: "Confronte chaque référence citée aux sources réellement disponibles — jamais une confirmation de complaisance.",
+              titre: t("landing.etapeVerifJuridiqueTitre"),
+              texte: t("landing.etapeVerifJuridiqueTexte"),
               photo: gardeFouVerification,
-              photoAlt: "Statuette de la Justice, un marteau de juge et un livre de droit ouvert",
+              photoAlt: t("landing.etapeVerifJuridiquePhotoAlt"),
             },
             {
               icone: "⚖",
-              titre: "Critique",
-              texte: "Joue le contradicteur : cherche activement les faiblesses du raisonnement, comme le ferait la partie adverse.",
+              titre: t("landing.etapeCritiqueTitre"),
+              texte: t("landing.etapeCritiqueTexte"),
               photo: gardeFouCritique,
-              photoAlt: "Deux pièces d'échecs, roi et reine, face à face sur un échiquier",
+              photoAlt: t("landing.etapeCritiquePhotoAlt"),
             },
             {
               icone: "✓",
-              titre: "Validation",
-              texte: "Consolide les deux contrôles précédents en un statut clair — sans jamais inventer une source pour combler un doute.",
+              titre: t("landing.etapeValidationTitre"),
+              texte: t("landing.etapeValidationTexte"),
               photo: gardeFouValidation,
-              photoAlt: "Tampon \"VALIDE\" apposé sur une demande d'approbation",
+              photoAlt: t("landing.etapeValidationPhotoAlt"),
             },
           ].map((etape) => (
             <div
@@ -341,9 +333,7 @@ export default function LandingPage() {
         </div>
 
         <p className="mx-auto mt-8 max-w-prose text-center text-xs leading-relaxed text-muted sm:text-sm">
-          Plusieurs contrôles indépendants ne rendent pas une réponse automatiquement correcte — ils aident à repérer
-          plus tôt les erreurs, les contradictions et les points qui restent à vérifier. Plaid'IA distingue toujours
-          ce qui est vérifié, ce qui est probable, et ce qui reste incertain.
+          {t("landing.gardeFouOutro")}
         </p>
       </section>
 
@@ -354,36 +344,35 @@ export default function LandingPage() {
             <div className="space-y-3">
               <Logo iconClassName="h-6 w-6 text-gold-500" wordmarkClassName="font-display text-lg font-bold text-gold-500" />
               <p className="max-w-xs text-sm text-warmgray">
-                Assistant de préparation de plaidoirie pour avocats et greffiers, France et espace OHADA.
+                {t("landing.footerAssistant")}
               </p>
             </div>
             <div className="space-y-2 text-sm">
-              <p className="text-micro font-medium uppercase tracking-wide text-warmgray">Le produit</p>
+              <p className="text-micro font-medium uppercase tracking-wide text-warmgray">{t("landing.leProduit")}</p>
               <a href="#fonctionnalites" className="block text-ivory hover:text-gold-500">
-                Fonctionnalités
+                {t("landing.navFonctionnalites")}
               </a>
               <a href="#comment-ca-marche" className="block text-ivory hover:text-gold-500">
-                Comment ça marche
+                {t("landing.navCommentCaMarche")}
               </a>
               <Link to="/app/chemise/dossiers" className="block text-ivory hover:text-gold-500">
-                Essayer la démo
+                {t("landing.essayerDemoSansFleche")}
               </Link>
             </div>
             <div className="space-y-2 text-sm">
-              <p className="text-micro font-medium uppercase tracking-wide text-warmgray">Contact</p>
+              <p className="text-micro font-medium uppercase tracking-wide text-warmgray">{t("landing.contact")}</p>
               <a href={URL_GITHUB} target="_blank" rel="noreferrer" className="block text-ivory hover:text-gold-500">
                 GitHub
               </a>
               <a href={URL_LINKEDIN} target="_blank" rel="noreferrer" className="block text-ivory hover:text-gold-500">
                 LinkedIn
               </a>
-              <p className="pt-1 text-xs text-muted">Projet portfolio, Abdoulaye Sadio, NLP / TAL</p>
+              <p className="pt-1 text-xs text-muted">{t("landing.projetPortfolio")}</p>
             </div>
           </div>
 
           <div className="mt-10 border-t border-gold-600/10 pt-6 text-center text-xs text-muted">
-            Plaid'IA est un outil d'aide à la préparation — il ne remplace pas l'analyse d'un avocat. Aucune donnée
-            n'est conservée en mode démo.
+            {t("statusBar.avertissement")} {t("landing.aucuneDonneeDemo")}
           </div>
         </div>
       </footer>

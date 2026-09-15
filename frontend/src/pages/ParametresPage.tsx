@@ -9,6 +9,7 @@
  * voir router.tsx, ajouté hors de la liste pilotée par navigation.ts.
  */
 
+import { useTranslation } from "react-i18next";
 import { useAppStore } from "@/store/useAppStore";
 import ClePersonnelleForm from "@/components/ClePersonnelleForm";
 import { useTheme } from "@/hooks/useTheme";
@@ -16,11 +17,12 @@ import { useTheme } from "@/hooks/useTheme";
 const URL_GITHUB = "https://github.com/abdoulayesadio701-rgb/plaidia";
 
 export default function ParametresPage() {
+  const { t } = useTranslation();
   return (
     <div className="mx-auto max-w-3xl space-y-8">
       <div>
-        <p className="kicker">Réglages</p>
-        <h1 className="mt-1 font-serif text-h2 font-semibold text-gold-500">Paramètres</h1>
+        <p className="kicker">{t("parametres.reglages")}</p>
+        <h1 className="mt-1 font-serif text-h2 font-semibold text-gold-500">{t("topBar.parametres")}</h1>
       </div>
 
       <JuridictionSection />
@@ -32,19 +34,20 @@ export default function ParametresPage() {
 }
 
 function ThemeSection() {
+  const { t } = useTranslation();
   const { theme, basculerTheme } = useTheme();
 
   return (
     <section className="card space-y-3 p-6">
-      <h2 className="font-serif text-h3 font-semibold text-gold-500">Thème</h2>
+      <h2 className="font-serif text-h3 font-semibold text-gold-500">{t("parametres.theme")}</h2>
       <p className="text-sm text-warmgray">
-        Le thème sombre reprend l'identité « or ancien » d'origine de Plaid'IA. Votre choix est mémorisé sur cet appareil.
+        {t("parametres.themeDescription")}
       </p>
       <div className="flex max-w-xs gap-1 rounded-md bg-surface-2 p-1">
         {(
           [
-            { valeur: "light", label: "☀ Clair" },
-            { valeur: "dark", label: "🌙 Sombre" },
+            { valeur: "light", label: `☀ ${t("parametres.clair")}` },
+            { valeur: "dark", label: `🌙 ${t("parametres.sombre")}` },
           ] as const
         ).map(({ valeur, label }) => (
           <button
@@ -66,22 +69,22 @@ function ThemeSection() {
 }
 
 function JuridictionSection() {
+  const { t } = useTranslation();
   const juridictionActive = useAppStore((s) => s.juridictionActive);
   const definirJuridictionActive = useAppStore((s) => s.definirJuridictionActive);
   const sourcesJuridictions = useAppStore((s) => s.sourcesJuridictions);
 
   return (
     <section className="card space-y-3 p-6">
-      <h2 className="font-serif text-h3 font-semibold text-gold-500">Juridiction active</h2>
+      <h2 className="font-serif text-h3 font-semibold text-gold-500">{t("topBar.juridictionActiveAria")}</h2>
       <p className="text-sm text-warmgray">
-        Détermine le contexte utilisé par l'agent pour « Consulter la jurisprudence » et le Chat. Seules les sources du corpus déjà
-        validées apparaissent ici, en plus de Légifrance — gérez-les depuis Le Grimoire → Gérer le corpus multi-source.
+        {t("parametres.juridictionDescription")}
       </p>
       <select
         className="input max-w-sm"
         value={juridictionActive}
         onChange={(e) => void definirJuridictionActive(e.target.value)}
-        aria-label="Juridiction active"
+        aria-label={t("topBar.juridictionActiveAria")}
       >
         {sourcesJuridictions.map((s) => (
           <option key={s} value={s}>
@@ -94,26 +97,27 @@ function JuridictionSection() {
 }
 
 function ClePersonnelleSection() {
+  const { t } = useTranslation();
   return (
     <section className="card space-y-3 p-6">
-      <h2 className="font-serif text-h3 font-semibold text-gold-500">Clé API Anthropic personnelle</h2>
+      <h2 className="font-serif text-h3 font-semibold text-gold-500">{t("parametres.cleApiPersonnelle")}</h2>
       <ClePersonnelleForm />
     </section>
   );
 }
 
 function AProposSection() {
+  const { t } = useTranslation();
   return (
     <section className="card space-y-3 p-6">
-      <h2 className="font-serif text-h3 font-semibold text-gold-500">À propos</h2>
+      <h2 className="font-serif text-h3 font-semibold text-gold-500">{t("parametres.aPropos")}</h2>
       <p className="text-sm leading-relaxed text-warmgray">
-        Plaid'IA est un outil d'aide à la préparation pour avocats et greffiers, France et espace OHADA. Chaque réponse signale
-        elle-même ce qui reste à vérifier plutôt que de présenter une déduction comme un fait établi — voir la balise{" "}
-        <mark className="marker-verify">À VÉRIFIER : ...</mark> dans les réponses de l'agent, à distinguer d'une référence
-        citée avec confiance comme <span className="marker-citation">art. 1240 du Code civil</span>.
+        {t("parametres.aProposTexte1")}{" "}
+        <mark className="marker-verify">{t("richOutput.aVerifier")} : ...</mark> {t("parametres.aProposTexte2")}{" "}
+        <span className="marker-citation">art. 1240 du Code civil</span>.
       </p>
       <a href={URL_GITHUB} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-sm text-amethyst-400 hover:underline">
-        Code source sur GitHub ↗
+        {t("parametres.codeSourceGithub")}
       </a>
     </section>
   );

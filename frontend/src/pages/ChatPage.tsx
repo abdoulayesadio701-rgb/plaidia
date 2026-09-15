@@ -7,6 +7,8 @@
 
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { useSearchParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
+import type { TFunction } from "i18next";
 import { chat as chatApi, dossiers as dossiersApi } from "@/api";
 import type { MessageChat, Verification } from "@/api";
 import { useAppStore } from "@/store/useAppStore";
@@ -37,14 +39,16 @@ interface PieceJointe {
  * jamais une instruction (voir EDITION_SYSTEM_PROMPT pour le précédent) --
  * ce n'est jamais le fichier brut qui part au modèle, seulement le texte
  * déjà extrait côté serveur (extract.py). */
-function composerContenuAvecPiecesJointes(messageTape: string, pieces: PieceJointe[]): string {
-  const message = messageTape.trim() || (pieces.length > 0 ? "Analyse le ou les documents joints." : "");
+function composerContenuAvecPiecesJointes(messageTape: string, pieces: PieceJointe[], t: TFunction): string {
+  const message = messageTape.trim() || (pieces.length > 0 ? t("chatPage.analyseDocumentsJoints") : "");
   if (pieces.length === 0) return message;
-  const blocs = pieces.map((p) => `--- Document joint : ${p.nom} ---\n${p.texte}`).join("\n\n");
+  const blocs = pieces.map((p) => `--- ${t("chatPage.documentJoint")} : ${p.nom} ---\n${p.texte}`).join("\n\n");
   return `${message}\n\n${blocs}`;
 }
 
 export default function ChatPage() {
+  const { t, i18n } = useTranslation();
+  const localeNombres = i18n.language === "en" ? "en-GB" : "fr-FR";
   const [searchParams] = useSearchParams();
   const chatHistorique = useAppStore((s) => s.chatHistorique);
   const ajouterMessageChat = useAppStore((s) => s.ajouterMessageChat);
@@ -82,7 +86,7 @@ export default function ChatPage() {
     if (!conversationIdParam) return;
     const conversationId = Number(conversationIdParam);
     if (!Number.isInteger(conversationId) || conversationId <= 0) {
-      pousserToast("error", "Le lien de conversation est invalide.");
+      pousserToast("error", t("chatPage.lienInvalide"));
       return;
     }
     let actif = true;
@@ -92,7 +96,7 @@ export default function ChatPage() {
         if (actif) chargerConversationChat(conversation.id, conversation.historique);
       })
       .catch((e) => {
-        if (actif) pousserToast("error", e instanceof Error ? e.message : "Impossible de charger cette conversation.");
+        if (actif) pousserToast("error", e instanceof Error ? e.message : t("chatPage.echecChargementConversation"));
       });
     return () => {
       actif = false;
@@ -124,7 +128,7 @@ export default function ChatPage() {
         const premierMessage = historique.find((m) => m.role === "user")?.content.trim() ?? "";
         let titre = premierMessage.replace(/\s+/g, " ").slice(0, 60);
         if (premierMessage.length > 60) titre += "…";
-        const conversation = await chatApi.creerConversation(titre || "Conversation sans titre", historique, dossierIdChat);
+        const conversation = await chatApi.creerConversation(titre || t("chatPage.conversationSansTitre"), historique, dossierIdChat);
         // `historique` est un tableau immuable (chaque action du store en
         // recrée un) : s'il a changé pendant l'appel réseau (ex. "Nouvelle
         // conversation" cliqué juste après un arrêt de génération), ne pas
@@ -143,7 +147,7 @@ export default function ChatPage() {
 
   const envoyerMessage = async (contenuBrut: string) => {
     if (genererEnCours) return;
-    const contenu = composerContenuAvecPiecesJointes(contenuBrut, piecesJointes);
+    const contenu = composerContenuAvecPiecesJointes(contenuBrut, piecesJointes, t);
     if (!contenu) return;
 
     const historiqueEnvoi: MessageChat[] = [...useAppStore.getState().chatHistorique, { role: "user", content: contenu }];
@@ -243,7 +247,7 @@ export default function ChatPage() {
         { id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, nom: resultat.nom_fichier, texte: resultat.texte_extrait, caracteres: resultat.caracteres_extraits },
       ]);
     } catch (e) {
-      pousserToast("error", e instanceof Error ? e.message : "Échec de l'import du fichier.");
+      pousserToast("error", e instanceof Error ? e.message : t("chatPage.echecImportFichier"));
     } finally {
       setImportPieceJointeEnCours(false);
     }
@@ -264,7 +268,7 @@ export default function ChatPage() {
       setIndexMessageCopie(index);
       setTimeout(() => setIndexMessageCopie((i) => (i === index ? null : i)), 1500);
     } catch {
-      pousserToast("error", "Impossible de copier – presse-papiers indisponible dans ce contexte.");
+      pousserToast("error", t("chatPage.echecCopie"));
     }
   };
 
@@ -286,10 +290,10 @@ export default function ChatPage() {
               }`}
             />
           </button>
-          Recherche live Légifrance / Judilibre
+          {t("chatPage.rechercheLive")}
         </label>
         <Button variant="ghost" onClick={nouvelleConversation}>
-          🔄 Nouvelle conversation
+          🔄 {t("chatPage.nouvelleConversation")}
         </Button>
       </div>
 
@@ -297,8 +301,7 @@ export default function ChatPage() {
       <div ref={conteneurRef} className="flex-1 space-y-4 overflow-y-auto pb-2 pr-1">
         {chatHistorique.length === 0 && (
           <p className="py-10 text-center text-sm text-warmgray">
-            Formulez votre question ci-dessous. La conversation demeure active tant que vous ne cliquez pas sur
-            « Nouvelle conversation ».
+            {t("chatPage.videConsigne", { nouvelleConversation: t("chatPage.nouvelleConversation") })}
           </p>
         )}
 
@@ -322,9 +325,12 @@ export default function ChatPage() {
                 {!estUtilisateur && estDernier && statutRecherche && (
                   <p className="mb-2 text-xs text-warmgray">
                     {statutRecherche.enCours
-                      ? "🔍 Recherche en direct sur Légifrance et Judilibre…"
+                      ? `🔍 ${t("chatPage.rechercheEnCours")}`
                       : statutRecherche.resultat &&
-                        `→ ${statutRecherche.resultat.n_articles} article(s) de loi, ${statutRecherche.resultat.n_jurisprudence} décision(s) trouvés.`}
+                        `→ ${t("chatPage.resultatsRecherche", {
+                          nArticles: statutRecherche.resultat.n_articles,
+                          nJurisprudence: statutRecherche.resultat.n_jurisprudence,
+                        })}`}
                   </p>
                 )}
 
@@ -335,7 +341,7 @@ export default function ChatPage() {
                 ) : (
                   estDernier &&
                   genererEnCours && (
-                    <span className="inline-flex gap-1 py-1" aria-label="L'agent réfléchit">
+                    <span className="inline-flex gap-1 py-1" aria-label={t("chatPage.agentReflechit")}>
                       <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-gold-500 [animation-delay:-0.3s]" />
                       <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-gold-500 [animation-delay:-0.15s]" />
                       <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-gold-500" />
@@ -347,8 +353,8 @@ export default function ChatPage() {
                   <button
                     onClick={() => copierMessage(index, message.content)}
                     className="absolute right-2 top-2 rounded-md p-1 text-warmgray opacity-0 transition-opacity hover:text-ivory group-hover:opacity-100"
-                    aria-label="Copier la réponse"
-                    title="Copier"
+                    aria-label={t("chatPage.copierReponse")}
+                    title={t("chatPage.copier")}
                   >
                     {indexMessageCopie === index ? "✓" : "⧉"}
                   </button>
@@ -369,10 +375,10 @@ export default function ChatPage() {
           <div className="mb-2 flex items-center justify-between text-xs">
             <span className="inline-flex items-center gap-1.5 text-warmgray">
               <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-amethyst-400" aria-hidden="true" />
-              Génération en cours…
+              {t("chatPage.generationEnCours")}
             </span>
             <button onClick={annulerGeneration} className="font-medium text-risk-high hover:underline">
-              Arrêter
+              {t("chatPage.arreter")}
             </button>
           </div>
         )}
@@ -384,11 +390,11 @@ export default function ChatPage() {
                 key={p.id}
                 className="inline-flex items-center gap-1.5 rounded-pill border border-amethyst-400/40 bg-amethyst-400/10 px-2.5 py-1 text-xs text-amethyst-400"
               >
-                📄 {p.nom} <span className="text-muted">({p.caracteres.toLocaleString("fr-FR")} car.)</span>
+                📄 {p.nom} <span className="text-muted">{t("chatPage.caracteresCount", { nombre: p.caracteres.toLocaleString(localeNombres) })}</span>
                 <button
                   onClick={() => retirerPieceJointe(p.id)}
                   className="ml-0.5 text-amethyst-400/70 hover:text-amethyst-400"
-                  aria-label={`Retirer ${p.nom}`}
+                  aria-label={t("chatPage.retirerPiece", { nom: p.nom })}
                   disabled={genererEnCours}
                 >
                   ✕
@@ -403,9 +409,9 @@ export default function ChatPage() {
             type="button"
             onClick={() => setModalTexteLongOuverte(true)}
             className="btn-secondary shrink-0 text-xs"
-            title="Coller un texte long (réquisitoire, conclusions...)"
+            title={t("chatPage.collerTexteLongTitre")}
           >
-            📋 Texte long
+            📋 {t("chatPage.texteLong")}
           </button>
           <FileDropZone
             variante="compact"
@@ -413,7 +419,7 @@ export default function ChatPage() {
             multiple
             loading={importPieceJointeEnCours}
             disabled={genererEnCours}
-            libelleBouton="📎 Joindre un fichier"
+            libelleBouton={`📎 ${t("chatPage.joindreFichier")}`}
             className="shrink-0 text-xs"
             onFichiers={(fichiers) => {
               for (const fichier of Array.from(fichiers)) void joindreFichier(fichier);
@@ -424,7 +430,7 @@ export default function ChatPage() {
             value={texte}
             onChange={(e) => setTexte(e.target.value)}
             onKeyDown={onKeyDownComposer}
-            placeholder="Posez votre question, ou joignez un document… (Entrée pour envoyer, Maj+Entrée pour un saut de ligne)"
+            placeholder={t("chatPage.placeholderComposer")}
             rows={1}
             className="input flex-1 resize-none"
             disabled={genererEnCours}
@@ -435,15 +441,15 @@ export default function ChatPage() {
             disabled={genererEnCours || (!texte.trim() && piecesJointes.length === 0)}
             className="shrink-0"
           >
-            Envoyer →
+            {t("chatPage.envoyer")} →
           </Button>
         </div>
       </div>
 
       {modalTexteLongOuverte && (
         <TexteLongModal
-          titre="Coller un texte long"
-          consigne="Collez ici le texte à analyser (réquisitoire, conclusions, jugement...) – il sera inséré dans la zone de saisie, à vous de compléter et d'envoyer."
+          titre={t("chatPage.collerTexteLongTitre2")}
+          consigne={t("chatPage.collerTexteLongConsigne")}
           onFermer={() => setModalTexteLongOuverte(false)}
           onValider={(texteColle) => {
             setTexte((precedent) => (precedent ? `${precedent}\n\n${texteColle}` : texteColle));

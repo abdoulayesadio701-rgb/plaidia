@@ -17,6 +17,8 @@
 
 import { useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
+import type { TFunction } from "i18next";
 import Logo from "@/components/Logo";
 import Button from "@/components/Button";
 import justitiaPhoto from "@/assets/justitia-banniere.jpg";
@@ -35,25 +37,26 @@ interface Erreurs {
 
 const RE_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-function validerChamps(champs: Champs): Erreurs {
+function validerChamps(champs: Champs, t: TFunction): Erreurs {
   const erreurs: Erreurs = {};
   if (!champs.email.trim()) {
-    erreurs.email = "L'adresse e-mail est requise.";
+    erreurs.email = t("connexion.emailRequis");
   } else if (!RE_EMAIL.test(champs.email.trim())) {
-    erreurs.email = "Adresse e-mail invalide.";
+    erreurs.email = t("connexion.emailInvalide");
   }
   if (!champs.motDePasse) {
-    erreurs.motDePasse = "Le mot de passe est requis.";
+    erreurs.motDePasse = t("connexion.motDePasseRequis");
   } else if (champs.motDePasse.length < 8) {
-    erreurs.motDePasse = "8 caractères minimum.";
+    erreurs.motDePasse = t("connexion.motDePasseCourt");
   }
   if (!champs.codeAcces.trim()) {
-    erreurs.codeAcces = "Le code d'accès est requis.";
+    erreurs.codeAcces = t("connexion.codeAccesRequis");
   }
   return erreurs;
 }
 
 export default function ConnexionPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [champs, setChamps] = useState<Champs>({ email: "", motDePasse: "", codeAcces: "" });
   const [erreurs, setErreurs] = useState<Erreurs>({});
@@ -66,7 +69,7 @@ export default function ConnexionPage() {
 
   const soumettre = (e: FormEvent) => {
     e.preventDefault();
-    const nouvellesErreurs = validerChamps(champs);
+    const nouvellesErreurs = validerChamps(champs, t);
     setErreurs(nouvellesErreurs);
     if (Object.keys(nouvellesErreurs).length > 0) return;
 
@@ -85,13 +88,13 @@ export default function ConnexionPage() {
         <div className="connexion-photo-scrim" />
         <div className="connexion-photo-wash" />
         <div className="relative z-10 flex h-full flex-col justify-end p-12 xl:p-16">
-          <p className="font-mono text-xs uppercase tracking-[0.24em] connexion-accent">L'engagement de l'agent IA</p>
+          <p className="font-mono text-xs uppercase tracking-[0.24em] connexion-accent">{t("connexion.engagementAgentIa")}</p>
           <blockquote className="mt-5 max-w-md font-serif text-3xl font-semibold leading-tight text-white xl:text-4xl">
-            « Les hommes naissent et demeurent libres et égaux en droits. »
+            {t("connexion.citation")}
           </blockquote>
-          <p className="mt-3 text-sm text-white/60">— Déclaration des droits de l'homme et du citoyen (1789)</p>
+          <p className="mt-3 text-sm text-white/60">— {t("connexion.citationSource")}</p>
           <p className="mt-8 max-w-sm font-serif text-lg italic leading-snug text-white/85">
-            Une justice éclairée et accessible à chacun, à chaque instant.
+            {t("connexion.baseline")}
           </p>
         </div>
       </div>
@@ -102,9 +105,9 @@ export default function ConnexionPage() {
         <div className="connexion-photo-scrim" />
         <div className="connexion-photo-wash" />
         <div className="relative z-10 flex h-full flex-col justify-end p-6">
-          <p className="font-mono text-[0.65rem] uppercase tracking-[0.2em] connexion-accent">L'engagement de l'agent IA</p>
+          <p className="font-mono text-[0.65rem] uppercase tracking-[0.2em] connexion-accent">{t("connexion.engagementAgentIa")}</p>
           <p className="mt-1.5 font-serif text-lg font-semibold leading-tight text-white">
-            « Libres et égaux en droits. »
+            {t("connexion.citationCourte")}
           </p>
         </div>
       </div>
@@ -119,13 +122,13 @@ export default function ConnexionPage() {
             </span>
           </div>
 
-          <h1 className="font-serif text-h2 font-semibold text-white">Accéder à l'agent IA</h1>
-          <p className="mt-2 text-sm text-white/50">Réservé aux avocats et greffiers invités.</p>
+          <h1 className="font-serif text-h2 font-semibold text-white">{t("connexion.accederAgentIa")}</h1>
+          <p className="mt-2 text-sm text-white/50">{t("connexion.reserveAvocatsGreffiers")}</p>
 
           <form className="mt-8 space-y-5" onSubmit={soumettre} noValidate>
             <div>
               <label htmlFor="cx-email" className="mb-1.5 block text-sm text-white/70">
-                Adresse e-mail
+                {t("connexion.adresseEmail")}
               </label>
               <input
                 id="cx-email"
@@ -148,7 +151,7 @@ export default function ConnexionPage() {
 
             <div>
               <label htmlFor="cx-mdp" className="mb-1.5 block text-sm text-white/70">
-                Mot de passe
+                {t("connexion.motDePasse")}
               </label>
               <input
                 id="cx-mdp"
@@ -171,14 +174,14 @@ export default function ConnexionPage() {
 
             <div>
               <label htmlFor="cx-code" className="mb-1.5 block text-sm text-white/70">
-                Code d'accès
+                {t("connexion.codeAcces")}
               </label>
               <input
                 id="cx-code"
                 type="text"
                 autoComplete="off"
                 className={`connexion-input font-mono tracking-wide ${erreurs.codeAcces ? "connexion-input-erreur" : ""}`}
-                placeholder="Clef d'invitation"
+                placeholder={t("connexion.clefInvitation")}
                 value={champs.codeAcces}
                 onChange={majChamp("codeAcces")}
                 disabled={envoiEnCours}
@@ -193,12 +196,12 @@ export default function ConnexionPage() {
             </div>
 
             <Button type="submit" variant="primary" loading={envoiEnCours} className="w-full justify-center">
-              Accéder à l'agent IA
+              {t("connexion.accederAgentIa")}
             </Button>
 
             <p className="text-center text-xs text-white/40">
               <a href="#" className="hover:text-[#9b59b6]" onClick={(e) => e.preventDefault()}>
-                Code oublié ? Demander un accès
+                {t("connexion.codeOublie")}
               </a>
             </p>
           </form>
