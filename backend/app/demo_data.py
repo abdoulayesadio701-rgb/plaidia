@@ -8,7 +8,16 @@ une réponse démo et une réponse réelle.
 
 Toute ressemblance avec une affaire réelle est fortuite : noms, dates et
 pièces sont inventés pour l'exercice.
+
+Seules les réponses de chat (tout en bas du fichier) tiennent compte de la
+langue de sortie (voir analyse.langue_requete()) : contrairement aux autres
+actions démo ci-dessus, c'est la seule pour laquelle un visiteur en mode
+démo peut basculer l'interface en anglais et attendre une vraie réponse
+dans cette langue -- DOSSIER_DEMO/CONCLUSIONS_DEMO/PLAN_DEMO/etc. restent
+un jeu de données fictif figé en français, jamais traduit à la volée.
 """
+
+import analyse as legacy_analyse
 
 NOM_DOSSIER_DEMO = "Diallo c/ Atlas Logistique"
 
@@ -213,8 +222,13 @@ RESUME_DEMO = {
 # ci-dessus. Chacune conserve une balise [VERIF:...] (ou [ART:...]) pour
 # démontrer le balisage anti-hallucination même en mode démo -- voir
 # analyse.REGLE_BALISAGE_CITATIONS.
+#
+# Seul le chat (contrairement aux autres actions démo de ce fichier) tient
+# compte de la langue d'interface : chaque réponse existe en FR et en EN
+# (voir analyse.langue_requete(), posé par le middleware X-Langue de
+# main.py), sélectionnée par _REPONSES_CHAT_PAR_LANGUE ci-dessous.
 
-REPONSE_CHAT_DEFAUT = """Vous êtes en **mode démo** de Plaid'IA : aucune clé API n'est configurée sur ce serveur public, je ne peux donc pas traiter librement une question ici.
+REPONSE_CHAT_DEFAUT_FR = """Vous êtes en **mode démo** de Plaid'IA : aucune clé API n'est configurée sur ce serveur public, je ne peux donc pas traiter librement une question ici.
 
 Ce que vous pouvez explorer dès maintenant, avec des données réalistes préenregistrées sur le dossier de démonstration « Diallo c/ Atlas Logistique » :
 - **Analyser des conclusions adverses**
@@ -226,7 +240,7 @@ Pour poser une vraie question et obtenir une réponse générée en direct, util
 
 [VERIF:comme toute réponse de Plaid'IA, même hors mode démo, ceci resterait à vérifier avant tout usage professionnel — c'est tout l'esprit de ce garde-fou]."""
 
-REPONSE_CHAT_FAUTE_GRAVE = """Dans le dossier de démonstration (Diallo c/ Atlas Logistique), la qualification de faute grave retenue par l'employeur repose sur des retards répétés et un incident d'insubordination.
+REPONSE_CHAT_FAUTE_GRAVE_FR = """Dans le dossier de démonstration (Diallo c/ Atlas Logistique), la qualification de faute grave retenue par l'employeur repose sur des retards répétés et un incident d'insubordination.
 
 En droit du travail français, la faute grave est celle qui rend impossible le maintien du salarié dans l'entreprise, même pendant la durée du préavis : elle prive le salarié de son préavis et de son indemnité de licenciement.
 
@@ -238,7 +252,7 @@ Deux éléments fragilisent cette qualification dans les faits présentés ici :
 
 *Réponse préenregistrée du mode démo, illustrant le format habituel de l'agent — pas une analyse en direct de votre situation.*"""
 
-REPONSE_CHAT_DELAI = """Sur le plan procédural, une contestation de licenciement devant le conseil de prud'hommes doit en principe être introduite dans un délai de 12 mois à compter de la notification du licenciement ([ART:L.1471-1:CTRAV]).
+REPONSE_CHAT_DELAI_FR = """Sur le plan procédural, une contestation de licenciement devant le conseil de prud'hommes doit en principe être introduite dans un délai de 12 mois à compter de la notification du licenciement ([ART:L.1471-1:CTRAV]).
 
 [VERIF:ce délai peut varier selon la nature exacte du grief invoqué (discrimination, harcèlement...) — à confirmer au cas par cas]
 
@@ -246,11 +260,67 @@ Dans le dossier de démonstration, le licenciement a été notifié le 28 févri
 
 *Réponse préenregistrée du mode démo.*"""
 
+REPONSE_CHAT_DEFAUT_EN = """You are in Plaid'IA's **demo mode**: no API key is configured on this public server, so I can't freely process a question here.
+
+What you can explore right now, with realistic prerecorded data on the demonstration case "Diallo v. Atlas Logistique":
+- **Analyse opposing submissions**
+- **Generate a timed pleading plan**
+- **Simulate** the judge's or opposing party's likely **objections**
+- **Build its automatic timeline**
+
+To ask a real question and get a live-generated answer, use **"Use my own Anthropic key"** at the bottom of the page — your key stays in your browser and is never logged by the server.
+
+[VERIF:like any Plaid'IA answer, even outside demo mode, this would still need to be checked before any professional use — that's the whole point of this safeguard]."""
+
+REPONSE_CHAT_FAUTE_GRAVE_EN = """In the demonstration case (Diallo v. Atlas Logistique), the serious misconduct claimed by the employer rests on repeated lateness and an insubordination incident.
+
+Under French employment law, serious misconduct ("faute grave") is a failure that makes it impossible to keep the employee on even during the notice period: it deprives the employee of both notice and severance pay.
+
+Two elements weaken this qualification in the facts presented here:
+- the absence of any prior disciplinary record in five years of tenure;
+- the coincidence of the lateness with a public transport strike.
+
+[VERIF:the case law position of the labour chamber on taking transport disruptions into account when assessing serious misconduct]
+
+*Prerecorded demo-mode answer, illustrating the agent's usual format — not a live analysis of your own situation.*"""
+
+REPONSE_CHAT_DELAI_EN = """Procedurally, a challenge to a dismissal before the labour tribunal (conseil de prud'hommes) must in principle be filed within 12 months of the dismissal notice ([ART:L.1471-1:CTRAV]).
+
+[VERIF:this time limit can vary depending on the exact nature of the claim raised (discrimination, harassment...) — to be confirmed case by case]
+
+In the demonstration case, the dismissal was notified on 28 February 2024 and the labour tribunal was seized on 15 April 2024 — well within the time limit.
+
+*Prerecorded demo-mode answer.*"""
+
+_REPONSES_CHAT_PAR_LANGUE = {
+    "fr": {
+        "defaut": REPONSE_CHAT_DEFAUT_FR,
+        "faute_grave": REPONSE_CHAT_FAUTE_GRAVE_FR,
+        "delai": REPONSE_CHAT_DELAI_FR,
+    },
+    "en": {
+        "defaut": REPONSE_CHAT_DEFAUT_EN,
+        "faute_grave": REPONSE_CHAT_FAUTE_GRAVE_EN,
+        "delai": REPONSE_CHAT_DELAI_EN,
+    },
+}
+
+# Rétro-compatibilité : quelques modules/tests peuvent encore importer ces
+# noms sans suffixe -- toujours la version française.
+REPONSE_CHAT_DEFAUT = REPONSE_CHAT_DEFAUT_FR
+REPONSE_CHAT_FAUTE_GRAVE = REPONSE_CHAT_FAUTE_GRAVE_FR
+REPONSE_CHAT_DELAI = REPONSE_CHAT_DELAI_FR
+
 
 def reponse_demo_pour_question(question: str) -> str:
+    """Choisit la réponse préenregistrée selon des mots-clés simples (dans
+    les deux langues -- un visiteur peut très bien garder une question en
+    français avec une interface basculée en anglais, ou l'inverse), puis la
+    renvoie dans la langue d'interface courante (analyse.langue_requete())."""
     q = question.lower()
-    if any(mot in q for mot in ("faute grave", "licenciement", "insubordination")):
-        return REPONSE_CHAT_FAUTE_GRAVE
-    if any(mot in q for mot in ("délai", "delai", "prescription", "procédure", "procedure")):
-        return REPONSE_CHAT_DELAI
-    return REPONSE_CHAT_DEFAUT
+    reponses = _REPONSES_CHAT_PAR_LANGUE.get(legacy_analyse.langue_requete(), _REPONSES_CHAT_PAR_LANGUE["fr"])
+    if any(mot in q for mot in ("faute grave", "licenciement", "insubordination", "serious misconduct", "dismissal", "insubordination")):
+        return reponses["faute_grave"]
+    if any(mot in q for mot in ("délai", "delai", "prescription", "procédure", "procedure", "deadline", "statute of limitations")):
+        return reponses["delai"]
+    return reponses["defaut"]

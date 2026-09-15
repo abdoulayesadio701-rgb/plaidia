@@ -160,6 +160,28 @@ def test_chat_stream_reste_en_mode_demo_et_contient_le_marqueur(client: TestClie
     assert "[VERIF:" in texte_reconstitue
 
 
+def test_chat_stream_demo_repond_en_anglais_si_x_langue_en(client: TestClient):
+    """Contrairement aux autres actions cannées de ce fichier (figées en
+    français), le chat démo doit respecter la langue d'interface -- voir
+    app/demo_data.py::reponse_demo_pour_question et son commentaire d'en-tête."""
+    r = client.post(
+        "/api/chat/stream",
+        json={"messages": [{"role": "user", "content": "Can you explain the serious misconduct claimed for this dismissal?"}]},
+        headers={"x-langue": "en"},
+    )
+    assert r.status_code == 200
+    texte_reconstitue = "".join(
+        json.loads(bloc.split("data:", 1)[1])["text"]
+        for bloc in r.text.split("\n\n")
+        if bloc.startswith("event: delta")
+    )
+    # La version anglaise glose le terme français ("faute grave") entre
+    # parenthèses à sa première mention -- elle n'en est pas moins bien en
+    # anglais, contrairement à la réponse française d'origine.
+    assert "serious misconduct" in texte_reconstitue.lower()
+    assert "en droit du travail français" not in texte_reconstitue.lower()
+
+
 def test_chat_contextuel_bloque_en_mode_demo(client: TestClient):
     """/api/chat/contextuel n'a pas de réponse préenregistrée -- même
     garde-fou que /api/analyse/style (voir test_action_non_cannee_est_bloquee_en_mode_demo)."""
