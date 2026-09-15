@@ -15,6 +15,7 @@ import { useAppStore } from "@/store/useAppStore";
 import Logo from "@/components/Logo";
 import Button from "@/components/Button";
 import ArgumentCard from "@/components/ArgumentCard";
+import SelecteurLangue from "@/components/SelecteurLangue";
 import type { Argument } from "@/api";
 import justitiaBanniere from "@/assets/justitia-banniere.jpg";
 import gardeFouSecurite from "@/assets/garde-fou-securite.jpg";
@@ -134,6 +135,7 @@ export default function LandingPage() {
           </a>
         </nav>
         <div className="flex items-center gap-3">
+          <SelecteurLangue />
           <a
             href={URL_GITHUB}
             target="_blank"
