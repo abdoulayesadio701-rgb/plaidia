@@ -51,7 +51,7 @@ def chronologie(payload: ChronologieIn):
     manquait déjà sous Claude sur cette route."""
     dossier = get_dossier_or_404(payload.dossier_id)
     if demo.mode_demo_effectif():
-        return demo_data.CHRONOLOGIE_DEMO
+        return demo_data.chronologie_demo()
     demo.exiger_cle_api_deepseek()
     contexte = construire_contexte_dossier(dossier)
     executer_garde_fou(contexte)

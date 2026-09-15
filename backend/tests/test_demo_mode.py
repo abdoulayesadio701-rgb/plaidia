@@ -60,6 +60,18 @@ def test_analyser_conclusions_sans_dossier_fonctionne_aussi(client: TestClient):
     assert len(r.json()["arguments"]) == 3
 
 
+def test_analyser_conclusions_cannees_en_anglais_si_x_langue_en(client: TestClient):
+    """Comme le chat (voir test_chat_stream_demo_repond_en_anglais_si_x_langue_en),
+    les autres actions cannées doivent elles aussi respecter X-Langue --
+    voir demo_data.py::conclusions_demo()."""
+    r = client.post("/api/analyse/conclusions", json={"texte": "peu importe"}, headers={"x-langue": "en"})
+    assert r.status_code == 200
+    data = r.json()
+    assert "lateness" in data["arguments"][0]["resume"].lower()
+    # Le token de risque reste un enum fixe, jamais traduit dans les données.
+    assert data["arguments"][0]["risque"] in ("Faible", "Moyen", "Élevé")
+
+
 def test_plan_de_plaidoirie_canne(client: TestClient, dossier_demo_id: int):
     r = client.post("/api/analyse/plan", json={"dossier_id": dossier_demo_id, "temps_minutes": 15})
     assert r.status_code == 200
@@ -67,6 +79,12 @@ def test_plan_de_plaidoirie_canne(client: TestClient, dossier_demo_id: int):
     assert data["accroche"]
     assert len(data["plan"]) >= 1
     assert all("point" in p and "argument_cle" in p for p in data["plan"])
+
+
+def test_plan_de_plaidoirie_canne_en_anglais_si_x_langue_en(client: TestClient, dossier_demo_id: int):
+    r = client.post("/api/analyse/plan", json={"dossier_id": dossier_demo_id, "temps_minutes": 15}, headers={"x-langue": "en"})
+    assert r.status_code == 200
+    assert "notice" in r.json()["accroche"].lower() or "tribunal" in r.json()["accroche"].lower()
 
 
 def test_simulateur_objections_canne(client: TestClient, dossier_demo_id: int):
@@ -77,12 +95,25 @@ def test_simulateur_objections_canne(client: TestClient, dossier_demo_id: int):
     assert data["point_le_plus_faible"]
 
 
+def test_simulateur_objections_canne_en_anglais_si_x_langue_en(client: TestClient, dossier_demo_id: int):
+    r = client.post("/api/analyse/simulateur", json={"dossier_id": dossier_demo_id}, headers={"x-langue": "en"})
+    assert r.status_code == 200
+    assert "diallo" in r.json()["point_le_plus_faible"].lower()
+    assert "l'absence" not in r.json()["point_le_plus_faible"].lower()
+
+
 def test_resume_dossier_canne(client: TestClient, dossier_demo_id: int):
     r = client.post("/api/analyse/resume", json={"dossier_id": dossier_demo_id})
     assert r.status_code == 200
     data = r.json()
     assert data["resume_court"]
     assert len(data["points_cles"]) >= 1
+
+
+def test_resume_dossier_canne_en_anglais_si_x_langue_en(client: TestClient, dossier_demo_id: int):
+    r = client.post("/api/analyse/resume", json={"dossier_id": dossier_demo_id}, headers={"x-langue": "en"})
+    assert r.status_code == 200
+    assert "warehouse operator" in r.json()["resume_court"].lower()
 
 
 def test_chronologie_cannee(client: TestClient, dossier_demo_id: int):
@@ -92,6 +123,13 @@ def test_chronologie_cannee(client: TestClient, dossier_demo_id: int):
     assert data["periode_couverte"]
     assert len(data["evenements"]) >= 1
     assert all("date" in e and "evenement" in e for e in data["evenements"])
+
+
+def test_chronologie_cannee_en_anglais_si_x_langue_en(client: TestClient, dossier_demo_id: int):
+    r = client.post("/api/greffier/chronologie", json={"dossier_id": dossier_demo_id}, headers={"x-langue": "en"})
+    assert r.status_code == 200
+    data = r.json()
+    assert "hired" in data["evenements"][0]["evenement"].lower()
 
 
 def test_dossier_inconnu_renvoie_404_meme_en_mode_demo(client: TestClient):

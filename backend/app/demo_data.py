@@ -9,12 +9,18 @@ une réponse démo et une réponse réelle.
 Toute ressemblance avec une affaire réelle est fortuite : noms, dates et
 pièces sont inventés pour l'exercice.
 
-Seules les réponses de chat (tout en bas du fichier) tiennent compte de la
-langue de sortie (voir analyse.langue_requete()) : contrairement aux autres
-actions démo ci-dessus, c'est la seule pour laquelle un visiteur en mode
-démo peut basculer l'interface en anglais et attendre une vraie réponse
-dans cette langue -- DOSSIER_DEMO/CONCLUSIONS_DEMO/PLAN_DEMO/etc. restent
-un jeu de données fictif figé en français, jamais traduit à la volée.
+Chaque jeu de données existe en FR et en EN (suffixes _FR/_EN) et se
+sélectionne via analyse.langue_requete() (posé par le middleware X-Langue de
+main.py), à l'exception de DOSSIER_DEMO : contrairement aux autres, ce
+dossier est ensemencé UNE SEULE FOIS en base au démarrage du serveur (voir
+main.py::lifespan), partagé par tous les visiteurs -- il ne peut donc pas
+varier selon la langue de la requête courante, faute de quoi son contenu
+changerait de langue sous les pieds d'un visiteur déjà en train de le
+consulter. Les constantes sans suffixe (CONCLUSIONS_DEMO, PLAN_DEMO, ...)
+restent exportées pour compatibilité ascendante -- toujours la version
+française -- mais le code applicatif doit passer par les fonctions
+conclusions_demo()/plan_demo()/simulateur_demo()/chronologie_demo()/
+resume_demo() ci-dessous, jamais les constantes directement.
 """
 
 import analyse as legacy_analyse
@@ -42,7 +48,7 @@ DOSSIER_DEMO = {
     "statut": "en cours",
 }
 
-CONCLUSIONS_DEMO = {
+CONCLUSIONS_DEMO_FR = {
     "arguments": [
         {
             "resume": "Les trois retards des 5, 8 et 9 février 2024 caractérisent un manquement réitéré à l'obligation de ponctualité.",
@@ -95,7 +101,68 @@ CONCLUSIONS_DEMO = {
     ],
 }
 
-PLAN_DEMO = {
+CONCLUSIONS_DEMO_EN = {
+    "arguments": [
+        {
+            "resume": "The three instances of lateness on 5, 8 and 9 February 2024 show a repeated failure to meet the duty of punctuality.",
+            "fondement": "Time-clock record submitted as exhibit 4 by the employer, showing three instances of lateness of 22 to 41 minutes over the period from 5 to 9 February 2024.",
+            "raisonnement": {
+                "probleme_de_droit": "Can repeated instances of lateness, even brief ones, on their own amount to serious misconduct justifying dismissal without notice or severance pay?",
+                "regle_applicable": "Serious misconduct requires a failure that makes it impossible to keep the employee on during the notice period. [VERIF:the qualification applied by case law to isolated instances of lateness with no prior warning]",
+                "application_aux_faits": "Mr. Diallo has faced no disciplinary sanction in five years of tenure; the three instances of lateness relied upon are concentrated within one week coinciding with an RER B rail strike (exhibit 7), which significantly weakens the wrongful and deliberate character claimed by the employer.",
+            },
+            "risque": "Moyen",
+            "justification_risque": "The absence of any disciplinary record and the coincidence with a transport strike weaken the case for serious misconduct, without ruling it out entirely if the employer shows that a reasonable alternative route was available.",
+            "refutations": [
+                {"angle": "Factuel", "piste": "Produce the SNCF/RATP certificate confirming the traffic disruption on the line used by Mr. Diallo on the dates in question."},
+                {"angle": "Juridique", "piste": "[VERIF:find a ruling from the labour chamber excluding serious misconduct in the case of lateness linked to a transport strike]"},
+            ],
+        },
+        {
+            "resume": "The refusal to comply on 9 February 2024 towards Mr. Bertrand, team leader, constitutes a clear act of insubordination.",
+            "fondement": "Statement from Mr. Bertrand (exhibit 6) stating that Mr. Diallo \"categorically refused\" to return to the packing station he had been assigned.",
+            "raisonnement": {
+                "probleme_de_droit": "Is a one-off, verbally expressed disagreement over a job assignment enough to amount to wrongful insubordination?",
+                "regle_applicable": "Insubordination requires a deliberate and unjustified refusal to carry out an instruction falling within the employer's managerial authority, assessed in light of the context and the exact content of the words exchanged.",
+                "application_aux_faits": "A single, uncorroborated statement from the direct superior involved in the disagreement does not establish with certainty either the exact content of the words exchanged or their deliberately insubordinate character rather than a one-off disagreement over an unplanned reassignment.",
+            },
+            "risque": "Faible",
+            "justification_risque": "The evidence rests on a single, uncorroborated testimony from a party itself involved in the disputed exchange, which strongly weakens the probative value of this argument.",
+            "refutations": [
+                {"angle": "Factuel", "piste": "Seek statements from colleagues present during the exchange on 9 February to contradict or qualify Mr. Bertrand's account."},
+                {"angle": "Proportionnalité", "piste": "Point out that, even assuming the facts are established, an isolated verbal disagreement does not, on its own and without repetition, justify an immediate termination of the contract without notice."},
+            ],
+        },
+        {
+            "resume": "The employee's seniority does not preclude a finding of serious misconduct once the facts are established.",
+            "fondement": "Argument of principle raised by the employer in response to the absence of any disciplinary record for Mr. Diallo.",
+            "raisonnement": {
+                "probleme_de_droit": "Should seniority and the absence of any disciplinary record be taken into account when assessing the seriousness of the misconduct alleged?",
+                "regle_applicable": "[VERIF:labour case law traditionally factors in seniority and the employee's prior conduct among the elements used to assess the seriousness of a failure, without this being an absolute bar]",
+                "application_aux_faits": "While seniority does not in principle rule out serious misconduct, five years without a single incident is a contextual element the labour tribunal will necessarily weigh against facts whose substance and seriousness are themselves disputed.",
+            },
+            "risque": "Faible",
+            "justification_risque": "The employer's argument is legally admissible but of little practical weight here, given that the substance and seriousness of the alleged facts are themselves shaky.",
+            "refutations": [
+                {"angle": "Juridique", "piste": "Recall that seniority and the absence of a disciplinary record, while not decisive on their own, are systematically taken into account in the overall assessment of the proportionality of the sanction."},
+            ],
+        },
+    ],
+    "points_attention": [
+        "Check whether the preliminary meeting complied with the statutory time limit before the dismissal notice (not specified in the documents provided).",
+        "The employer could produce further evidence (other testimony, a broader time-clock history) not disclosed at this stage — to anticipate.",
+    ],
+}
+
+# Rétro-compatibilité (toujours la version française) -- voir l'en-tête du fichier.
+CONCLUSIONS_DEMO = CONCLUSIONS_DEMO_FR
+
+
+def conclusions_demo() -> dict:
+    return CONCLUSIONS_DEMO_EN if legacy_analyse.langue_requete() == "en" else CONCLUSIONS_DEMO_FR
+
+
+PLAN_DEMO_FR = {
     "accroche": (
         "Monsieur le Président, Mesdames et Messieurs les conseillers, cinq années de service sans le "
         "moindre reproche, balayées en quelques jours, pour trois retards liés à une grève des transports "
@@ -145,7 +212,63 @@ PLAN_DEMO = {
     ],
 }
 
-SIMULATEUR_DEMO = {
+PLAN_DEMO_EN = {
+    "accroche": (
+        "Mr. President, Members of the tribunal, five years of service without a single reproach, swept "
+        "aside in a matter of days, over three instances of lateness linked to a transport strike and a "
+        "verbal disagreement reported by a single witness: this is what we ask you to weigh today."
+    ),
+    "plan": [
+        {
+            "point": "Recap of the facts and the employment relationship",
+            "duree_minutes": 2,
+            "argument_cle": "Five years of tenure, no disciplinary record, dismissal notified within days.",
+            "notes": "Stress the contrast between the seniority and the abruptness of the termination.",
+        },
+        {
+            "point": "On the instances of lateness on 5, 8 and 9 February 2024",
+            "duree_minutes": 4,
+            "argument_cle": "These instances of lateness coincide with an RER B rail strike, established by exhibit.",
+            "notes": "Present exhibit 7 (SNCF notice) before any discussion of whether the lateness actually occurred.",
+        },
+        {
+            "point": "On the alleged refusal to comply on 9 February",
+            "duree_minutes": 4,
+            "argument_cle": "The evidence rests on the single, uncorroborated testimony of the person involved in the disagreement.",
+            "notes": "Highlight the absence of any other witness cited by the employer despite a workshop of twelve people.",
+        },
+        {
+            "point": "On the disproportion of the sanction given the seniority",
+            "duree_minutes": 3,
+            "argument_cle": "No intermediate measure (warning, suspension) was considered before the immediate termination.",
+            "notes": "Recall the scale of sanctions set out in the internal rules, if filed in evidence.",
+        },
+        {
+            "point": "On the consequences: reclassification and compensation",
+            "duree_minutes": 2,
+            "argument_cle": "Request to reclassify as a dismissal without real and serious cause, and compensation for the harm suffered.",
+            "notes": "Quantify the harm precisely before the hearing, based on seniority.",
+        },
+    ],
+    "conclusion": (
+        "Serious misconduct, which deprives an employee of notice and severance pay, requires a certainty "
+        "this case does not present. The doubt here should benefit five years of loyal service."
+    ),
+    "points_attention": [
+        "Prepare an oral response in case the employer produces undisclosed evidence at the hearing.",
+        "Check that Mr. Diallo will actually be present at the hearing in case of questioning.",
+    ],
+}
+
+# Rétro-compatibilité (toujours la version française) -- voir l'en-tête du fichier.
+PLAN_DEMO = PLAN_DEMO_FR
+
+
+def plan_demo() -> dict:
+    return PLAN_DEMO_EN if legacy_analyse.langue_requete() == "en" else PLAN_DEMO_FR
+
+
+SIMULATEUR_DEMO_FR = {
     "objections": [
         {
             "origine": "Partie adverse",
@@ -179,7 +302,49 @@ SIMULATEUR_DEMO = {
     ),
 }
 
-CHRONOLOGIE_DEMO = {
+SIMULATEUR_DEMO_EN = {
+    "objections": [
+        {
+            "origine": "Partie adverse",
+            "question": "Why did your client only report the transport strike to his employer after being summoned to the preliminary meeting?",
+            "piege": "Suggest that the explanation is an after-the-fact justification, invented for the needs of the defence.",
+            "piste_reponse": "Produce, if possible, an exchange contemporaneous with the facts already mentioning these disruptions; failing that, rely on the public notoriety of the strike (exhibit 7), which makes the explanation credible independently of any formal report.",
+        },
+        {
+            "origine": "Magistrat",
+            "question": "Does the company's internal rules provide for any leniency in the event of a transport strike?",
+            "piege": "No internal rules have been disclosed at this stage — a lack of an answer would weaken the claimant's position.",
+            "piste_reponse": "Request disclosure of the internal rules before the hearing; failing any specific provision, recall that the absence of a procedure does not deprive the employee of the right to invoke the facts.",
+        },
+        {
+            "origine": "Partie adverse",
+            "question": "If the remarks on 9 February were only a trivial disagreement, why did your client not dispute them at the preliminary meeting?",
+            "piege": "Treat Mr. Diallo's silence at the meeting as an implicit admission.",
+            "piste_reponse": "Recall that the preliminary meeting is not an adversarial debate but an asymmetric procedural formality, and that an employee's silence never amounts to an admission of the facts. [VERIF:cite a ruling to this effect if available]",
+        },
+        {
+            "origine": "Magistrat",
+            "question": "Did Mr. Diallo hold a position of particular responsibility justifying a heightened requirement of punctuality?",
+            "piege": "Bring out a term of the employment contract not anticipated by the defence.",
+            "piste_reponse": "Check the exact terms of the employment contract and job description before the hearing rather than answering while uncertain.",
+        },
+    ],
+    "point_le_plus_faible": (
+        "The absence, at this stage of the case, of any evidence contemporaneous with the facts confirming "
+        "Mr. Diallo's account of the exchange on 9 February — the defence rests largely on the weakness of "
+        "the opposing evidence rather than on positive evidence of its own."
+    ),
+}
+
+# Rétro-compatibilité (toujours la version française) -- voir l'en-tête du fichier.
+SIMULATEUR_DEMO = SIMULATEUR_DEMO_FR
+
+
+def simulateur_demo() -> dict:
+    return SIMULATEUR_DEMO_EN if legacy_analyse.langue_requete() == "en" else SIMULATEUR_DEMO_FR
+
+
+CHRONOLOGIE_DEMO_FR = {
     "periode_couverte": "3 juin 2019 – 15 avril 2024",
     "evenements": [
         {"date": "3 juin 2019", "evenement": "Embauche de M. Karim Diallo en qualité de magasinier-cariste au sein de la SAS Atlas Logistique (CDI)."},
@@ -197,7 +362,33 @@ CHRONOLOGIE_DEMO = {
     ],
 }
 
-RESUME_DEMO = {
+CHRONOLOGIE_DEMO_EN = {
+    "periode_couverte": "3 June 2019 – 15 April 2024",
+    "evenements": [
+        {"date": "3 June 2019", "evenement": "Mr. Karim Diallo hired as a warehouse operator/forklift driver by SAS Atlas Logistique (open-ended contract)."},
+        {"date": "5 February 2024", "evenement": "First instance of lateness recorded (22 minutes), coinciding with a strike on the RER B line."},
+        {"date": "8 February 2024", "evenement": "Second instance of lateness recorded (35 minutes)."},
+        {"date": "9 February 2024", "evenement": "Third instance of lateness recorded (41 minutes); disputed exchange with Mr. Bertrand, team leader, over a job reassignment."},
+        {"date": "14 February 2024", "evenement": "Summons to a preliminary dismissal meeting, delivered by hand."},
+        {"date": "21 February 2024", "evenement": "Preliminary meeting held, in the presence of an employee adviser."},
+        {"date": "28 February 2024", "evenement": "Dismissal for serious misconduct notified, with immediate effect."},
+        {"date": "15 April 2024", "evenement": "Labour tribunal of Bobigny seized to challenge the dismissal."},
+    ],
+    "elements_manquants": [
+        "Exact date the dismissal letter was received by the employee (starts the time limit to challenge it running).",
+        "Any written exchanges between Mr. Diallo and his management before 5 February 2024.",
+    ],
+}
+
+# Rétro-compatibilité (toujours la version française) -- voir l'en-tête du fichier.
+CHRONOLOGIE_DEMO = CHRONOLOGIE_DEMO_FR
+
+
+def chronologie_demo() -> dict:
+    return CHRONOLOGIE_DEMO_EN if legacy_analyse.langue_requete() == "en" else CHRONOLOGIE_DEMO_FR
+
+
+RESUME_DEMO_FR = {
     "resume_court": (
         "M. Karim Diallo, magasinier-cariste depuis 2019 chez Atlas Logistique, conteste son licenciement "
         "pour faute grave notifié le 28 février 2024, motivé par trois retards imputés à une grève des "
@@ -216,6 +407,35 @@ RESUME_DEMO = {
         "Pièces complémentaires susceptibles d'être produites par l'employeur en cours de procédure.",
     ],
 }
+
+RESUME_DEMO_EN = {
+    "resume_court": (
+        "Mr. Karim Diallo, a warehouse operator/forklift driver at Atlas Logistique since 2019, is "
+        "challenging his dismissal for serious misconduct notified on 28 February 2024, based on three "
+        "instances of lateness attributed to a transport strike and a verbal disagreement with his team "
+        "leader reported by a single witness. He is seeking reclassification as a dismissal without real "
+        "and serious cause."
+    ),
+    "points_cles": [
+        "Five years of tenure with no disciplinary record whatsoever.",
+        "The three instances of lateness relied upon coincide with a documented RER B rail strike (exhibit 7).",
+        "The insubordination accusation rests on the single, uncorroborated testimony of the superior involved.",
+        "No intermediate sanction was considered before the immediate termination of the contract.",
+    ],
+    "elements_manquants": [
+        "The company's internal rules (any procedure for transport disruptions).",
+        "Employment contract and job description specifying the punctuality requirements.",
+        "Further evidence the employer might produce during the proceedings.",
+    ],
+}
+
+# Rétro-compatibilité (toujours la version française) -- voir l'en-tête du fichier.
+RESUME_DEMO = RESUME_DEMO_FR
+
+
+def resume_demo() -> dict:
+    return RESUME_DEMO_EN if legacy_analyse.langue_requete() == "en" else RESUME_DEMO_FR
+
 
 # --- Chat : quelques réponses préenregistrées selon des mots-clés simples,
 # et une réponse générique par défaut qui oriente vers les actions cannées

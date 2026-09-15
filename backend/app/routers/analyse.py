@@ -76,7 +76,7 @@ def analyser_conclusions(payload: ConclusionsIn):
     if demo.mode_demo_effectif():
         # Réponse préenregistrée, quel que soit le texte fourni -- jamais
         # persistée (voir le bandeau "Mode démo" : données non conservées).
-        resultat = demo_data.CONCLUSIONS_DEMO
+        resultat = demo_data.conclusions_demo()
         sections = structurer_sortie_strategique(resultat, dossier or {"id": 0, "nom": "", "faits": "", "parties": ""}, "conclusions")
         return ConclusionsOut(
             arguments=resultat["arguments"],
@@ -217,7 +217,7 @@ def resumer_dossier(payload: ResumeIn):
     Claude sur cette route, ce n'est pas spécifique à DeepSeek."""
     dossier = get_dossier_or_404(payload.dossier_id)
     if demo.mode_demo_effectif():
-        return demo_data.RESUME_DEMO
+        return demo_data.resume_demo()
     demo.exiger_cle_api_deepseek()
     contexte = construire_contexte_dossier(dossier)
     quality_pipeline.executer_garde_fou(contexte)
@@ -233,7 +233,7 @@ def resumer_dossier(payload: ResumeIn):
 def generer_plan(payload: PlanIn):
     dossier = get_dossier_or_404(payload.dossier_id)
     if demo.mode_demo_effectif():
-        resultat = structurer_sortie_strategique(demo_data.PLAN_DEMO, dossier, "plan")
+        resultat = structurer_sortie_strategique(demo_data.plan_demo(), dossier, "plan")
     else:
         contexte = construire_contexte_dossier(dossier)
         pipeline = quality_pipeline.executer_pipeline_complet(
@@ -314,7 +314,7 @@ def generer_plan_stream(payload: PlanIn):
 def simuler_objections(payload: SimulateurIn):
     dossier = get_dossier_or_404(payload.dossier_id)
     if demo.mode_demo_effectif():
-        resultat = structurer_sortie_strategique(demo_data.SIMULATEUR_DEMO, dossier, "simulateur")
+        resultat = structurer_sortie_strategique(demo_data.simulateur_demo(), dossier, "simulateur")
     else:
         contexte = construire_contexte_dossier(dossier)
         pipeline = quality_pipeline.executer_pipeline_complet(
@@ -374,8 +374,8 @@ def rapport_complet(payload: RapportCompletIn):
     dossier = get_dossier_or_404(payload.dossier_id)
 
     if demo.mode_demo_effectif():
-        plan_result = demo_data.PLAN_DEMO if payload.temps_minutes else None
-        return RapportCompletOut(analyse=demo_data.CONCLUSIONS_DEMO, plan=plan_result, simulateur=demo_data.SIMULATEUR_DEMO)
+        plan_result = demo_data.plan_demo() if payload.temps_minutes else None
+        return RapportCompletOut(analyse=demo_data.conclusions_demo(), plan=plan_result, simulateur=demo_data.simulateur_demo())
 
     contexte = construire_contexte_dossier(dossier)
 
