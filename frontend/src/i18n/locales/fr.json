@@ -781,7 +781,19 @@
     "essayerDemoSansFleche": "Essayer la démo",
     "contact": "Contact",
     "projetPortfolio": "Projet portfolio, Abdoulaye Sadio, NLP / TAL",
-    "aucuneDonneeDemo": "Aucune donnée n'est conservée en mode démo."
+    "aucuneDonneeDemo": "Aucune donnée n'est conservée en mode démo.",
+    "demoArgument": {
+      "resume": "Les trois retards des 5, 8 et 9 fevrier 2024 caracterisent un manquement reitere a l'obligation de ponctualite.",
+      "fondement": "Releve de badgeuse produit en piece 4 par l'employeur, faisant etat de trois retards de 22 a 41 minutes.",
+      "problemeDeDroit": "Des retards repetes, meme de courte duree, peuvent-ils a eux seuls caracteriser une faute grave ?",
+      "regleApplicable": "La faute grave suppose un manquement rendant impossible le maintien du salarie dans l'entreprise pendant le preavis. [VERIF:la qualification retenue pour des retards isoles sans avertissement prealable]",
+      "applicationAuxFaits": "M. Diallo n'a fait l'objet d'aucune sanction en cinq ans d'anciennete ; les retards coincident avec un mouvement de greve RER B (piece 7), ce qui affaiblit le caractere fautif retenu par l'employeur.",
+      "justificationRisque": "L'absence d'antecedent et la coincidence avec la greve fragilisent la qualification de faute grave, sans l'exclure totalement.",
+      "refutation1Angle": "Factuel",
+      "refutation1Piste": "Produire l'attestation SNCF de perturbation du trafic aux dates visees.",
+      "refutation2Angle": "Juridique",
+      "refutation2Piste": "[VERIF:rechercher un arret excluant la faute grave en cas de greve des transports]"
+    }
   },
   "home": {
     "choisissezAction": "Choisissez une action dans {{espace}} a gauche pour continuer.",

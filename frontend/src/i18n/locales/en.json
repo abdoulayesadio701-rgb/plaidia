@@ -781,7 +781,19 @@
     "essayerDemoSansFleche": "Try the demo",
     "contact": "Contact",
     "projetPortfolio": "Portfolio project, Abdoulaye Sadio, NLP / Computational Linguistics",
-    "aucuneDonneeDemo": "No data is kept in demo mode."
+    "aucuneDonneeDemo": "No data is kept in demo mode.",
+    "demoArgument": {
+      "resume": "The three instances of lateness on 5, 8 and 9 February 2024 show a repeated failure to meet the duty of punctuality.",
+      "fondement": "Time-clock record submitted as exhibit 4 by the employer, showing three instances of lateness of 22 to 41 minutes.",
+      "problemeDeDroit": "Can repeated instances of lateness, even brief ones, on their own amount to serious misconduct?",
+      "regleApplicable": "Serious misconduct requires a failure that makes it impossible to keep the employee on during the notice period. [VERIF:the qualification applied to isolated instances of lateness with no prior warning]",
+      "applicationAuxFaits": "Mr. Diallo has faced no sanction in five years of tenure ; the instances of lateness coincide with an RER B rail strike (exhibit 7), which weakens the wrongful character claimed by the employer.",
+      "justificationRisque": "The absence of any prior record and the coincidence with the strike weaken the case for serious misconduct, without ruling it out entirely.",
+      "refutation1Angle": "Factual",
+      "refutation1Piste": "Produce the SNCF certificate confirming the traffic disruption on the dates in question.",
+      "refutation2Angle": "Legal",
+      "refutation2Piste": "[VERIF:find a ruling excluding serious misconduct in the case of a transport strike]"
+    }
   },
   "home": {
     "choisissezAction": "Choose an action in {{espace}} on the left to continue.",

@@ -35,21 +35,23 @@ import {
 const URL_GITHUB = "https://github.com/abdoulayesadio701-rgb";
 const URL_LINKEDIN = "https://www.linkedin.com/in/abdoulaye-sadio";
 
-const ARGUMENT_VITRINE: Argument = {
-  resume: "Les trois retards des 5, 8 et 9 février 2024 caractérisent un manquement réitéré à l'obligation de ponctualité.",
-  fondement: "Relevé de badgeuse produit en pièce 4 par l'employeur, faisant état de trois retards de 22 à 41 minutes.",
-  raisonnement: {
-    probleme_de_droit: "Des retards répétés, même de courte durée, peuvent-ils à eux seuls caractériser une faute grave ?",
-    regle_applicable: "La faute grave suppose un manquement rendant impossible le maintien du salarié dans l'entreprise pendant le préavis. [VERIF:la qualification retenue pour des retards isolés sans avertissement préalable]",
-    application_aux_faits: "M. Diallo n'a fait l'objet d'aucune sanction en cinq ans d'ancienneté ; les retards coïncident avec un mouvement de grève RER B (pièce 7), ce qui affaiblit le caractère fautif retenu par l'employeur.",
-  },
-  risque: "Moyen",
-  justification_risque: "L'absence d'antécédent et la coïncidence avec la grève fragilisent la qualification de faute grave, sans l'exclure totalement.",
-  refutations: [
-    { angle: "Factuel", piste: "Produire l'attestation SNCF de perturbation du trafic aux dates visées." },
-    { angle: "Juridique", piste: "[VERIF:rechercher un arrêt excluant la faute grave en cas de grève des transports]" },
-  ],
-};
+function argumentVitrine(t: TFunction): Argument {
+  return {
+    resume: t("landing.demoArgument.resume"),
+    fondement: t("landing.demoArgument.fondement"),
+    raisonnement: {
+      probleme_de_droit: t("landing.demoArgument.problemeDeDroit"),
+      regle_applicable: t("landing.demoArgument.regleApplicable"),
+      application_aux_faits: t("landing.demoArgument.applicationAuxFaits"),
+    },
+    risque: "Moyen",
+    justification_risque: t("landing.demoArgument.justificationRisque"),
+    refutations: [
+      { angle: t("landing.demoArgument.refutation1Angle"), piste: t("landing.demoArgument.refutation1Piste") },
+      { angle: t("landing.demoArgument.refutation2Angle"), piste: t("landing.demoArgument.refutation2Piste") },
+    ],
+  };
+}
 
 function fonctionnalites(t: TFunction) {
   return [
@@ -104,6 +106,7 @@ export default function LandingPage() {
   const { t } = useTranslation();
   const FONCTIONNALITES = fonctionnalites(t);
   const ETAPES = etapes(t);
+  const ARGUMENT_VITRINE = argumentVitrine(t);
   const navigate = useNavigate();
   const chargerConfiguration = useAppStore((s) => s.chargerConfiguration);
   const demoMode = useAppStore((s) => s.demoMode);
