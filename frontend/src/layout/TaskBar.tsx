@@ -16,7 +16,6 @@ import { useTranslation } from "react-i18next";
 import { useAppStore } from "@/store/useAppStore";
 import RecentsPanel from "./RecentsPanel";
 import EpinglesPanel from "./EpinglesPanel";
-import SelecteurLangue from "@/components/SelecteurLangue";
 
 type PanneauOuvert = "recents" | "epingles" | null;
 
@@ -93,8 +92,6 @@ export default function TaskBar() {
           </button>
           {panneauOuvert === "recents" && <RecentsPanel onFermer={() => setPanneauOuvert(null)} />}
         </div>
-
-        <SelecteurLangue />
       </div>
     </div>
   );
