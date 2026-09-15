@@ -7,6 +7,7 @@
  */
 
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { greffier as greffierApi, downloadBlob } from "@/api";
 import { useAppStore } from "@/store/useAppStore";
 import { useLazyAction } from "@/hooks/useLazyAction";
@@ -21,6 +22,7 @@ import { SkeletonBlock } from "@/components/Skeleton";
 import ChatContextuelPanel from "@/components/chat/ChatContextuelPanel";
 
 export default function PvAudiencePage() {
+  const { t } = useTranslation();
   const pousserToast = useAppStore((s) => s.pousserToast);
   const [notes, setNotes] = useState("");
   const [pvTexte, setPvTexte] = useState("");
@@ -41,9 +43,9 @@ export default function PvAudiencePage() {
   const copier = async () => {
     try {
       await navigator.clipboard.writeText(pvTexte);
-      pousserToast("success", "PV copié dans le presse-papiers.");
+      pousserToast("success", t("pvAudience.copie"));
     } catch {
-      pousserToast("error", "Impossible d'accéder au presse-papiers.");
+      pousserToast("error", t("noteClient.echecPressePapiers"));
     }
   };
 
@@ -53,7 +55,7 @@ export default function PvAudiencePage() {
       const { blob, filename } = await greffierApi.exporterPvAudience(pvTexte);
       downloadBlob(blob, filename ?? "proces_verbal_audience.docx");
     } catch (e) {
-      pousserToast("error", e instanceof Error ? e.message : "Échec de l'export.");
+      pousserToast("error", e instanceof Error ? e.message : t("arsenal.echecExport"));
     } finally {
       setExportEnCours(false);
     }
@@ -62,17 +64,17 @@ export default function PvAudiencePage() {
   return (
     <div className="space-y-6">
       <div>
-        <p className="kicker">Le Greffier</p>
-        <h1 className="mt-1 font-serif text-h2 font-semibold text-gold-500">Rédaction d'un procès-verbal d'audience</h1>
+        <p className="kicker">{t("nav.espace.greffier")}</p>
+        <h1 className="mt-1 font-serif text-h2 font-semibold text-gold-500">{t("nav.greffier.pv-audience")}</h1>
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <div className="card flex flex-col gap-3 p-6">
-          <p className="text-micro font-medium uppercase tracking-wide text-amethyst-400">Notes brutes</p>
+          <p className="text-micro font-medium uppercase tracking-wide text-amethyst-400">{t("pvAudience.notesBrutes")}</p>
           <textarea
             {...dragProps}
             className={`input min-h-[380px] flex-1 resize-y ${survole ? "ring-2 ring-amethyst-400" : ""}`}
-            placeholder="Notez librement ce qui se dit pendant l'audience, ou déposez un fichier – l'agent les met en forme en PV structuré."
+            placeholder={t("pvAudience.placeholder")}
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             disabled={loading || enImport}
@@ -89,7 +91,7 @@ export default function PvAudiencePage() {
               />
             </div>
             <Button variant="primary" loading={loading} disabled={!notes.trim() || enImport} onClick={() => void generer()}>
-              {pvTexte ? "↻ Régénérer le PV" : "Générer le PV"}
+              {pvTexte ? `↻ ${t("pvAudience.regenerer")}` : t("pvAudience.generer")}
             </Button>
           </div>
           {choixEnAttente && <ChoixImportModal noms={choixEnAttente.noms} onChoisir={resoudreChoix} />}
@@ -97,14 +99,14 @@ export default function PvAudiencePage() {
 
         <div className="card flex flex-col gap-3 p-6">
           <div className="flex items-center justify-between gap-3">
-            <p className="text-micro font-medium uppercase tracking-wide text-gold-500">PV généré (éditable)</p>
+            <p className="text-micro font-medium uppercase tracking-wide text-gold-500">{t("pvAudience.pvGenere")}</p>
             {pvTexte && !loading && (
               <div className="flex gap-2">
                 <Button variant="ghost" onClick={() => void copier()}>
-                  📋 Copier
+                  📋 {t("noteClient.copier")}
                 </Button>
                 <Button variant="secondary" loading={exportEnCours} onClick={() => void exporter()}>
-                  ⬇ Exporter en Word
+                  ⬇ {t("arsenal.exporterWord")}
                 </Button>
               </div>
             )}
@@ -132,14 +134,14 @@ export default function PvAudiencePage() {
                 feature="pv_audience"
                 resultatActuel={{ texte: pvTexte }}
                 onMiseAJour={(r) => setPvTexte(r.texte)}
-                placeholder="Ex. « Rends le style plus formel », « raccourcis le deuxième paragraphe »…"
+                placeholder={t("pvAudience.chatPlaceholder")}
               />
             </>
           )}
 
           {!loading && !error && !pvTexte && (
             <div className="flex flex-1 items-center">
-              <EmptyState titre="En attente" description="Rédigez vos notes à gauche, puis cliquez sur « Générer le PV »." />
+              <EmptyState titre={t("pvAudience.enAttenteTitre")} description={t("pvAudience.enAttenteDescription")} />
             </div>
           )}
         </div>

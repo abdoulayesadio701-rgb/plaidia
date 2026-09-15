@@ -9,6 +9,7 @@
 
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { greffier as greffierApi } from "@/api";
 import { useAppStore } from "@/store/useAppStore";
 import { useLazyAction } from "@/hooks/useLazyAction";
@@ -16,11 +17,12 @@ import RechercheDossierResultats from "@/components/RechercheDossierResultats";
 import EmptyState from "@/components/EmptyState";
 
 export default function RechercheTransversalePage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const selectionnerDossier = useAppStore((s) => s.selectionnerDossier);
   const [terme, setTerme] = useState("");
 
-  const { data, loading, error, executer, reinitialiser } = useLazyAction((t: string) => greffierApi.rechercheTransversale(t));
+  const { data, loading, error, executer, reinitialiser } = useLazyAction((texte: string) => greffierApi.rechercheTransversale(texte));
 
   const enRecherche = terme.trim().length > 0;
 
@@ -42,15 +44,15 @@ export default function RechercheTransversalePage() {
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <div>
-        <p className="kicker">Le Greffier</p>
-        <h1 className="mt-1 font-serif text-h2 font-semibold text-gold-500">Rechercher dans toutes les affaires</h1>
-        <p className="mt-2 text-sm text-warmgray">Recherche transversale dans les faits, parties, noms, domaines et analyses de tous les dossiers.</p>
+        <p className="kicker">{t("nav.espace.greffier")}</p>
+        <h1 className="mt-1 font-serif text-h2 font-semibold text-gold-500">{t("nav.greffier.recherche")}</h1>
+        <p className="mt-2 text-sm text-warmgray">{t("rechercheTransversale.sousTitre")}</p>
       </div>
 
       <input
         className="input"
-        placeholder="Rechercher un nom, une référence, un mot-clé…"
-        aria-label="Rechercher dans toutes les affaires"
+        placeholder={t("rechercheTransversale.placeholder")}
+        aria-label={t("nav.greffier.recherche")}
         value={terme}
         onChange={(e) => setTerme(e.target.value)}
         autoFocus
@@ -66,7 +68,7 @@ export default function RechercheTransversalePage() {
           onOuvrir={ouvrirDossier}
         />
       ) : (
-        <EmptyState titre="Saisissez un terme de recherche" description="La recherche porte sur l'ensemble des affaires, tous espaces confondus." />
+        <EmptyState titre={t("rechercheTransversale.saisirTitre")} description={t("rechercheTransversale.saisirDescription")} />
       )}
     </div>
   );

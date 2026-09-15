@@ -8,6 +8,7 @@
  */
 
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { greffier as greffierApi, downloadBlob } from "@/api";
 import { useAppStore, useDossierActif } from "@/store/useAppStore";
 import { useLazyAction } from "@/hooks/useLazyAction";
@@ -18,6 +19,7 @@ import { SkeletonList } from "@/components/Skeleton";
 import ChatContextuelPanel from "@/components/chat/ChatContextuelPanel";
 
 export default function ChronologiePage() {
+  const { t } = useTranslation();
   const dossierActif = useDossierActif();
   const pousserToast = useAppStore((s) => s.pousserToast);
   const [exportEnCours, setExportEnCours] = useState(false);
@@ -30,32 +32,32 @@ export default function ChronologiePage() {
       const { blob, filename } = await greffierApi.exporterChronologie(dossierActif.id, data);
       downloadBlob(blob, filename ?? `${dossierActif.nom}_chronologie.csv`);
     } catch (e) {
-      pousserToast("error", e instanceof Error ? e.message : "Échec de l'export.");
+      pousserToast("error", e instanceof Error ? e.message : t("arsenal.echecExport"));
     } finally {
       setExportEnCours(false);
     }
   };
 
   if (!dossierActif) {
-    return <EmptyState titre="Aucun dossier sélectionné" description="Sélectionnez ou créez un dossier pour construire sa chronologie." />;
+    return <EmptyState titre={t("chronologie.emptyTitre")} description={t("chronologie.emptyDescription")} />;
   }
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="kicker">Le Greffier</p>
-          <h1 className="mt-1 font-serif text-h2 font-semibold text-gold-500">Chronologie automatique</h1>
-          <p className="mt-2 text-sm text-warmgray">Dossier actif : {dossierActif.nom}</p>
+          <p className="kicker">{t("nav.espace.greffier")}</p>
+          <h1 className="mt-1 font-serif text-h2 font-semibold text-gold-500">{t("nav.greffier.chronologie")}</h1>
+          <p className="mt-2 text-sm text-warmgray">{t("arsenal.dossierActif")} : {dossierActif.nom}</p>
         </div>
         <div className="flex flex-wrap gap-2">
           {data && (
             <Button variant="secondary" loading={exportEnCours} onClick={() => void exporter()}>
-              ⬇ Exporter en CSV
+              ⬇ {t("chronologie.exporterCsv")}
             </Button>
           )}
           <Button variant="primary" loading={loading} onClick={() => void executer()}>
-            {data ? "↻ Régénérer" : "Construire la chronologie"}
+            {data ? `↻ ${t("noteClient.regenerer")}` : t("chronologie.construire")}
           </Button>
         </div>
       </div>
@@ -67,12 +69,12 @@ export default function ChronologiePage() {
       {!loading && !error && data && (
         <div className="space-y-6">
           <p className="flex items-center gap-2 text-sm text-warmgray">
-            Période couverte
+            {t("chronologie.periodeCouverte")}
             <span className="badge border-amethyst-400/40 bg-amethyst-400/10 text-amethyst-400">{data.periode_couverte}</span>
           </p>
 
           {data.evenements.length === 0 ? (
-            <EmptyState titre="Aucun événement daté identifié" description="Le contenu du dossier ne contient pas assez d'éléments datés pour construire une chronologie." />
+            <EmptyState titre={t("chronologie.aucunEvenementTitre")} description={t("chronologie.aucunEvenementDescription")} />
           ) : (
             <div className="relative space-y-5 border-l-2 border-gold-600/25 pl-8">
               {data.evenements.map((ev, i) => (
@@ -91,7 +93,7 @@ export default function ChronologiePage() {
 
           {data.elements_manquants.length > 0 && (
             <div className="rounded-md border border-gold-500/30 bg-gold-500/10 p-5">
-              <p className="mb-2 text-sm font-semibold text-gold-500">Éléments manquants</p>
+              <p className="mb-2 text-sm font-semibold text-gold-500">{t("resumerDossier.elementsManquants")}</p>
               <ul className="space-y-1.5 text-sm text-ivory">
                 {data.elements_manquants.map((el, i) => (
                   <li key={i} className="flex gap-2">
@@ -108,13 +110,13 @@ export default function ChronologiePage() {
             resultatActuel={data}
             onMiseAJour={definirDonnees}
             dossierId={dossierActif.id}
-            placeholder="Ex. « Ajoute cet événement : … », « pourquoi cet élément est-il manquant ? »…"
+            placeholder={t("chronologie.chatPlaceholder")}
           />
         </div>
       )}
 
       {!loading && !error && !data && (
-        <EmptyState titre="Prêt à construire la chronologie" description="Cliquez sur « Construire la chronologie » pour ordonner les événements datés du dossier." />
+        <EmptyState titre={t("chronologie.pretTitre")} description={t("chronologie.pretDescription")} />
       )}
     </div>
   );

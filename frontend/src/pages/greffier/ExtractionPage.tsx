@@ -11,6 +11,7 @@
  */
 
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { greffier as greffierApi } from "@/api";
 import type { ExtractionResultat } from "@/api";
 import { useDossierActif } from "@/store/useAppStore";
@@ -25,15 +26,15 @@ import FileDropZone from "@/components/FileDropZone";
 import { SkeletonList } from "@/components/Skeleton";
 import ChatContextuelPanel from "@/components/chat/ChatContextuelPanel";
 
-const BLOCS: { key: keyof ExtractionResultat; label: string; icone: string }[] = [
-  { key: "dates", label: "Dates", icone: "📅" },
-  { key: "personnes_et_parties", label: "Personnes et parties", icone: "👥" },
-  { key: "references", label: "Références", icone: "🔖" },
-  { key: "demandes", label: "Demandes", icone: "📌" },
-  { key: "decisions", label: "Décisions", icone: "⚖" },
-];
-
 export default function ExtractionPage() {
+  const { t } = useTranslation();
+  const BLOCS: { key: keyof ExtractionResultat; label: string; icone: string }[] = [
+    { key: "dates", label: t("extraction.dates"), icone: "📅" },
+    { key: "personnes_et_parties", label: t("extraction.personnesEtParties"), icone: "👥" },
+    { key: "references", label: t("extraction.references"), icone: "🔖" },
+    { key: "demandes", label: t("extraction.demandes"), icone: "📌" },
+    { key: "decisions", label: t("extraction.decisions"), icone: "⚖" },
+  ];
   const dossierActif = useDossierActif();
   const [texte, setTexte] = useState("");
 
@@ -49,16 +50,16 @@ export default function ExtractionPage() {
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <div>
-        <p className="kicker">Le Greffier</p>
-        <h1 className="mt-1 font-serif text-h2 font-semibold text-gold-500">Extraction d'éléments clés</h1>
-        <p className="mt-2 text-sm text-warmgray">Repère dates, personnes, références, demandes et décisions dans un document.</p>
+        <p className="kicker">{t("nav.espace.greffier")}</p>
+        <h1 className="mt-1 font-serif text-h2 font-semibold text-gold-500">{t("nav.greffier.extraction")}</h1>
+        <p className="mt-2 text-sm text-warmgray">{t("extraction.sousTitre")}</p>
       </div>
 
       <div className="card space-y-3 p-6">
         <textarea
           {...dragProps}
           className={`input min-h-[220px] resize-y ${survole ? "ring-2 ring-amethyst-400" : ""}`}
-          placeholder="Collez ici le texte du document à traiter, ou déposez un fichier…"
+          placeholder={t("extraction.placeholder")}
           value={texte}
           onChange={(e) => setTexte(e.target.value)}
           disabled={loading || enImport}
@@ -75,12 +76,12 @@ export default function ExtractionPage() {
             />
             <span className="text-xs text-muted">
               {dossierActif
-                ? `Le texte extrait sera aussi ajouté aux faits de « ${dossierActif.nom} ».`
-                : "PDF, Word, Excel, image — le texte extrait est injecté ci-dessus."}
+                ? t("analyseStyle.texteAjouteAuxFaits", { nom: dossierActif.nom })
+                : t("arsenal.formatsAcceptes")}
             </span>
           </div>
           <Button variant="primary" loading={loading} disabled={!texte.trim() || enImport} onClick={lancer}>
-            Extraire
+            {t("extraction.extraire")}
           </Button>
         </div>
       </div>
@@ -102,7 +103,7 @@ export default function ExtractionPage() {
                     {icone} {label}
                   </p>
                   {items.length === 0 ? (
-                    <p className="text-sm text-muted">Rien détecté.</p>
+                    <p className="text-sm text-muted">{t("extraction.rienDetecte")}</p>
                   ) : (
                     <ul className="space-y-1.5 text-sm text-ivory">
                       {items.map((item, i) => (
@@ -123,13 +124,13 @@ export default function ExtractionPage() {
             resultatActuel={data}
             onMiseAJour={definirDonnees}
             dossierId={dossierActif?.id}
-            placeholder="Ex. « Cherche aussi les délais de prescription », « ajoute cette date : … »…"
+            placeholder={t("extraction.chatPlaceholder")}
           />
         </div>
       )}
 
       {!loading && !error && !data && (
-        <EmptyState titre="Prêt à extraire" description="Collez le texte du document ci-dessus, ou importez un fichier, puis cliquez sur « Extraire »." />
+        <EmptyState titre={t("extraction.pretTitre")} description={t("extraction.pretDescription")} />
       )}
     </div>
   );

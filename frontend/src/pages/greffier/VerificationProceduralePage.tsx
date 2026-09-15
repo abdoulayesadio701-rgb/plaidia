@@ -13,6 +13,7 @@
  */
 
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { greffier as greffierApi, downloadBlob } from "@/api";
 import { useAppStore, useDossierActif } from "@/store/useAppStore";
 import { useLazyAction } from "@/hooks/useLazyAction";
@@ -22,6 +23,9 @@ import ErrorState from "@/components/ErrorState";
 import { SkeletonList } from "@/components/Skeleton";
 import ChatContextuelPanel from "@/components/chat/ChatContextuelPanel";
 
+// Valeurs fixes renvoyees par le backend (VERIFICATION_PROCEDURALE_SYSTEM_PROMPT)
+// -- toujours ces tokens francais quelle que soit la langue de l'interface,
+// meme principe que niveauRisque/niveauConfiance (voir RiskBadge.tsx).
 const CLASSE_STATUT: Record<string, string> = {
   "À venir": "badge-risk-low",
   Proche: "badge-risk-medium",
@@ -30,6 +34,7 @@ const CLASSE_STATUT: Record<string, string> = {
 const CLASSE_STATUT_DEFAUT = "badge border-muted/30 bg-surface-2 text-warmgray";
 
 export default function VerificationProceduralePage() {
+  const { t } = useTranslation();
   const dossierActif = useDossierActif();
   const pousserToast = useAppStore((s) => s.pousserToast);
   const [exportEnCours, setExportEnCours] = useState(false);
@@ -42,32 +47,32 @@ export default function VerificationProceduralePage() {
       const { blob, filename } = await greffierApi.exporterVerificationProcedurale(dossierActif.id, data);
       downloadBlob(blob, filename ?? `${dossierActif.nom}_verification_procedurale.docx`);
     } catch (e) {
-      pousserToast("error", e instanceof Error ? e.message : "Échec de l'export.");
+      pousserToast("error", e instanceof Error ? e.message : t("arsenal.echecExport"));
     } finally {
       setExportEnCours(false);
     }
   };
 
   if (!dossierActif) {
-    return <EmptyState titre="Aucun dossier sélectionné" description="Sélectionnez ou créez un dossier pour vérifier sa procédure." />;
+    return <EmptyState titre={t("verifProcedurale.emptyTitre")} description={t("verifProcedurale.emptyDescription")} />;
   }
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="kicker">Vérification procédurale</p>
-          <h1 className="mt-1 font-serif text-h2 font-semibold text-gold-500">Échéances et actes manquants</h1>
-          <p className="mt-2 text-sm text-warmgray">Dossier actif : {dossierActif.nom}</p>
+          <p className="kicker">{t("nav.arsenal.verification-procedurale")}</p>
+          <h1 className="mt-1 font-serif text-h2 font-semibold text-gold-500">{t("verifProcedurale.titre")}</h1>
+          <p className="mt-2 text-sm text-warmgray">{t("arsenal.dossierActif")} : {dossierActif.nom}</p>
         </div>
         <div className="flex flex-wrap gap-2">
           {data && (
             <Button variant="secondary" loading={exportEnCours} onClick={() => void exporter()}>
-              ⬇ Exporter en Word
+              ⬇ {t("arsenal.exporterWord")}
             </Button>
           )}
           <Button variant="primary" loading={loading} onClick={() => void executer()}>
-            {data ? "↻ Relancer la vérification" : "Vérifier la procédure"}
+            {data ? `↻ ${t("verifProcedurale.relancer")}` : t("verifProcedurale.verifier")}
           </Button>
         </div>
       </div>
@@ -79,9 +84,9 @@ export default function VerificationProceduralePage() {
       {!loading && !error && data && (
         <div className="space-y-6">
           <div>
-            <p className="mb-3 font-serif text-h3 font-semibold text-gold-500">Échéances identifiées</p>
+            <p className="mb-3 font-serif text-h3 font-semibold text-gold-500">{t("verifProcedurale.echeancesIdentifiees")}</p>
             {data.echeances_identifiees.length === 0 ? (
-              <p className="text-sm text-muted">Aucune échéance identifiée.</p>
+              <p className="text-sm text-muted">{t("verifProcedurale.aucuneEcheance")}</p>
             ) : (
               <div className="space-y-2.5">
                 {data.echeances_identifiees.map((ech, i) => (
@@ -90,7 +95,7 @@ export default function VerificationProceduralePage() {
                       <p className="text-sm font-medium text-ivory">{ech.echeance}</p>
                       <p className="text-xs text-muted">{ech.date}</p>
                     </div>
-                    <span className={CLASSE_STATUT[ech.statut] ?? CLASSE_STATUT_DEFAUT}>{ech.statut}</span>
+                    <span className={CLASSE_STATUT[ech.statut] ?? CLASSE_STATUT_DEFAUT}>{t(`statutEcheance.${ech.statut}`, ech.statut)}</span>
                   </div>
                 ))}
               </div>
@@ -99,7 +104,7 @@ export default function VerificationProceduralePage() {
 
           {data.actes_potentiellement_manquants.length > 0 && (
             <div className="rounded-md border border-risk-high/30 bg-risk-high/10 p-5">
-              <p className="mb-2 text-sm font-semibold text-risk-high">⚠ Actes potentiellement manquants</p>
+              <p className="mb-2 text-sm font-semibold text-risk-high">⚠ {t("verifProcedurale.actesManquants")}</p>
               <ul className="space-y-1.5">
                 {data.actes_potentiellement_manquants.map((a, i) => (
                   <li key={i} className="flex gap-2 text-sm text-ivory">
@@ -113,7 +118,7 @@ export default function VerificationProceduralePage() {
 
           {data.points_attention.length > 0 && (
             <div className="rounded-md border border-gold-500/30 bg-gold-500/10 p-5">
-              <p className="mb-2 text-sm font-semibold text-gold-500">Points d'attention</p>
+              <p className="mb-2 text-sm font-semibold text-gold-500">{t("planTimeline.pointsAttention")}</p>
               <ul className="space-y-1.5">
                 {data.points_attention.map((p, i) => (
                   <li key={i} className="flex gap-2 text-sm text-ivory">
@@ -130,15 +135,15 @@ export default function VerificationProceduralePage() {
             resultatActuel={data}
             onMiseAJour={definirDonnees}
             dossierId={dossierActif.id}
-            placeholder="Ex. « Pourquoi cette échéance est-elle possiblement dépassée ? »…"
+            placeholder={t("verifProcedurale.chatPlaceholder")}
           />
         </div>
       )}
 
       {!loading && !error && !data && (
         <EmptyState
-          titre="Prêt à vérifier"
-          description="Cliquez sur « Vérifier la procédure » pour repérer les échéances, actes manquants et points d'attention de ce dossier."
+          titre={t("verifProcedurale.pretTitre")}
+          description={t("verifProcedurale.pretDescription")}
         />
       )}
     </div>

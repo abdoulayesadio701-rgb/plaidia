@@ -380,6 +380,103 @@
     "chatPlaceholder": "E.g. \"Make the tone more reassuring\", \"make it shorter\", \"less technical\"…",
     "pretDescription": "Drafts a plain-language summary of the case's facts, stakes and next steps, for the client."
   },
+  "chronologie": {
+    "emptyTitre": "No case selected",
+    "emptyDescription": "Select or create a case to build its timeline.",
+    "exporterCsv": "Export to CSV",
+    "construire": "Build the timeline",
+    "periodeCouverte": "Period covered",
+    "aucunEvenementTitre": "No dated event identified",
+    "aucunEvenementDescription": "The case's content does not contain enough dated elements to build a timeline.",
+    "chatPlaceholder": "E.g. \"Add this event: …\", \"why is this element missing?\"…",
+    "pretTitre": "Ready to build the timeline",
+    "pretDescription": "Click « Build the timeline » to order the case's dated events."
+  },
+  "verifProcedurale": {
+    "emptyTitre": "No case selected",
+    "emptyDescription": "Select or create a case to check its procedure.",
+    "titre": "Deadlines and missing filings",
+    "relancer": "Run the check again",
+    "verifier": "Check the procedure",
+    "echeancesIdentifiees": "Identified deadlines",
+    "aucuneEcheance": "No deadline identified.",
+    "actesManquants": "Potentially missing filings",
+    "chatPlaceholder": "E.g. \"Why might this deadline have passed?\"…",
+    "pretTitre": "Ready to check",
+    "pretDescription": "Click « Check the procedure » to spot deadlines, missing filings and points of attention for this case."
+  },
+  "statutEcheance": {
+    "À venir": "Upcoming",
+    "Proche": "Approaching",
+    "Possiblement dépassée": "Possibly passed"
+  },
+  "extraction": {
+    "dates": "Dates",
+    "personnesEtParties": "People and parties",
+    "references": "References",
+    "demandes": "Claims",
+    "decisions": "Decisions",
+    "sousTitre": "Spots dates, people, references, claims and decisions in a document.",
+    "placeholder": "Paste the document text to process here, or drop a file…",
+    "extraire": "Extract",
+    "rienDetecte": "Nothing detected.",
+    "chatPlaceholder": "E.g. \"Also look for limitation periods\", \"add this date: …\"…",
+    "pretTitre": "Ready to extract",
+    "pretDescription": "Paste the document text above, or import a file, then click « Extract »."
+  },
+  "classement": {
+    "sousTitre": "Identifies a document's nature (writ, judgment, order, filing…).",
+    "placeholder": "Paste the text of the document to classify here, or drop a file…",
+    "classer": "Classify",
+    "natureDocument": "Document nature",
+    "justification": "Justification",
+    "pretTitre": "Ready to classify",
+    "pretDescription": "Paste the document text above, or import a file, then click « Classify »."
+  },
+  "natureDocument": {
+    "assignation": "Writ of summons",
+    "jugement": "Judgment",
+    "ordonnance": "Order",
+    "conclusions": "Submissions",
+    "pièce": "Exhibit",
+    "requête": "Petition",
+    "citation": "Citation",
+    "procès-verbal": "Minutes",
+    "autre": "Other"
+  },
+  "coherence": {
+    "documentNumero": "Document {{numero}}",
+    "retirer": "Remove",
+    "documentPlaceholder": "Paste this document's text here, or drop a file…",
+    "sousTitre": "Compares at least two documents to spot factual contradictions (dates, amounts, names…).",
+    "ajouterDocument": "Add a document",
+    "controlerCoherence": "Check consistency",
+    "auMoinsDeux": "At least two documents with a name and a text are required.",
+    "contradictions": "Contradictions",
+    "aucuneContradictionTitre": "No contradiction detected",
+    "aucuneContradictionDescription": "The provided documents show no apparent factual inconsistency.",
+    "sujet": "Subject",
+    "elementsCoherents": "Consistent elements",
+    "limitesAnalyse": "Limits of the analysis",
+    "chatPlaceholder": "E.g. \"Explain this contradiction in more detail\", \"compare these two documents\"…"
+  },
+  "pvAudience": {
+    "copie": "Minutes copied to clipboard.",
+    "notesBrutes": "Raw notes",
+    "placeholder": "Freely note what is said during the hearing, or drop a file – the assistant formats it into structured minutes.",
+    "regenerer": "Regenerate the minutes",
+    "generer": "Generate the minutes",
+    "pvGenere": "Generated minutes (editable)",
+    "enAttenteTitre": "Waiting",
+    "enAttenteDescription": "Write your notes on the left, then click « Generate the minutes ».",
+    "chatPlaceholder": "E.g. \"Make the style more formal\", \"shorten the second paragraph\"…"
+  },
+  "rechercheTransversale": {
+    "sousTitre": "Cross-case search across facts, parties, names, domains and analyses of every case.",
+    "placeholder": "Search a name, a reference, a keyword…",
+    "saisirTitre": "Enter a search term",
+    "saisirDescription": "The search covers every case, across all spaces."
+  },
   "traduire": {
     "francais": "French",
     "anglais": "English",

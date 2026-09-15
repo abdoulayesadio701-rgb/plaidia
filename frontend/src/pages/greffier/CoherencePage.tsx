@@ -6,6 +6,8 @@
  */
 
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
+import type { TFunction } from "i18next";
 import { greffier as greffierApi } from "@/api";
 import type { Contradiction } from "@/api";
 import { useLazyAction } from "@/hooks/useLazyAction";
@@ -45,7 +47,7 @@ interface DocumentBrouillonCardProps {
 /** Une carte par document -- chacune gère son propre import (extraction
  * seule, cette page ne dépend d'aucun dossier) pour ne pas bloquer les
  * autres cartes pendant un import en cours. */
-function DocumentBrouillonCard({ doc, index, loading, peutRetirer, onChange, onRetirer }: DocumentBrouillonCardProps) {
+function DocumentBrouillonCard({ doc, index, loading, peutRetirer, onChange, onRetirer, t }: DocumentBrouillonCardProps & { t: TFunction }) {
   const { enImport, survole, dragProps, importerFichiers, choixEnAttente, resoudreChoix } = useImportTexte({
     dossierId: null,
     getTexteActuel: () => doc.texte,
@@ -59,19 +61,19 @@ function DocumentBrouillonCard({ doc, index, loading, peutRetirer, onChange, onR
           className="input max-w-xs font-medium"
           value={doc.nomDocument}
           onChange={(e) => onChange({ nomDocument: e.target.value })}
-          placeholder={`Document ${index + 1}`}
+          placeholder={t("coherence.documentNumero", { numero: index + 1 })}
           disabled={loading}
         />
         {peutRetirer && (
           <button onClick={onRetirer} className="text-xs text-muted hover:text-risk-high" disabled={loading}>
-            ✕ Retirer
+            ✕ {t("coherence.retirer")}
           </button>
         )}
       </div>
       <textarea
         {...dragProps}
         className={`input min-h-[140px] resize-y ${survole ? "ring-2 ring-amethyst-400" : ""}`}
-        placeholder="Collez ici le texte de ce document, ou déposez un fichier…"
+        placeholder={t("coherence.documentPlaceholder")}
         value={doc.texte}
         onChange={(e) => onChange({ texte: e.target.value })}
         disabled={loading || enImport}
@@ -90,12 +92,13 @@ function DocumentBrouillonCard({ doc, index, loading, peutRetirer, onChange, onR
   );
 }
 
-function nouveauDocument(numero: number): DocumentBrouillon {
-  return { id: `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`, nomDocument: `Document ${numero}`, texte: "" };
+function nouveauDocument(numero: number, t: TFunction): DocumentBrouillon {
+  return { id: `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`, nomDocument: t("coherence.documentNumero", { numero }), texte: "" };
 }
 
 export default function CoherencePage() {
-  const [documents, setDocuments] = useState<DocumentBrouillon[]>([nouveauDocument(1), nouveauDocument(2)]);
+  const { t } = useTranslation();
+  const [documents, setDocuments] = useState<DocumentBrouillon[]>([nouveauDocument(1, t), nouveauDocument(2, t)]);
 
   const { data, loading, error, executer, definirDonnees } = useLazyAction((docs: { nom_document: string; texte: string }[]) =>
     greffierApi.controleCoherence(docs)
@@ -104,7 +107,7 @@ export default function CoherencePage() {
   const majDocument = (id: string, patch: Partial<DocumentBrouillon>) =>
     setDocuments((liste) => liste.map((d) => (d.id === id ? { ...d, ...patch } : d)));
 
-  const ajouterDocument = () => setDocuments((liste) => [...liste, nouveauDocument(liste.length + 1)]);
+  const ajouterDocument = () => setDocuments((liste) => [...liste, nouveauDocument(liste.length + 1, t)]);
 
   const retirerDocument = (id: string) => setDocuments((liste) => liste.filter((d) => d.id !== id));
 
@@ -121,9 +124,9 @@ export default function CoherencePage() {
   return (
     <div className="mx-auto max-w-4xl space-y-6">
       <div>
-        <p className="kicker">Le Greffier</p>
-        <h1 className="mt-1 font-serif text-h2 font-semibold text-gold-500">Contrôle de cohérence entre documents</h1>
-        <p className="mt-2 text-sm text-warmgray">Compare au moins deux documents pour repérer les contradictions factuelles (dates, montants, noms…).</p>
+        <p className="kicker">{t("nav.espace.greffier")}</p>
+        <h1 className="mt-1 font-serif text-h2 font-semibold text-gold-500">{t("nav.greffier.coherence")}</h1>
+        <p className="mt-2 text-sm text-warmgray">{t("coherence.sousTitre")}</p>
       </div>
 
       <div className="space-y-4">
@@ -136,18 +139,19 @@ export default function CoherencePage() {
             peutRetirer={documents.length > 2}
             onChange={(patch) => majDocument(doc.id, patch)}
             onRetirer={() => retirerDocument(doc.id)}
+            t={t}
           />
         ))}
 
         <div className="flex flex-wrap items-center justify-between gap-3">
           <button onClick={ajouterDocument} disabled={loading} className="text-sm text-amethyst-400 hover:underline">
-            ＋ Ajouter un document
+            ＋ {t("coherence.ajouterDocument")}
           </button>
           <Button variant="primary" loading={loading} disabled={!peutLancer} onClick={lancer}>
-            Contrôler la cohérence
+            {t("coherence.controlerCoherence")}
           </Button>
         </div>
-        {!peutLancer && <p className="text-xs text-muted">Au moins deux documents avec un nom et un texte sont nécessaires.</p>}
+        {!peutLancer && <p className="text-xs text-muted">{t("coherence.auMoinsDeux")}</p>}
       </div>
 
       {loading && <SkeletonList count={2} />}
@@ -157,25 +161,25 @@ export default function CoherencePage() {
       {!loading && !error && data && (
         <div className="space-y-6">
           <div>
-            <p className="mb-3 font-serif text-h3 font-semibold text-gold-500">Contradictions</p>
+            <p className="mb-3 font-serif text-h3 font-semibold text-gold-500">{t("coherence.contradictions")}</p>
             {contradictionsTriees.length === 0 ? (
-              <EmptyState titre="Aucune contradiction détectée" description="Les documents fournis ne présentent pas d'incohérence factuelle apparente." />
+              <EmptyState titre={t("coherence.aucuneContradictionTitre")} description={t("coherence.aucuneContradictionDescription")} />
             ) : (
               <div className="overflow-x-auto rounded-md border border-gold-600/20">
                 <table className="w-full border-collapse text-sm">
                   <thead>
                     <tr className="border-b border-gold-600/20 bg-surface-2 text-left text-micro uppercase tracking-wide text-warmgray">
-                      <th className="px-4 py-3 font-medium">Gravité</th>
-                      <th className="px-4 py-3 font-medium">Sujet</th>
-                      <th className="px-4 py-3 font-medium">Document 1</th>
-                      <th className="px-4 py-3 font-medium">Document 2</th>
+                      <th className="px-4 py-3 font-medium">{t("verificationPanel.gravite")}</th>
+                      <th className="px-4 py-3 font-medium">{t("coherence.sujet")}</th>
+                      <th className="px-4 py-3 font-medium">{t("coherence.documentNumero", { numero: 1 })}</th>
+                      <th className="px-4 py-3 font-medium">{t("coherence.documentNumero", { numero: 2 })}</th>
                     </tr>
                   </thead>
                   <tbody>
                     {contradictionsTriees.map((c: Contradiction, i) => (
                       <tr key={i} className="border-b border-gold-600/10 last:border-0 hover:bg-surface-2/40">
                         <td className="px-4 py-3">
-                          <span className={CLASSE_GRAVITE[c.gravite] ?? "badge border-muted/30 bg-surface-2 text-warmgray"}>{c.gravite}</span>
+                          <span className={CLASSE_GRAVITE[c.gravite] ?? "badge border-muted/30 bg-surface-2 text-warmgray"}>{t(`niveauConfiance.${c.gravite}`, c.gravite)}</span>
                         </td>
                         <td className="px-4 py-3 font-medium text-ivory">{c.sujet}</td>
                         <td className="max-w-xs px-4 py-3 text-warmgray">{c.document_1}</td>
@@ -190,7 +194,7 @@ export default function CoherencePage() {
 
           {data.elements_coherents.length > 0 && (
             <div className="rounded-md border border-risk-low/30 bg-risk-low/10 p-5">
-              <p className="mb-2 text-sm font-semibold text-risk-low">✓ Éléments cohérents</p>
+              <p className="mb-2 text-sm font-semibold text-risk-low">✓ {t("coherence.elementsCoherents")}</p>
               <ul className="space-y-1.5">
                 {data.elements_coherents.map((el, i) => (
                   <li key={i} className="flex gap-2 text-sm text-ivory">
@@ -204,7 +208,7 @@ export default function CoherencePage() {
 
           {data.limites_analyse && (
             <div className="card p-5">
-              <p className="mb-2 text-micro font-medium uppercase tracking-wide text-warmgray">Limites de l'analyse</p>
+              <p className="mb-2 text-micro font-medium uppercase tracking-wide text-warmgray">{t("coherence.limitesAnalyse")}</p>
               <RichOutput texte={data.limites_analyse} prose={false} className="text-sm" />
             </div>
           )}
@@ -213,7 +217,7 @@ export default function CoherencePage() {
             feature="coherence"
             resultatActuel={data}
             onMiseAJour={definirDonnees}
-            placeholder="Ex. « Explique cette contradiction plus en détail », « compare ces deux documents »…"
+            placeholder={t("coherence.chatPlaceholder")}
           />
         </div>
       )}

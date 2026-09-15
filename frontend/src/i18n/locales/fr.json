@@ -380,6 +380,103 @@
     "chatPlaceholder": "Ex. « Rends le ton plus rassurant », « fais plus court », « moins technique »…",
     "pretDescription": "Rédige une synthèse en langage simple des faits, des enjeux et des prochaines étapes du dossier, à destination du client."
   },
+  "chronologie": {
+    "emptyTitre": "Aucun dossier sélectionné",
+    "emptyDescription": "Sélectionnez ou créez un dossier pour construire sa chronologie.",
+    "exporterCsv": "Exporter en CSV",
+    "construire": "Construire la chronologie",
+    "periodeCouverte": "Période couverte",
+    "aucunEvenementTitre": "Aucun événement daté identifié",
+    "aucunEvenementDescription": "Le contenu du dossier ne contient pas assez d'éléments datés pour construire une chronologie.",
+    "chatPlaceholder": "Ex. « Ajoute cet événement : … », « pourquoi cet élément est-il manquant ? »…",
+    "pretTitre": "Prêt à construire la chronologie",
+    "pretDescription": "Cliquez sur « Construire la chronologie » pour ordonner les événements datés du dossier."
+  },
+  "verifProcedurale": {
+    "emptyTitre": "Aucun dossier sélectionné",
+    "emptyDescription": "Sélectionnez ou créez un dossier pour vérifier sa procédure.",
+    "titre": "Échéances et actes manquants",
+    "relancer": "Relancer la vérification",
+    "verifier": "Vérifier la procédure",
+    "echeancesIdentifiees": "Échéances identifiées",
+    "aucuneEcheance": "Aucune échéance identifiée.",
+    "actesManquants": "Actes potentiellement manquants",
+    "chatPlaceholder": "Ex. « Pourquoi cette échéance est-elle possiblement dépassée ? »…",
+    "pretTitre": "Prêt à vérifier",
+    "pretDescription": "Cliquez sur « Vérifier la procédure » pour repérer les échéances, actes manquants et points d'attention de ce dossier."
+  },
+  "statutEcheance": {
+    "À venir": "À venir",
+    "Proche": "Proche",
+    "Possiblement dépassée": "Possiblement dépassée"
+  },
+  "extraction": {
+    "dates": "Dates",
+    "personnesEtParties": "Personnes et parties",
+    "references": "Références",
+    "demandes": "Demandes",
+    "decisions": "Décisions",
+    "sousTitre": "Repère dates, personnes, références, demandes et décisions dans un document.",
+    "placeholder": "Collez ici le texte du document à traiter, ou déposez un fichier…",
+    "extraire": "Extraire",
+    "rienDetecte": "Rien détecté.",
+    "chatPlaceholder": "Ex. « Cherche aussi les délais de prescription », « ajoute cette date : … »…",
+    "pretTitre": "Prêt à extraire",
+    "pretDescription": "Collez le texte du document ci-dessus, ou importez un fichier, puis cliquez sur « Extraire »."
+  },
+  "classement": {
+    "sousTitre": "Identifie la nature d'un document (assignation, jugement, ordonnance, pièce…).",
+    "placeholder": "Collez ici le texte du document à classer, ou déposez un fichier…",
+    "classer": "Classer",
+    "natureDocument": "Nature du document",
+    "justification": "Justification",
+    "pretTitre": "Prêt à classer",
+    "pretDescription": "Collez le texte du document ci-dessus, ou importez un fichier, puis cliquez sur « Classer »."
+  },
+  "natureDocument": {
+    "assignation": "Assignation",
+    "jugement": "Jugement",
+    "ordonnance": "Ordonnance",
+    "conclusions": "Conclusions",
+    "pièce": "Pièce",
+    "requête": "Requête",
+    "citation": "Citation",
+    "procès-verbal": "Procès-verbal",
+    "autre": "Autre"
+  },
+  "coherence": {
+    "documentNumero": "Document {{numero}}",
+    "retirer": "Retirer",
+    "documentPlaceholder": "Collez ici le texte de ce document, ou déposez un fichier…",
+    "sousTitre": "Compare au moins deux documents pour repérer les contradictions factuelles (dates, montants, noms…).",
+    "ajouterDocument": "Ajouter un document",
+    "controlerCoherence": "Contrôler la cohérence",
+    "auMoinsDeux": "Au moins deux documents avec un nom et un texte sont nécessaires.",
+    "contradictions": "Contradictions",
+    "aucuneContradictionTitre": "Aucune contradiction détectée",
+    "aucuneContradictionDescription": "Les documents fournis ne présentent pas d'incohérence factuelle apparente.",
+    "sujet": "Sujet",
+    "elementsCoherents": "Éléments cohérents",
+    "limitesAnalyse": "Limites de l'analyse",
+    "chatPlaceholder": "Ex. « Explique cette contradiction plus en détail », « compare ces deux documents »…"
+  },
+  "pvAudience": {
+    "copie": "PV copié dans le presse-papiers.",
+    "notesBrutes": "Notes brutes",
+    "placeholder": "Notez librement ce qui se dit pendant l'audience, ou déposez un fichier – l'agent les met en forme en PV structuré.",
+    "regenerer": "Régénérer le PV",
+    "generer": "Générer le PV",
+    "pvGenere": "PV généré (éditable)",
+    "enAttenteTitre": "En attente",
+    "enAttenteDescription": "Rédigez vos notes à gauche, puis cliquez sur « Générer le PV ».",
+    "chatPlaceholder": "Ex. « Rends le style plus formel », « raccourcis le deuxième paragraphe »…"
+  },
+  "rechercheTransversale": {
+    "sousTitre": "Recherche transversale dans les faits, parties, noms, domaines et analyses de tous les dossiers.",
+    "placeholder": "Rechercher un nom, une référence, un mot-clé…",
+    "saisirTitre": "Saisissez un terme de recherche",
+    "saisirDescription": "La recherche porte sur l'ensemble des affaires, tous espaces confondus."
+  },
   "traduire": {
     "francais": "Français",
     "anglais": "English",

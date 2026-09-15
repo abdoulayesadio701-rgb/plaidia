@@ -8,6 +8,7 @@
  */
 
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { greffier as greffierApi } from "@/api";
 import { useDossierActif } from "@/store/useAppStore";
 import { useLazyAction } from "@/hooks/useLazyAction";
@@ -23,6 +24,7 @@ import JaugeConfiance from "@/components/JaugeConfiance";
 import { SkeletonList } from "@/components/Skeleton";
 
 export default function ClassementPage() {
+  const { t } = useTranslation();
   const dossierActif = useDossierActif();
   const [texte, setTexte] = useState("");
 
@@ -40,16 +42,16 @@ export default function ClassementPage() {
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <div>
-        <p className="kicker">Le Greffier</p>
-        <h1 className="mt-1 font-serif text-h2 font-semibold text-gold-500">Classement automatique</h1>
-        <p className="mt-2 text-sm text-warmgray">Identifie la nature d'un document (assignation, jugement, ordonnance, pièce…).</p>
+        <p className="kicker">{t("nav.espace.greffier")}</p>
+        <h1 className="mt-1 font-serif text-h2 font-semibold text-gold-500">{t("nav.greffier.classement")}</h1>
+        <p className="mt-2 text-sm text-warmgray">{t("classement.sousTitre")}</p>
       </div>
 
       <div className="card space-y-3 p-6">
         <textarea
           {...dragProps}
           className={`input min-h-[220px] resize-y ${survole ? "ring-2 ring-amethyst-400" : ""}`}
-          placeholder="Collez ici le texte du document à classer, ou déposez un fichier…"
+          placeholder={t("classement.placeholder")}
           value={texte}
           onChange={(e) => setTexte(e.target.value)}
           disabled={loading || enImport}
@@ -66,12 +68,12 @@ export default function ClassementPage() {
             />
             <span className="text-xs text-muted">
               {dossierActif
-                ? `Le texte extrait sera aussi ajouté aux faits de « ${dossierActif.nom} ».`
-                : "PDF, Word, Excel, image — le texte extrait est injecté ci-dessus."}
+                ? t("analyseStyle.texteAjouteAuxFaits", { nom: dossierActif.nom })
+                : t("arsenal.formatsAcceptes")}
             </span>
           </div>
           <Button variant="primary" loading={loading} disabled={!texte.trim() || enImport} onClick={lancer}>
-            Classer
+            {t("classement.classer")}
           </Button>
         </div>
       </div>
@@ -85,19 +87,19 @@ export default function ClassementPage() {
       {!loading && !error && data && (
         <div className="card space-y-5 p-6">
           <div>
-            <p className="text-micro font-medium uppercase tracking-wide text-amethyst-400">Nature du document</p>
-            <p className="mt-1 font-serif text-h3 font-semibold capitalize text-gold-500">{data.nature}</p>
+            <p className="text-micro font-medium uppercase tracking-wide text-amethyst-400">{t("classement.natureDocument")}</p>
+            <p className="mt-1 font-serif text-h3 font-semibold capitalize text-gold-500">{t(`natureDocument.${data.nature}`, data.nature)}</p>
           </div>
           <JaugeConfiance niveau={data.confiance} />
           <div>
-            <p className="mb-1 text-micro font-medium uppercase tracking-wide text-warmgray">Justification</p>
+            <p className="mb-1 text-micro font-medium uppercase tracking-wide text-warmgray">{t("classement.justification")}</p>
             <RichOutput texte={data.justification} prose={false} className="text-sm" />
           </div>
         </div>
       )}
 
       {!loading && !error && !data && (
-        <EmptyState titre="Prêt à classer" description="Collez le texte du document ci-dessus, ou importez un fichier, puis cliquez sur « Classer »." />
+        <EmptyState titre={t("classement.pretTitre")} description={t("classement.pretDescription")} />
       )}
     </div>
   );
