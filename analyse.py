@@ -1227,7 +1227,7 @@ def traiter_message_edition(
     response = client.messages.create(
         model=MODEL_ACTIF,
         max_tokens=3000,
-        system=EDITION_SYSTEM_PROMPT,
+        system=EDITION_SYSTEM_PROMPT + _directive_langue(),
         messages=messages,
     )
     raw = response.content[0].text.strip().replace("```json", "").replace("```", "").strip()

@@ -30,6 +30,8 @@ niveau.
 import copy
 import re
 
+from app.deps import libelle
+
 OPERATIONS_AUTORISEES = {"rewrite", "expand", "shorten", "delete", "add", "explain", "compare", "none"}
 
 _RE_SEGMENT = re.compile(r"^([a-zA-Z_][a-zA-Z0-9_]*)(\[(\d+)\])?$")
@@ -46,7 +48,7 @@ def _analyser_chemin(scope: str) -> list[tuple[str, int | None]]:
     for partie in scope.split("."):
         m = _RE_SEGMENT.match(partie)
         if not m:
-            raise ActionInvalide(f"Scope mal formé : {scope!r} (segment {partie!r} invalide).")
+            raise ActionInvalide(libelle("scope_mal_forme", scope=scope, segment=partie))
         nom, _, idx = m.groups()
         segments.append((nom, int(idx) if idx is not None else None))
     return segments
@@ -63,7 +65,7 @@ def _naviguer(resultat_actuel: dict, segments: list[tuple[str, int | None]], fea
     for i, (nom, idx) in enumerate(segments):
         if not isinstance(courant, dict) or nom not in courant:
             chemin_lisible.append(nom)
-            raise ActionInvalide(f"Le champ {'.'.join(chemin_lisible)!r} n'existe pas dans le résultat actuel de {feature!r}.")
+            raise ActionInvalide(libelle("champ_introuvable", chemin=".".join(chemin_lisible), feature=feature))
         valeur = courant[nom]
         dernier = i == len(segments) - 1
 
@@ -76,21 +78,21 @@ def _naviguer(resultat_actuel: dict, segments: list[tuple[str, int | None]], fea
 
         chemin_lisible.append(f"{nom}[{idx}]")
         if not isinstance(valeur, list):
-            raise ActionInvalide(f"Le champ {'.'.join(chemin_lisible[:-1] + [nom])!r} n'est pas une liste — un index ne s'applique pas ici.")
+            raise ActionInvalide(libelle("champ_pas_liste_index", chemin=".".join(chemin_lisible[:-1] + [nom])))
         if not (0 <= idx < len(valeur)):
-            raise ActionInvalide(f"Index hors limites pour {nom!r} : {idx} (liste de {len(valeur)} élément(s)).")
+            raise ActionInvalide(libelle("index_hors_limites", nom=nom, idx=idx, taille=len(valeur)))
         if dernier:
             return valeur, idx, "index"  # conteneur = la liste elle-même, clé = l'index
         courant = valeur[idx]
 
-    raise ActionInvalide("Scope vide.")
+    raise ActionInvalide(libelle("scope_vide"))
 
 
 def valider_action(feature: str, scope: str, operation: str, resultat_actuel: dict) -> None:
     """Lève ActionInvalide si l'action proposée ne peut pas être appliquée
     en l'état. N'applique rien — seulement une vérification préalable."""
     if operation not in OPERATIONS_AUTORISEES:
-        raise ActionInvalide(f"Opération non reconnue : {operation!r}.")
+        raise ActionInvalide(libelle("operation_non_reconnue", operation=operation))
 
     if scope == "global":
         return
@@ -106,12 +108,12 @@ def valider_action(feature: str, scope: str, operation: str, resultat_actuel: di
     valeur = conteneur[cle]
     if operation == "add":
         if not isinstance(valeur, list):
-            raise ActionInvalide(f"Le champ {cle!r} n'est pas une liste — « add » ne s'y applique pas.")
+            raise ActionInvalide(libelle("champ_pas_liste_add", cle=cle))
         return
     if isinstance(valeur, list):
-        raise ActionInvalide(f"Le champ {cle!r} est une liste — précisez un index (ex. « {cle}[0] »).")
+        raise ActionInvalide(libelle("champ_est_liste_precisez_index", cle=cle))
     if not isinstance(valeur, (str, int, float, type(None))):
-        raise ActionInvalide(f"Le champ {cle!r} a une structure trop complexe pour une modification ciblée — utilisez scope=\"global\".")
+        raise ActionInvalide(libelle("champ_structure_complexe", cle=cle))
 
 
 def appliquer_patch(resultat_actuel: dict, scope: str, operation: str, contenu_modifie) -> dict:
@@ -120,7 +122,7 @@ def appliquer_patch(resultat_actuel: dict, scope: str, operation: str, contenu_m
     qu'un appel qui échoue à mi-chemin ne laisse jamais un état partiel)."""
     if scope == "global":
         if not isinstance(contenu_modifie, dict):
-            raise ActionInvalide("Une mise à jour globale doit fournir un objet complet en contenu_modifie.")
+            raise ActionInvalide(libelle("maj_globale_objet_complet"))
         return contenu_modifie
 
     resultat = copy.deepcopy(resultat_actuel)

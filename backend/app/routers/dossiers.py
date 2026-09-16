@@ -11,7 +11,7 @@ import os
 
 import db
 import export as legacy_export
-from app.deps import extraire_texte_upload, get_dossier_or_404
+from app.deps import extraire_texte_upload, get_dossier_or_404, libelle
 from app.schemas.dossiers import (
     DossierCreate,
     DossierDomaineUpdate,
@@ -66,7 +66,7 @@ def obtenir_document_genere(dossier_id: int, document_id: int):
     get_dossier_or_404(dossier_id)
     document = db.get_document_genere(document_id)
     if not document or document["dossier_id"] != dossier_id:
-        raise HTTPException(status_code=404, detail=f"Document {document_id} introuvable dans ce dossier.")
+        raise HTTPException(status_code=404, detail=libelle("document_introuvable_dossier", document_id=document_id))
     return document
 
 

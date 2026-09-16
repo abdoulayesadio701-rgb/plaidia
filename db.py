@@ -427,6 +427,39 @@ _TRANSITIONS_DOCUMENT = {
 }
 
 
+# Messages bilingues de ces deux exceptions -- str(e) est renvoyé tel quel
+# comme HTTPException.detail par les routers (voir backend/app/routers/
+# analyse.py, chat.py, documents.py), donc jamais traduit sinon. Ne peut pas
+# réutiliser app.deps._l()/libelle() ici : app.deps importe déjà db, un
+# import inverse créerait un cycle -- mini-mécanisme local à la place, même
+# principe (langue lue via le même ContextVar que analyse._directive_langue(),
+# posé par le middleware X-Langue de backend/app/main.py).
+import analyse as legacy_analyse  # noqa: E402
+
+_LIBELLES_CYCLE_VIE = {
+    "statut_actuel_inconnu": {"fr": "Statut actuel inconnu : {statut}.", "en": "Unknown current status: {statut}."},
+    "statut_cible_inconnu": {"fr": "Statut cible inconnu : {statut}.", "en": "Unknown target status: {statut}."},
+    "transition_impossible": {
+        "fr": "Transition impossible : {actuel} -> {cible}. Les transitions se font étape par étape et un document Final est définitif.",
+        "en": "Impossible transition: {actuel} -> {cible}. Transitions happen step by step and a Final document is definitive.",
+    },
+    "analyse_finale": {
+        "fr": "L'analyse {analyse_id} est Final et ne peut plus être modifiée.",
+        "en": "Analysis {analyse_id} is Final and can no longer be modified.",
+    },
+    "document_final": {
+        "fr": "Le document {document_id} est Final et ne peut plus être modifié.",
+        "en": "Document {document_id} is Final and can no longer be modified.",
+    },
+}
+
+
+def _l_cycle_vie(cle: str, **kwargs) -> str:
+    entree = _LIBELLES_CYCLE_VIE.get(cle, {})
+    texte = entree.get(legacy_analyse.langue_requete(), entree.get("fr", cle))
+    return texte.format(**kwargs) if kwargs else texte
+
+
 class TransitionStatutInvalide(ValueError):
     """Transition de cycle de vie non autorisée."""
 
@@ -438,14 +471,11 @@ class DocumentFinalError(ValueError):
 def valider_transition_statut(statut_actuel: str, nouveau_statut: str) -> str:
     """Valide une transition adjacente, partagée par tous les documents."""
     if statut_actuel not in STATUTS_DOCUMENT:
-        raise TransitionStatutInvalide(f"Statut actuel inconnu : {statut_actuel}.")
+        raise TransitionStatutInvalide(_l_cycle_vie("statut_actuel_inconnu", statut=statut_actuel))
     if nouveau_statut not in STATUTS_DOCUMENT:
-        raise TransitionStatutInvalide(f"Statut cible inconnu : {nouveau_statut}.")
+        raise TransitionStatutInvalide(_l_cycle_vie("statut_cible_inconnu", statut=nouveau_statut))
     if nouveau_statut not in _TRANSITIONS_DOCUMENT[statut_actuel]:
-        raise TransitionStatutInvalide(
-            f"Transition impossible : {statut_actuel} -> {nouveau_statut}. "
-            "Les transitions se font étape par étape et un document Final est définitif."
-        )
+        raise TransitionStatutInvalide(_l_cycle_vie("transition_impossible", actuel=statut_actuel, cible=nouveau_statut))
     return nouveau_statut
 
 
@@ -483,7 +513,7 @@ def verifier_analyse_modifiable(analyse_id):
     """Refuse toute édition d'une analyse dont le cycle est arrivé à Final."""
     analyse = get_analyse(analyse_id)
     if analyse and analyse["statut"] == "Final":
-        raise DocumentFinalError(f"L'analyse {analyse_id} est Final et ne peut plus être modifiée.")
+        raise DocumentFinalError(_l_cycle_vie("analyse_finale", analyse_id=analyse_id))
     return analyse
 
 
@@ -985,7 +1015,7 @@ def changer_statut_document(document_id, nouveau_statut):
 def verifier_document_modifiable(document_id):
     document = get_document_genere(document_id)
     if document and document["statut"] == "Final":
-        raise DocumentFinalError(f"Le document {document_id} est Final et ne peut plus être modifié.")
+        raise DocumentFinalError(_l_cycle_vie("document_final", document_id=document_id))
     return document
 
 

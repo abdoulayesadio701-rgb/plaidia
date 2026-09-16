@@ -34,7 +34,7 @@ import analyse as legacy_analyse
 import db
 import recherche_juridique as legacy_rj
 from app import chat_actions, demo, demo_data, quality_pipeline
-from app.deps import construire_contexte_dossier, get_dossier_or_404, sse_event as _sse
+from app.deps import construire_contexte_dossier, get_dossier_or_404, libelle, sse_event as _sse
 from app.security_guard import executer_garde_fou
 from app.schemas.chat import (
     ChatContextuelIn,
@@ -215,7 +215,7 @@ def chat_contextuel(payload: ChatContextuelIn):
     if payload.document_id is not None:
         document = db.get_document_genere(payload.document_id)
         if not document or document["dossier_id"] != payload.dossier_id:
-            raise HTTPException(status_code=404, detail=f"Document {payload.document_id} introuvable dans ce dossier.")
+            raise HTTPException(status_code=404, detail=libelle("document_introuvable_dossier", document_id=payload.document_id))
         try:
             db.verifier_document_modifiable(payload.document_id)
         except db.DocumentFinalError as e:
@@ -297,7 +297,7 @@ def lister_conversations_dossier(dossier_id: int):
 def obtenir_conversation(conversation_id: int):
     conversation = db.get_conversation_chat(conversation_id)
     if not conversation:
-        raise HTTPException(status_code=404, detail=f"Conversation {conversation_id} introuvable.")
+        raise HTTPException(status_code=404, detail=libelle("conversation_introuvable", conversation_id=conversation_id))
     return conversation
 
 
@@ -313,7 +313,7 @@ def creer_conversation(payload: ConversationCreate):
 @router.put("/conversations/{conversation_id}", response_model=ConversationOut)
 def mettre_a_jour_conversation(conversation_id: int, payload: ConversationUpdate):
     if not db.get_conversation_chat(conversation_id):
-        raise HTTPException(status_code=404, detail=f"Conversation {conversation_id} introuvable.")
+        raise HTTPException(status_code=404, detail=libelle("conversation_introuvable", conversation_id=conversation_id))
     historique = [m.model_dump() for m in payload.historique]
     db.mettre_a_jour_conversation_chat(conversation_id, historique)
     return next(c for c in db.lister_conversations_chat() if c["id"] == conversation_id)

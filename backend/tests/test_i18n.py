@@ -12,6 +12,7 @@ test_chat_contextuel.py) :
 """
 
 import analyse as legacy_analyse
+import pytest
 from fastapi.testclient import TestClient
 
 from app.main import app
@@ -142,3 +143,81 @@ def test_entete_x_langue_atteint_le_contextvar_via_le_vrai_middleware(monkeypatc
     assert capture["langue"] == "en"
     # La langue ne doit jamais fuiter sur la requête suivante qui n'en envoie pas.
     assert legacy_analyse.langue_requete() == "fr"
+
+
+# --- Messages d'erreur déterministes (HTTPException.detail) ---------------
+# Ces messages ne passent jamais par Claude -- voir app.deps._LIBELLES et le
+# commentaire en tête de ce dictionnaire. Couverts séparément des tests
+# ci-dessus, qui ne portent que sur le texte produit par le modèle.
+
+def test_dossier_introuvable_en_anglais_si_x_langue_en(client: TestClient):
+    r = client.get("/api/dossiers/999999", headers={"x-langue": "en"})
+    assert r.status_code == 404
+    assert r.json()["detail"] == "Case 999999 not found."
+
+
+def test_dossier_introuvable_reste_en_francais_par_defaut(client: TestClient):
+    r = client.get("/api/dossiers/999999")
+    assert r.status_code == 404
+    assert r.json()["detail"] == "Dossier 999999 introuvable."
+
+
+def test_document_introuvable_en_anglais_si_x_langue_en(client: TestClient):
+    r = client.get("/api/documents-generes/999999", headers={"x-langue": "en"})
+    assert r.status_code == 404
+    assert r.json()["detail"] == "Document 999999 not found."
+
+
+def test_cle_api_requise_en_anglais_si_x_langue_en(client: TestClient):
+    """chat_contextuel n'a pas de réponse préenregistrée en mode démo (voir
+    test_demo_mode.py::test_chat_contextuel_bloque_en_mode_demo) -- même
+    503 que exiger_cle_api() ailleurs, maintenant bilingue."""
+    r = client.post(
+        "/api/chat/contextuel",
+        json={"feature": "conclusions", "resultat_actuel": {"arguments": []}, "message": "développe le premier argument"},
+        headers={"x-langue": "en"},
+    )
+    assert r.status_code == 503
+    assert "demo mode" in r.json()["detail"].lower()
+    assert "mode démo" not in r.json()["detail"].lower()
+
+
+def test_format_fichier_non_supporte_en_anglais_si_x_langue_en(client: TestClient, dossier_demo_id: int):
+    r = client.post(
+        f"/api/dossiers/{dossier_demo_id}/documents",
+        files={"fichier": ("notes.xyz", b"contenu quelconque", "application/octet-stream")},
+        headers={"x-langue": "en"},
+    )
+    assert r.status_code == 415
+    assert "Unsupported format" in r.json()["detail"]
+
+
+def test_chat_actions_action_invalide_en_anglais_si_x_langue_en():
+    """chat_actions.py (validation des patchs proposés par le modèle, voir
+    routers/chat.py::chat_contextuel) -- cas rare mais couvert comme le
+    reste, voir app.deps._LIBELLES."""
+    import analyse as legacy_analyse_local
+    from app import chat_actions
+
+    jeton = legacy_analyse_local.definir_langue_requete("en")
+    try:
+        with pytest.raises(chat_actions.ActionInvalide, match="Unrecognised operation"):
+            chat_actions.valider_action("conclusions", "global", "invente_pas", {})
+    finally:
+        legacy_analyse_local.reinitialiser_langue_requete(jeton)
+
+
+def test_etape_pipeline_sse_en_anglais_si_x_langue_en(client: TestClient):
+    """EtapePipelineIndicator.tsx affiche ce libellé en direct pendant la
+    génération -- voir routers/analyse.py, évènement SSE "etape". Mode démo
+    non couvert par /conclusions/stream (voir la 400 dédiée) : on vérifie
+    directement l'appel qui prépare la traduction du libellé."""
+    from app.deps import libelle
+    import analyse as legacy_analyse_local
+
+    jeton = legacy_analyse_local.definir_langue_requete("en")
+    try:
+        assert libelle("etape_verification_demande") == "Checking the request"
+        assert libelle("etape_analyse_conclusions") == "Analysing the submissions"
+    finally:
+        legacy_analyse_local.reinitialiser_langue_requete(jeton)

@@ -79,6 +79,91 @@ _LIBELLES = {
     "prob_moyenne": {"fr": "Moyenne", "en": "Medium"},
     "prob_faible": {"fr": "Faible", "en": "Low"},
     "prob_improbable": {"fr": "Improbable", "en": "Long shot"},
+    # --- Messages d'erreur déterministes (HTTPException.detail) -----------
+    # Ces messages ne passent JAMAIS par Claude (ni donc par
+    # analyse._directive_langue()) : ce sont des chaînes Python construites
+    # directement par les routers/deps.py, il faut les traduire ici
+    # explicitement -- voir la remarque en tête de _LIBELLES ci-dessus.
+    "dossier_introuvable": {"fr": "Dossier {dossier_id} introuvable.", "en": "Case {dossier_id} not found."},
+    "format_non_supporte": {
+        "fr": "Format non supporté : {suffix}. Formats acceptés : {formats}",
+        "en": "Unsupported format: {suffix}. Accepted formats: {formats}",
+    },
+    "fichier_trop_volumineux": {"fr": "Fichier trop volumineux (limite : {limite} Mo).", "en": "File too large (limit: {limite} MB)."},
+    "fichier_vide": {"fr": "Le fichier est vide.", "en": "The file is empty."},
+    "fichier_illisible": {
+        "fr": "Impossible de lire ce fichier : il semble corrompu ou dans un format inattendu ({erreur}).",
+        "en": "Unable to read this file: it appears to be corrupted or in an unexpected format ({erreur}).",
+    },
+    "analyse_introuvable": {"fr": "Analyse {analyse_id} introuvable.", "en": "Analysis {analyse_id} not found."},
+    "analyse_introuvable_dossier": {"fr": "Analyse {reference_id} introuvable pour ce dossier.", "en": "Analysis {reference_id} not found for this case."},
+    "document_introuvable": {"fr": "Document {document_id} introuvable.", "en": "Document {document_id} not found."},
+    "document_introuvable_dossier": {"fr": "Document {document_id} introuvable dans ce dossier.", "en": "Document {document_id} not found in this case."},
+    "conversation_introuvable": {"fr": "Conversation {conversation_id} introuvable.", "en": "Conversation {conversation_id} not found."},
+    "version_introuvable": {"fr": "Version {version_id} introuvable.", "en": "Version {version_id} not found."},
+    "dossier_id_requis_epingle": {"fr": "dossier_id est requis pour épingler une analyse.", "en": "dossier_id is required to pin an analysis."},
+    "texte_importe_illisible": {
+        "fr": "Le texte importé n'a pas pu être relu après insertion.",
+        "en": "The imported text could not be read back after insertion.",
+    },
+    "streaming_indisponible_demo": {
+        "fr": "Le streaming n'est pas disponible en mode démo -- utilisez {endpoint}.",
+        "en": "Streaming is not available in demo mode -- use {endpoint} instead.",
+    },
+    "demande_refusee_generique": {"fr": "Cette demande ne peut pas être traitée.", "en": "This request cannot be processed."},
+    "cle_api_requise": {
+        "fr": (
+            "Cette fonctionnalité nécessite une clé API Anthropic et n'est pas disponible en mode démo. "
+            "Essayez « Analyser des conclusions », « Générer un plan de plaidoirie », "
+            "« Simuler les objections », « Chronologie automatique » ou le Chat sur le dossier de "
+            "démonstration — ou indiquez votre propre clé via « Utiliser ma propre clé Anthropic » "
+            "en pied de page."
+        ),
+        "en": (
+            "This feature requires an Anthropic API key and is not available in demo mode. "
+            "Try « Analyse opposing submissions », « Generate a pleading plan », "
+            "« Simulate objections », « Automatic timeline » or the Chat on the demonstration "
+            "case — or provide your own key via « Use my own Anthropic key » "
+            "at the bottom of the page."
+        ),
+    },
+    "cle_api_deepseek_requise": {
+        "fr": "Cette fonctionnalité nécessite une clé API NVIDIA (fournisseur DeepSeek, voir NVIDIA_API_KEY) qui n'est pas configurée sur ce serveur.",
+        "en": "This feature requires an NVIDIA API key (DeepSeek provider, see NVIDIA_API_KEY) which is not configured on this server.",
+    },
+    "trop_de_requetes": {
+        "fr": "Trop de requêtes depuis cette adresse — merci de patienter avant de réessayer.",
+        "en": "Too many requests from this address — please wait a moment before retrying.",
+    },
+    "erreur_configuration_serveur": {"fr": "Erreur de configuration serveur : {erreur}", "en": "Server configuration error: {erreur}"},
+    "erreur_interne": {"fr": "Erreur interne : {erreur}", "en": "Internal error: {erreur}"},
+    # --- Libellés d'étape des endpoints /stream (évènement SSE "etape") ---
+    # Affichés en direct par EtapePipelineIndicator.tsx pendant la
+    # génération -- même remarque que ci-dessus, jamais produits par Claude.
+    "etape_verification_demande": {"fr": "Vérification de la demande", "en": "Checking the request"},
+    "etape_analyse_conclusions": {"fr": "Analyse des conclusions en cours", "en": "Analysing the submissions"},
+    "etape_verification_sources_critique": {"fr": "Vérification des sources et critique", "en": "Checking sources and critique"},
+    "etape_construction_plan": {"fr": "Construction du plan de plaidoirie", "en": "Building the pleading plan"},
+    # --- chat_actions.py (validation des patchs proposés par le modèle) ---
+    # Cas rare (le modèle propose un scope/une opération malformés) mais le
+    # message finit dans reponse_agent, donc visible dans le fil de chat
+    # (voir routers/chat.py::chat_contextuel, bloc except ActionInvalide).
+    "scope_mal_forme": {"fr": "Scope mal formé : {scope!r} (segment {segment!r} invalide).", "en": "Malformed scope: {scope!r} (invalid segment {segment!r})."},
+    "champ_introuvable": {"fr": "Le champ {chemin!r} n'existe pas dans le résultat actuel de {feature!r}.", "en": "The field {chemin!r} does not exist in the current result for {feature!r}."},
+    "champ_pas_liste_index": {"fr": "Le champ {chemin!r} n'est pas une liste — un index ne s'applique pas ici.", "en": "The field {chemin!r} is not a list — an index does not apply here."},
+    "index_hors_limites": {"fr": "Index hors limites pour {nom!r} : {idx} (liste de {taille} élément(s)).", "en": "Index out of range for {nom!r}: {idx} (list of {taille} element(s))."},
+    "scope_vide": {"fr": "Scope vide.", "en": "Empty scope."},
+    "operation_non_reconnue": {"fr": "Opération non reconnue : {operation!r}.", "en": "Unrecognised operation: {operation!r}."},
+    "champ_pas_liste_add": {"fr": "Le champ {cle!r} n'est pas une liste — « add » ne s'y applique pas.", "en": "The field {cle!r} is not a list — “add” does not apply to it."},
+    "champ_est_liste_precisez_index": {"fr": "Le champ {cle!r} est une liste — précisez un index (ex. « {cle}[0] »).", "en": "The field {cle!r} is a list — specify an index (e.g. “{cle}[0]”)."},
+    "champ_structure_complexe": {
+        "fr": "Le champ {cle!r} a une structure trop complexe pour une modification ciblée — utilisez scope=\"global\".",
+        "en": "The field {cle!r} has a structure too complex for a targeted change — use scope=\"global\".",
+    },
+    "maj_globale_objet_complet": {
+        "fr": "Une mise à jour globale doit fournir un objet complet en contenu_modifie.",
+        "en": "A global update must provide a complete object in contenu_modifie.",
+    },
 }
 
 _AXE_VERS_CLE = {"Procédure": "axe_procedure", "Preuve": "axe_preuve", "Fond": "axe_fond", "Quantum": "axe_quantum"}
@@ -92,6 +177,20 @@ def _l(cle: str) -> str:
     n'est pas reconnue."""
     entree = _LIBELLES.get(cle, {})
     return entree.get(legacy_analyse.langue_requete(), entree.get("fr", cle))
+
+
+def libelle(cle: str, /, **kwargs) -> str:
+    """Version publique de _l(), avec interpolation .format(**kwargs) en un
+    seul appel -- destinée aux modules hors deps.py (routers, demo.py,
+    security_guard.py, main.py, db.py, chat_actions.py) qui construisent des
+    messages d'erreur déterministes (HTTPException.detail, texte d'exception
+    métier...), jamais pour du texte produit par Claude, déjà couvert par
+    analyse._directive_langue(). `cle` est positional-only (/) : plusieurs
+    appelants interpolent eux-mêmes un champ nommé "cle" (voir
+    chat_actions.py), qui entrerait sinon en collision avec ce premier
+    paramètre."""
+    texte = _l(cle)
+    return texte.format(**kwargs) if kwargs else texte
 
 
 def _traduire_valeur(valeur: str, correspondance: dict[str, str]) -> str:
@@ -128,17 +227,17 @@ async def extraire_texte_upload(fichier: UploadFile) -> str:
     if suffix not in EXTENSIONS_DOCUMENT_AUTORISEES:
         raise HTTPException(
             status_code=415,
-            detail=f"Format non supporté : {suffix or '(aucun)'}. Formats acceptés : {legacy_extract.FORMATS_SUPPORTES}",
+            detail=libelle("format_non_supporte", suffix=suffix or "(aucun)", formats=legacy_extract.FORMATS_SUPPORTES),
         )
 
     contenu = await fichier.read(MAX_TAILLE_FICHIER_UPLOAD + 1)
     if len(contenu) > MAX_TAILLE_FICHIER_UPLOAD:
         raise HTTPException(
             status_code=413,
-            detail=f"Fichier trop volumineux (limite : {MAX_TAILLE_FICHIER_UPLOAD // (1024 * 1024)} Mo).",
+            detail=libelle("fichier_trop_volumineux", limite=MAX_TAILLE_FICHIER_UPLOAD // (1024 * 1024)),
         )
     if not contenu:
-        raise HTTPException(status_code=422, detail="Le fichier est vide.")
+        raise HTTPException(status_code=422, detail=_l("fichier_vide"))
 
     tmp_path = None
     try:
@@ -153,7 +252,7 @@ async def extraire_texte_upload(fichier: UploadFile) -> str:
         except Exception as e:
             raise HTTPException(
                 status_code=422,
-                detail=f"Impossible de lire ce fichier : il semble corrompu ou dans un format inattendu ({e}).",
+                detail=libelle("fichier_illisible", erreur=e),
             )
     finally:
         if tmp_path:
@@ -176,7 +275,7 @@ def get_dossier_or_404(dossier_id: int) -> dict:
     """Récupère un dossier en base ou lève une 404 JSON exploitable côté front."""
     row = db.get_dossier(dossier_id)
     if not row:
-        raise HTTPException(status_code=404, detail=f"Dossier {dossier_id} introuvable.")
+        raise HTTPException(status_code=404, detail=libelle("dossier_introuvable", dossier_id=dossier_id))
     return dict(row)
 
 

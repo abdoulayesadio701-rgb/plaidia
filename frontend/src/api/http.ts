@@ -57,7 +57,7 @@ function messageFromDetail(detail: unknown, status: number): string {
       .filter((m): m is string => Boolean(m));
     if (messages.length) return messages.join(" ; ");
   }
-  return `Erreur ${status}`;
+  return i18nInstance.t("commun.erreurStatut", { status });
 }
 
 async function parseErrorBody(response: Response): Promise<{ detail: unknown; message: string }> {
@@ -66,7 +66,7 @@ async function parseErrorBody(response: Response): Promise<{ detail: unknown; me
     const detail = data?.detail ?? data;
     return { detail, message: messageFromDetail(detail, response.status) };
   } catch {
-    return { detail: null, message: `Erreur ${response.status}` };
+    return { detail: null, message: i18nInstance.t("commun.erreurStatut", { status: response.status }) };
   }
 }
 
@@ -104,7 +104,7 @@ async function doFetch(path: string, options: RequestOptions, extraHeaders?: Hea
   try {
     return await fetch(url, { method, headers, body: finalBody, signal });
   } catch {
-    throw new ApiError(0, null, "Impossible de joindre le serveur. Vérifiez que le backend est lancé (voir backend/README.md).");
+    throw new ApiError(0, null, i18nInstance.t("commun.serveurIndisponible"));
   }
 }
 

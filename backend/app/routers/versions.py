@@ -12,6 +12,7 @@ import json
 from app.bootstrap import ROOT_DIR  # noqa: F401
 
 import db
+from app.deps import libelle
 from app.schemas.versions import VersionOut
 from fastapi import APIRouter, HTTPException
 
@@ -33,5 +34,5 @@ def lister(feature: str, dossier_id: int | None = None, document_id: int | None 
 def restaurer(version_id: int):
     nouvelle_version = db.restaurer_version(version_id)
     if not nouvelle_version:
-        raise HTTPException(status_code=404, detail=f"Version {version_id} introuvable.")
+        raise HTTPException(status_code=404, detail=libelle("version_introuvable", version_id=version_id))
     return _vers_sortie(nouvelle_version)

@@ -16,7 +16,7 @@ import analyse as legacy_analyse
 import db
 import export as legacy_export
 from app import demo, demo_data, quality_pipeline
-from app.deps import construire_contexte_dossier, get_dossier_or_404, sse_event, structurer_sortie_strategique
+from app.deps import construire_contexte_dossier, get_dossier_or_404, libelle, sse_event, structurer_sortie_strategique
 from app.schemas.analyse import (
     ConclusionsIn,
     ConclusionsOut,
@@ -138,18 +138,18 @@ def analyser_conclusions_stream(payload: ConclusionsIn):
     est déjà instantanée) -- utiliser /conclusions dans ce cas."""
     dossier = get_dossier_or_404(payload.dossier_id) if payload.dossier_id is not None else None
     if demo.mode_demo_effectif():
-        raise HTTPException(status_code=400, detail="Le streaming n'est pas disponible en mode démo -- utilisez /api/analyse/conclusions.")
+        raise HTTPException(status_code=400, detail=libelle("streaming_indisponible_demo", endpoint="/api/analyse/conclusions"))
 
     def event_stream():
         trace: list[quality_pipeline.EtapeTrace] = []
         try:
             t0 = time.monotonic()
-            yield sse_event("etape", {"etape": "garde_fou", "libelle": "Vérification de la demande"})
+            yield sse_event("etape", {"etape": "garde_fou", "libelle": libelle("etape_verification_demande")})
             garde = quality_pipeline.executer_garde_fou(payload.texte)
             trace.append(quality_pipeline.EtapeTrace("garde_fou_entree", "ok", _duree_ms(t0), garde.get("reason", "")))
 
             t0 = time.monotonic()
-            yield sse_event("etape", {"etape": "analyse", "libelle": "Analyse des conclusions en cours"})
+            yield sse_event("etape", {"etape": "analyse", "libelle": libelle("etape_analyse_conclusions")})
             resultat = legacy_analyse.analyser_conclusions_par_moyens(payload.texte)
             trace.append(quality_pipeline.EtapeTrace("agent_principal", "ok", _duree_ms(t0)))
 
@@ -169,7 +169,7 @@ def analyser_conclusions_stream(payload: ConclusionsIn):
                 "statut": "Brouillon",
             })
 
-            yield sse_event("etape", {"etape": "verification", "libelle": "Vérification des sources et critique"})
+            yield sse_event("etape", {"etape": "verification", "libelle": libelle("etape_verification_sources_critique")})
             verification, trace_trio = quality_pipeline.executer_trio_qualite(
                 quality_pipeline.texte_pour_verification(resultat), [payload.texte], contexte_dossier
             )
@@ -205,7 +205,7 @@ def changer_statut_conclusions(analyse_id: int, payload: StatutDocumentIn):
     except db.TransitionStatutInvalide as e:
         raise HTTPException(status_code=409, detail=str(e)) from e
     if not analyse:
-        raise HTTPException(status_code=404, detail=f"Analyse {analyse_id} introuvable.")
+        raise HTTPException(status_code=404, detail=libelle("analyse_introuvable", analyse_id=analyse_id))
     return {"analyse_id": analyse_id, "statut": analyse["statut"]}
 
 
@@ -262,7 +262,7 @@ def generer_plan_stream(payload: PlanIn):
     vérification arrive ensuite dans un évènement séparé."""
     dossier = get_dossier_or_404(payload.dossier_id)
     if demo.mode_demo_effectif():
-        raise HTTPException(status_code=400, detail="Le streaming n'est pas disponible en mode démo -- utilisez /api/analyse/plan.")
+        raise HTTPException(status_code=400, detail=libelle("streaming_indisponible_demo", endpoint="/api/analyse/plan"))
 
     def event_stream():
         trace: list[quality_pipeline.EtapeTrace] = []
@@ -270,12 +270,12 @@ def generer_plan_stream(payload: PlanIn):
             contexte = construire_contexte_dossier(dossier)
 
             t0 = time.monotonic()
-            yield sse_event("etape", {"etape": "garde_fou", "libelle": "Vérification de la demande"})
+            yield sse_event("etape", {"etape": "garde_fou", "libelle": libelle("etape_verification_demande")})
             garde = quality_pipeline.executer_garde_fou(contexte)
             trace.append(quality_pipeline.EtapeTrace("garde_fou_entree", "ok", _duree_ms(t0), garde.get("reason", "")))
 
             t0 = time.monotonic()
-            yield sse_event("etape", {"etape": "analyse", "libelle": "Construction du plan de plaidoirie"})
+            yield sse_event("etape", {"etape": "analyse", "libelle": libelle("etape_construction_plan")})
             resultat_principal = legacy_analyse.generer_plan_plaidoirie(contexte, payload.temps_minutes)
             trace.append(quality_pipeline.EtapeTrace("agent_principal", "ok", _duree_ms(t0)))
 
@@ -283,7 +283,7 @@ def generer_plan_stream(payload: PlanIn):
             sections = structurer_sortie_strategique({**resultat_principal}, dossier, "plan", strategie_combative=strategie_combative)
             yield sse_event("principal", {**sections, "statut": "Brouillon"})
 
-            yield sse_event("etape", {"etape": "verification", "libelle": "Vérification des sources et critique"})
+            yield sse_event("etape", {"etape": "verification", "libelle": libelle("etape_verification_sources_critique")})
             verification, trace_trio = quality_pipeline.executer_trio_qualite(
                 quality_pipeline.texte_pour_verification(resultat_principal), [contexte], contexte
             )

@@ -36,6 +36,7 @@ from slowapi.middleware import SlowAPIMiddleware  # noqa: E402
 from slowapi.util import get_remote_address  # noqa: E402
 
 from app import demo, demo_data  # noqa: E402
+from app.deps import libelle  # noqa: E402
 from app.routers import analyse, chat, documents, dossiers, epingles, greffier, intention, jurisprudence, notes, versions  # noqa: E402
 from app.security_guard import DemandeRefusee  # noqa: E402
 
@@ -112,7 +113,7 @@ def limite_debit_handler(request: Request, exc: RateLimitExceeded):
     # slowapi/middleware.py::sync_check_limits) : un `async def` ici serait
     # silencieusement ignoré au profit du message par défaut de slowapi
     # ("Rate limit exceeded: ..."), d'où ce handler volontairement sync.
-    return JSONResponse(status_code=429, content={"detail": "Trop de requêtes depuis cette adresse — merci de patienter avant de réessayer."})
+    return JSONResponse(status_code=429, content={"detail": libelle("trop_de_requetes")})
 
 
 # --- Clé API personnelle ("Utiliser ma propre clé Anthropic") ---------------
@@ -165,7 +166,7 @@ async def langue_requete_middleware(request: Request, call_next):
 async def env_error_handler(request, exc: EnvironmentError):
     # Clé API / identifiants manquants (ANTHROPIC_API_KEY, JUDILIBRE_KEY_ID,
     # LEGIFRANCE_CLIENT_ID/SECRET...) — erreur de configuration serveur.
-    return JSONResponse(status_code=500, content={"detail": f"Erreur de configuration serveur : {exc}"})
+    return JSONResponse(status_code=500, content={"detail": libelle("erreur_configuration_serveur", erreur=exc)})
 
 
 @app.exception_handler(ValueError)
@@ -206,7 +207,7 @@ async def import_error_handler(request, exc: ImportError):
 @app.exception_handler(Exception)
 async def generic_error_handler(request, exc: Exception):
     # Filet de sécurité final : jamais de trace Python brute renvoyée au front.
-    return JSONResponse(status_code=500, content={"detail": f"Erreur interne : {exc}"})
+    return JSONResponse(status_code=500, content={"detail": libelle("erreur_interne", erreur=exc)})
 
 
 # --- Routers ------------------------------------------------------------

@@ -20,6 +20,7 @@ laisser échouer un appel Anthropic sans clé avec une erreur moins lisible.
 import os
 
 import analyse as legacy_analyse
+from app.deps import libelle
 from fastapi import HTTPException
 
 DEMO_MODE_FORCE = os.environ.get("DEMO_MODE", "").strip().lower() in ("1", "true", "yes", "on")
@@ -65,16 +66,7 @@ def exiger_cle_api():
     préenregistrée. Lève une 503 claire plutôt que de laisser _client()
     échouer avec un message moins orienté visiteur."""
     if mode_demo_effectif():
-        raise HTTPException(
-            status_code=503,
-            detail=(
-                "Cette fonctionnalité nécessite une clé API Anthropic et n'est pas disponible en mode démo. "
-                "Essayez « Analyser des conclusions », « Générer un plan de plaidoirie », "
-                "« Simuler les objections », « Chronologie automatique » ou le Chat sur le dossier de "
-                "démonstration — ou indiquez votre propre clé via « Utiliser ma propre clé Anthropic » "
-                "en pied de page."
-            ),
-        )
+        raise HTTPException(status_code=503, detail=libelle("cle_api_requise"))
 
 
 def exiger_cle_api_deepseek():
@@ -88,10 +80,4 @@ def exiger_cle_api_deepseek():
     personnelle reste bloqué ici si le serveur n'a pas de clé NVIDIA -- ce
     n'est pas un mode démo, c'est un fournisseur absent."""
     if not legacy_analyse.cle_api_deepseek_configuree():
-        raise HTTPException(
-            status_code=503,
-            detail=(
-                "Cette fonctionnalité nécessite une clé API NVIDIA (fournisseur DeepSeek, "
-                "voir NVIDIA_API_KEY) qui n'est pas configurée sur ce serveur."
-            ),
-        )
+        raise HTTPException(status_code=503, detail=libelle("cle_api_deepseek_requise"))

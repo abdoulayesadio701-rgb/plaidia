@@ -17,7 +17,7 @@ import db
 import judilibre as legacy_judilibre
 import recherche_juridique as legacy_rj
 from app import demo, quality_pipeline
-from app.deps import construire_contexte_dossier, extraire_texte_upload, structurer_sortie_strategique
+from app.deps import construire_contexte_dossier, extraire_texte_upload, libelle, structurer_sortie_strategique
 from app.security_guard import executer_garde_fou
 from app.schemas.jurisprudence import (
     CollecterIn,
@@ -45,7 +45,7 @@ def consulter(payload: ConsulterIn):
     dossier_row = db.get_dossier(payload.dossier_id)
     dossier = dict(dossier_row) if dossier_row else None
     if not dossier:
-        raise HTTPException(status_code=404, detail=f"Dossier {payload.dossier_id} introuvable.")
+        raise HTTPException(status_code=404, detail=libelle("dossier_introuvable", dossier_id=payload.dossier_id))
     # §2b du chantier "temps de traitement" : le garde-fou ne dépend en rien
     # de l'identification de notions ni de la recherche live -- il ne
     # screene que le texte brut de la question -- donc lancé EN PARALLÈLE de
@@ -161,7 +161,7 @@ def importer_texte_corpus(payload: CorpusImportIn):
     textes = db.get_corpus_en_attente()
     trouve = next((t for t in textes if t["id"] == texte_id), None)
     if not trouve:
-        raise HTTPException(status_code=500, detail="Le texte importé n'a pas pu être relu après insertion.")
+        raise HTTPException(status_code=500, detail=libelle("texte_importe_illisible"))
     return trouve
 
 
@@ -195,7 +195,7 @@ async def importer_fichier_corpus(
     textes = db.get_corpus_en_attente()
     trouve = next((t for t in textes if t["id"] == texte_id), None)
     if not trouve:
-        raise HTTPException(status_code=500, detail="Le texte importé n'a pas pu être relu après insertion.")
+        raise HTTPException(status_code=500, detail=libelle("texte_importe_illisible"))
     return trouve
 
 

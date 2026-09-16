@@ -16,6 +16,7 @@ unique utilisé par les routers.
 """
 
 import analyse as legacy_analyse
+from app.deps import libelle
 
 
 class DemandeRefusee(Exception):
@@ -40,7 +41,7 @@ def executer_garde_fou(texte: str) -> dict:
     evaluation = legacy_analyse.evaluer_garde_fou_entree(texte)
     if not evaluation.get("allowed", True):
         raise DemandeRefusee(
-            evaluation.get("reason") or "Cette demande ne peut pas être traitée.",
+            evaluation.get("reason") or libelle("demande_refusee_generique"),
             evaluation.get("risk_level", "medium"),
         )
     return evaluation

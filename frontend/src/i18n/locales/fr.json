@@ -7,7 +7,9 @@
     "chargement": "Chargement…",
     "reessayer": "Réessayer",
     "confirmer": "Confirmer",
-    "notes": "Notes"
+    "notes": "Notes",
+    "erreurStatut": "Erreur {{status}}",
+    "serveurIndisponible": "Impossible de joindre le serveur. Vérifiez que le backend est lancé (voir backend/README.md)."
   },
   "niveauRisque": {
     "Élevé": "Élevé",

@@ -14,7 +14,7 @@ navigation, les épingler créerait un raccourci vers rien.
 from app.bootstrap import ROOT_DIR  # noqa: F401
 
 import db
-from app.deps import get_dossier_or_404
+from app.deps import get_dossier_or_404, libelle
 from app.schemas.epingles import EpingleOut, EpinglerIn
 from fastapi import APIRouter, HTTPException
 
@@ -33,11 +33,11 @@ def epingler(payload: EpinglerIn):
         dossier_id = payload.reference_id
     else:  # "analyse"
         if payload.dossier_id is None:
-            raise HTTPException(status_code=422, detail="dossier_id est requis pour épingler une analyse.")
+            raise HTTPException(status_code=422, detail=libelle("dossier_id_requis_epingle"))
         get_dossier_or_404(payload.dossier_id)
         ids_valides = {a["id"] for a in db.get_analyses_for_dossier(payload.dossier_id)}
         if payload.reference_id not in ids_valides:
-            raise HTTPException(status_code=404, detail=f"Analyse {payload.reference_id} introuvable pour ce dossier.")
+            raise HTTPException(status_code=404, detail=libelle("analyse_introuvable_dossier", reference_id=payload.reference_id))
         dossier_id = payload.dossier_id
 
     existant = db.deja_epingle(payload.type, payload.reference_id)

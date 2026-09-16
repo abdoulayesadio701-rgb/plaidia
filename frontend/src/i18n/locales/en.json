@@ -7,7 +7,9 @@
     "chargement": "Loading…",
     "reessayer": "Retry",
     "confirmer": "Confirm",
-    "notes": "Notes"
+    "notes": "Notes",
+    "erreurStatut": "Error {{status}}",
+    "serveurIndisponible": "Unable to reach the server. Check that the backend is running (see backend/README.md)."
   },
   "niveauRisque": {
     "Élevé": "High",
