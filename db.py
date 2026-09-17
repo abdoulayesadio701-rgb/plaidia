@@ -187,6 +187,25 @@ CREATE TABLE IF NOT EXISTS alertes_articles_dossier (
     FOREIGN KEY (dossier_id) REFERENCES dossiers(id) ON DELETE CASCADE
 );
 
+-- Pendant de alertes_articles_dossier pour la jurisprudence, mais utilisée
+-- UNIQUEMENT par l'orchestrateur de veille du backend web (backend/app/
+-- veille.py) -- gui.py garde son propre badge de veille jurisprudence
+-- éphémère (self.notifications_veille, en mémoire) tel quel, jamais
+-- modifié. Nécessaire côté web car il n'existe pas de session unique où
+-- garder un badge en mémoire : la persistance est la seule façon pour
+-- plusieurs rechargements de page de voir la même notification tant
+-- qu'elle n'est pas acquittée.
+CREATE TABLE IF NOT EXISTS alertes_jurisprudence_dossier (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    dossier_id INTEGER NOT NULL,
+    reference TEXT NOT NULL,
+    resume TEXT,
+    source TEXT,
+    date_detection TEXT NOT NULL,
+    statut TEXT NOT NULL DEFAULT 'active',  -- "active" | "acquittee"
+    FOREIGN KEY (dossier_id) REFERENCES dossiers(id) ON DELETE CASCADE
+);
+
 CREATE TABLE IF NOT EXISTS elements_epingles (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     type TEXT NOT NULL,            -- "dossier" | "analyse" (voir app/schemas/epingles.py pour la liste à jour)
@@ -261,6 +280,7 @@ def _migrer_colonnes_manquantes(conn):
 
 
 TABLES = (
+    "alertes_jurisprudence_dossier",
     "alertes_articles_dossier",
     "articles_cites_dossier",
     "articles_surveilles",
@@ -1376,12 +1396,21 @@ def creer_alerte_article(dossier_id: int, code: str, numero: str, ancien_etat, n
     conn.close()
 
 
-def get_alertes_actives_dossier(dossier_id: int) -> list:
+def get_alertes_actives_dossier(dossier_id: int | None = None) -> list:
+    """Sans dossier_id, renvoie TOUTES les alertes actives (utilisé par le
+    badge global du backend web, voir backend/app/routers/veille.py) --
+    gui.py continue d'appeler cette fonction avec un dossier_id précis,
+    comportement inchangé."""
     conn = get_connection()
-    rows = conn.execute(
-        "SELECT * FROM alertes_articles_dossier WHERE dossier_id = ? AND statut = 'active' ORDER BY date_detection DESC",
-        (dossier_id,),
-    ).fetchall()
+    if dossier_id is not None:
+        rows = conn.execute(
+            "SELECT * FROM alertes_articles_dossier WHERE dossier_id = ? AND statut = 'active' ORDER BY date_detection DESC",
+            (dossier_id,),
+        ).fetchall()
+    else:
+        rows = conn.execute(
+            "SELECT * FROM alertes_articles_dossier WHERE statut = 'active' ORDER BY date_detection DESC"
+        ).fetchall()
     conn.close()
     return [dict(r) for r in rows]
 
@@ -1392,6 +1421,49 @@ def acquitter_alerte_article(alerte_id: int) -> None:
     ce qui a été signalé et acquitté."""
     conn = get_connection()
     conn.execute("UPDATE alertes_articles_dossier SET statut = 'acquittee' WHERE id = ?", (alerte_id,))
+    conn.commit()
+    conn.close()
+
+
+# --- Alertes de veille jurisprudence (backend web uniquement) -----------
+# Voir le commentaire sur CREATE TABLE alertes_jurisprudence_dossier plus
+# haut : pendant persistant de alertes_articles_dossier, pour le backend
+# web seulement -- gui.py garde son propre badge éphémère en mémoire.
+
+def creer_alerte_jurisprudence(dossier_id: int, reference: str, resume: str, source: str) -> None:
+    conn = get_connection()
+    deja_active = conn.execute(
+        "SELECT id FROM alertes_jurisprudence_dossier WHERE dossier_id = ? AND reference = ? AND statut = 'active'",
+        (dossier_id, reference),
+    ).fetchone()
+    if deja_active is None:
+        conn.execute(
+            "INSERT INTO alertes_jurisprudence_dossier (dossier_id, reference, resume, source, date_detection, statut) "
+            "VALUES (?, ?, ?, ?, ?, 'active')",
+            (dossier_id, reference, resume, source, datetime.now().isoformat(timespec="seconds")),
+        )
+        conn.commit()
+    conn.close()
+
+
+def get_alertes_jurisprudence_actives(dossier_id: int | None = None) -> list:
+    conn = get_connection()
+    if dossier_id is not None:
+        rows = conn.execute(
+            "SELECT * FROM alertes_jurisprudence_dossier WHERE dossier_id = ? AND statut = 'active' ORDER BY date_detection DESC",
+            (dossier_id,),
+        ).fetchall()
+    else:
+        rows = conn.execute(
+            "SELECT * FROM alertes_jurisprudence_dossier WHERE statut = 'active' ORDER BY date_detection DESC"
+        ).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+def acquitter_alerte_jurisprudence(alerte_id: int) -> None:
+    conn = get_connection()
+    conn.execute("UPDATE alertes_jurisprudence_dossier SET statut = 'acquittee' WHERE id = ?", (alerte_id,))
     conn.commit()
     conn.close()
 

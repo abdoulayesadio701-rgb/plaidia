@@ -37,7 +37,8 @@ from slowapi.util import get_remote_address  # noqa: E402
 
 from app import demo, demo_data  # noqa: E402
 from app.deps import libelle  # noqa: E402
-from app.routers import analyse, chat, documents, dossiers, epingles, greffier, intention, jurisprudence, notes, versions  # noqa: E402
+from app import veille  # noqa: E402
+from app.routers import analyse, chat, documents, dossiers, epingles, generations, greffier, intention, jurisprudence, notes, versions, veille as veille_router  # noqa: E402
 from app.security_guard import DemandeRefusee  # noqa: E402
 
 
@@ -93,6 +94,18 @@ async def lifespan(app: FastAPI):
             # bandeau...) mais base existante préservée -- on ajoute
             # seulement le dossier de démo s'il manque, sans rien effacer.
             _ensemencer_dossier_demo()
+    # Toute génération restée 'en_cours' en base ne peut être qu'un
+    # reliquat d'un arrêt brutal du serveur (redémarrage, crash) --
+    # inutile après un reset démo (la table vient d'être reconstruite
+    # vide), mais inoffensif de l'appeler dans tous les cas. Même logique
+    # que gui.py::main() côté desktop.
+    db.marquer_generations_en_cours_comme_interrompues()
+    if not demo.mode_demo_serveur():
+        # Jamais sur un déploiement de démonstration public (voir
+        # veille.executer_un_passage) -- évite aussi d'accumuler un thread
+        # de veille par instance de TestClient créée pendant les tests
+        # (DEMO_MODE=true, voir conftest.py), qui tournent tous en mode démo.
+        veille.demarrer_boucle_veille()
     yield
 
 
@@ -240,6 +253,8 @@ app.include_router(intention.router)
 app.include_router(epingles.router)
 app.include_router(versions.router)
 app.include_router(documents.router)
+app.include_router(generations.router)
+app.include_router(veille_router.router)
 
 
 @app.get("/api/health", tags=["health"])
