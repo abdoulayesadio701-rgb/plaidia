@@ -108,14 +108,9 @@ export default function DossiersPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <p className="kicker">{t("nav.sections.chemise")}</p>
-          <h1 className="mt-1 font-serif text-h2 font-semibold text-gold-500">{t("nav.chemise.dossiers")}</h1>
-        </div>
-        <Button variant="primary" onClick={() => setModalCreation(true)}>
-          ＋ {t("nouveauDossier.titre")}
-        </Button>
+      <div>
+        <p className="kicker">{t("nav.sections.chemise")}</p>
+        <h1 className="mt-1 font-serif text-h2 font-semibold text-gold-500">{t("nav.chemise.dossiers")}</h1>
       </div>
 
       <input
