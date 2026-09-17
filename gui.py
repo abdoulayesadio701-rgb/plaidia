@@ -759,6 +759,36 @@ class PlaidIAApp:
 
         tk.Label(bandeau, text="⚖ Plaid'IA", font=FONT_TITLE, fg="white", bg=NAVY).pack(side="left", padx=24)
 
+        # Icônes de statut (veille, générations, alerte loi) -- packées ICI,
+        # tout de suite après le titre, PLUTÔT QU'À CÔTÉ du nom de dossier
+        # (de longueur variable) : sur une fenêtre pas vraiment maximisée
+        # (root.state("zoomed") peut échouer silencieusement selon le poste
+        # -- voir le try/except TclError plus haut) ou une largeur d'écran
+        # réduite, le contenu du bandeau peut dépasser la largeur
+        # disponible ; tk.pack() alloue l'espace aux widgets dans l'ordre
+        # d'empaquetage, donc les derniers packés sont les premiers
+        # écrasés à zéro pixel de large -- invisibles sans qu'aucune
+        # erreur ne soit levée. Les packer en premier leur garantit
+        # toujours leur espace, quoi qu'il arrive au reste du bandeau.
+        self.bouton_veille = tk.Button(
+            bandeau, text="🔔", command=self._afficher_notifications_veille, font=("Segoe UI", 11),
+            bg=NAVY, fg="#5578A0", activebackground=NAVY, activeforeground="#5578A0", relief="flat", bd=0, cursor="hand2",
+        )
+        self.bouton_veille.pack(side="left", padx=(0, 4))
+        self.notifications_veille = []  # liste de dicts {dossier_nom, reference, resume, source}
+
+        self.bouton_generations = tk.Button(
+            bandeau, text="🔄", command=self._afficher_generations, font=("Segoe UI", 11),
+            bg=NAVY, fg="#5578A0", activebackground=NAVY, activeforeground="#5578A0", relief="flat", bd=0, cursor="hand2",
+        )
+        self.bouton_generations.pack(side="left", padx=4)
+
+        self.bouton_alerte_dossier = tk.Button(
+            bandeau, text="⚠️", command=self._afficher_alertes_articles_dossier, font=("Segoe UI", 9, "bold"),
+            bg=NAVY, fg="#5578A0", activebackground=NAVY, activeforeground="#5578A0", relief="flat", bd=0, cursor="hand2",
+        )
+        self.bouton_alerte_dossier.pack(side="left", padx=(4, 20))
+
         zone_dossier = tk.Frame(bandeau, bg=NAVY)
         zone_dossier.pack(side="left", padx=20)
 
@@ -788,43 +818,12 @@ class PlaidIAApp:
         self.combo_juridiction.pack(side="left")
         self.combo_juridiction.bind("<<ComboboxSelected>>", self._changer_juridiction)
 
-        # Badge de veille juridique — toujours visible en discret (gris
-        # bleuté), pour que la fonctionnalité soit repérable même quand
-        # rien de neuf n'a été trouvé ; devient doré et affiche un nombre
-        # dès qu'une vraie nouveauté est détectée. Vérification silencieuse
-        # au lancement, jamais intrusive, jamais de fenêtre imposée.
-        self.bouton_veille = tk.Button(
-            bandeau, text="🔔", command=self._afficher_notifications_veille, font=("Segoe UI", 11),
-            bg=NAVY, fg="#5578A0", activebackground=NAVY, activeforeground="#5578A0", relief="flat", bd=0, cursor="hand2",
-        )
-        self.bouton_veille.pack(side="left", padx=(10, 0))
-        self.notifications_veille = []  # liste de dicts {dossier_nom, reference, resume, source}
-
-        # Badge des générations en arrière-plan -- même idiome que le badge
-        # de veille juste au-dessus : toujours visible (discret au repos),
-        # doré et avec un compteur dès qu'une génération tourne ou vient de
-        # se terminer, quel que soit l'écran affiché au moment où ça arrive.
-        self.bouton_generations = tk.Button(
-            bandeau, text="🔄", command=self._afficher_generations, font=("Segoe UI", 11),
-            bg=NAVY, fg="#5578A0", activebackground=NAVY, activeforeground="#5578A0", relief="flat", bd=0, cursor="hand2",
-        )
-        self.bouton_generations.pack(side="left", padx=(10, 0))
-
+        # Nom du dossier actif -- seul élément de longueur variable posé à
+        # droite du bandeau ; les icônes de statut (🔔/🔄/⚠️, packées plus
+        # haut juste après le titre) ne sont plus à côté de ce label
+        # précisément pour ne jamais dépendre de sa longueur.
         self.label_dossier_actif = tk.Label(bandeau, text="Aucun dossier sélectionné", font=FONT_BASE, fg="#C9D6E8", bg=NAVY)
-        self.label_dossier_actif.pack(side="right", padx=(4, 24))
-
-        # Signal d'alerte "article de loi modifié" pour le dossier actif --
-        # voir veille_lois.py. Même principe que les badges 🔔/🔄 : toujours
-        # visible, en discret (gris) par défaut, seul le texte se colore et
-        # affiche un nombre quand une alerte active existe -- jamais masqué/
-        # réaffiché par pack/pack_forget, pour que sa position reste stable
-        # dans le bandeau. Recalculé à chaque changement de dossier (voir
-        # _selectionner_dossier).
-        self.bouton_alerte_dossier = tk.Button(
-            bandeau, text="⚠️", command=self._afficher_alertes_articles_dossier, font=("Segoe UI", 9, "bold"),
-            bg=NAVY, fg="#5578A0", activebackground=NAVY, activeforeground="#5578A0", relief="flat", bd=0, cursor="hand2",
-        )
-        self.bouton_alerte_dossier.pack(side="right", padx=(0, 8))
+        self.label_dossier_actif.pack(side="right", padx=24)
 
         # Barre de commande en langage naturel — la vraie signature de l'outil :
         # parler à l'agent plutôt que naviguer dans des menus.
