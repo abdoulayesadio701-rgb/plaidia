@@ -143,6 +143,50 @@ CREATE TABLE IF NOT EXISTS generations (
     FOREIGN KEY (dossier_id) REFERENCES dossiers(id) ON DELETE SET NULL
 );
 
+CREATE TABLE IF NOT EXISTS elements_veille_vus (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    dossier_id INTEGER NOT NULL,
+    type TEXT NOT NULL,            -- "jurisprudence" | "loi"
+    reference TEXT NOT NULL,       -- référence jurisprudence, ou "<code>:<numéro>" pour un article
+    date_vue TEXT NOT NULL,
+    UNIQUE(dossier_id, type, reference),
+    FOREIGN KEY (dossier_id) REFERENCES dossiers(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS articles_surveilles (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    code TEXT NOT NULL,                  -- "CP" | "CCIV" | ... (voir analyse.REGLE_BALISAGE_CITATIONS)
+    numero TEXT NOT NULL,
+    dernier_id_version TEXT,             -- LEGIARTI... vu au dernier contrôle Légifrance
+    dernier_etat TEXT,                   -- "VIGUEUR" | "ABROGE" | ... au dernier contrôle
+    derniere_verification TEXT NOT NULL, -- pour ne pas réinterroger Légifrance plus d'une fois par jour (quota API)
+    UNIQUE(code, numero)
+);
+
+CREATE TABLE IF NOT EXISTS articles_cites_dossier (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    dossier_id INTEGER NOT NULL,
+    code TEXT NOT NULL,
+    numero TEXT NOT NULL,
+    derniere_extraction TEXT NOT NULL,   -- dernier passage de veille où ce lien a été confirmé présent
+    UNIQUE(dossier_id, code, numero),
+    FOREIGN KEY (dossier_id) REFERENCES dossiers(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS alertes_articles_dossier (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    dossier_id INTEGER NOT NULL,
+    code TEXT NOT NULL,
+    numero TEXT NOT NULL,
+    ancien_etat TEXT,
+    nouvel_etat TEXT,
+    date_modification TEXT,              -- date d'effet du changement, si connue (dateDebut de la nouvelle version)
+    lien_source TEXT,                    -- URL Légifrance vers l'article à jour
+    date_detection TEXT NOT NULL,
+    statut TEXT NOT NULL DEFAULT 'active',  -- "active" | "acquittee" -- jamais résolue autrement que par acquitter_alerte_article
+    FOREIGN KEY (dossier_id) REFERENCES dossiers(id) ON DELETE CASCADE
+);
+
 CREATE TABLE IF NOT EXISTS elements_epingles (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     type TEXT NOT NULL,            -- "dossier" | "analyse" (voir app/schemas/epingles.py pour la liste à jour)
@@ -217,6 +261,10 @@ def _migrer_colonnes_manquantes(conn):
 
 
 TABLES = (
+    "alertes_articles_dossier",
+    "articles_cites_dossier",
+    "articles_surveilles",
+    "elements_veille_vus",
     "generations",
     "documents_generes",
     "versions_document",
@@ -1183,6 +1231,167 @@ def marquer_generations_en_cours_comme_interrompues() -> None:
         "WHERE statut = 'en_cours'",
         (datetime.now().isoformat(timespec="seconds"),),
     )
+    conn.commit()
+    conn.close()
+
+
+# --- Veille (jurisprudence ET lois) -------------------------------------
+#
+# Table de dédup PARTAGÉE entre les deux veilles (voir gui.py::
+# _lancer_verification_veille pour la jurisprudence, ::
+# _lancer_verification_veille_lois pour les lois -- deux threads
+# indépendants, même mécanique de "déjà vu"). Remplace get_references_vues/
+# marquer_references_vues qu'appelait déjà _lancer_verification_veille sans
+# qu'elles n'aient jamais été définies (AttributeError silencieux dans le
+# thread dès qu'un dossier obtenait un résultat Judilibre -- jamais remarqué
+# faute de clé Judilibre configurée en dev, qui fait échouer l'appel avant
+# d'atteindre ce point).
+
+def get_references_vues(dossier_id: int, type_: str = "jurisprudence") -> set:
+    conn = get_connection()
+    rows = conn.execute(
+        "SELECT reference FROM elements_veille_vus WHERE dossier_id = ? AND type = ?", (dossier_id, type_)
+    ).fetchall()
+    conn.close()
+    return {r["reference"] for r in rows}
+
+
+def marquer_references_vues(dossier_id: int, references, type_: str = "jurisprudence") -> None:
+    conn = get_connection()
+    horodatage = datetime.now().isoformat(timespec="seconds")
+    for reference in references:
+        conn.execute(
+            "INSERT INTO elements_veille_vus (dossier_id, type, reference, date_vue) VALUES (?, ?, ?, ?) "
+            "ON CONFLICT(dossier_id, type, reference) DO NOTHING",
+            (dossier_id, type_, reference, horodatage),
+        )
+    conn.commit()
+    conn.close()
+
+
+# --- Veille des lois : articles cités par dossier -----------------------
+#
+# Recalculé à chaque passage de veille (voir gui.py::
+# _lancer_verification_veille_lois) à partir des balises [ART:<numéro>:<code>]
+# déjà présentes dans le contenu généré (analyses, generations, notes) et
+# les faits bruts du dossier -- aucune extraction dédiée n'existait avant
+# ce chantier, ces balises ne servaient jusqu'ici qu'à l'affichage
+# (gui.py::_afficher). Seuls les 6 codes de REGLE_BALISAGE_CITATIONS
+# (analyse.py) sont balisés -- l'OHADA n'a pas de format de balise et n'est
+# donc pas couvert par ce lien (voir la section OHADA plus bas).
+
+def remplacer_articles_cites_dossier(dossier_id: int, articles) -> None:
+    """Remplace entièrement la liste des articles liés à ce dossier par
+    `articles` (itérable de (code, numero)) -- reflète l'état du contenu
+    généré à l'instant de l'extraction, pas un ajout cumulatif (un article
+    retiré d'une nouvelle version d'une analyse ne doit pas rester lié
+    indéfiniment)."""
+    conn = get_connection()
+    horodatage = datetime.now().isoformat(timespec="seconds")
+    conn.execute("DELETE FROM articles_cites_dossier WHERE dossier_id = ?", (dossier_id,))
+    for code, numero in articles:
+        conn.execute(
+            "INSERT INTO articles_cites_dossier (dossier_id, code, numero, derniere_extraction) VALUES (?, ?, ?, ?)",
+            (dossier_id, code, numero, horodatage),
+        )
+    conn.commit()
+    conn.close()
+
+
+def get_articles_cites_dossier(dossier_id: int) -> list:
+    conn = get_connection()
+    rows = conn.execute(
+        "SELECT code, numero FROM articles_cites_dossier WHERE dossier_id = ?", (dossier_id,)
+    ).fetchall()
+    conn.close()
+    return [(r["code"], r["numero"]) for r in rows]
+
+
+def lister_dossiers_citant_article(code: str, numero: str) -> list:
+    """Dossiers (id, nom) citant cet article -- pour savoir qui prévenir
+    quand une modification est détectée."""
+    conn = get_connection()
+    rows = conn.execute(
+        "SELECT DISTINCT d.id, d.nom FROM articles_cites_dossier a "
+        "JOIN dossiers d ON d.id = a.dossier_id WHERE a.code = ? AND a.numero = ?",
+        (code, numero),
+    ).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+def tous_articles_cites() -> list:
+    """Ensemble des (code, numero) distincts actuellement liés à au moins
+    un dossier -- c'est la liste à vérifier auprès de Légifrance à chaque
+    passage de veille."""
+    conn = get_connection()
+    rows = conn.execute("SELECT DISTINCT code, numero FROM articles_cites_dossier").fetchall()
+    conn.close()
+    return [(r["code"], r["numero"]) for r in rows]
+
+
+# --- Veille des lois : cache de dernier état connu par article ----------
+
+def get_article_surveille(code: str, numero: str):
+    conn = get_connection()
+    row = conn.execute("SELECT * FROM articles_surveilles WHERE code = ? AND numero = ?", (code, numero)).fetchone()
+    conn.close()
+    return dict(row) if row else None
+
+
+def upsert_article_surveille(code: str, numero: str, id_version, etat) -> None:
+    conn = get_connection()
+    conn.execute(
+        "INSERT INTO articles_surveilles (code, numero, dernier_id_version, dernier_etat, derniere_verification) "
+        "VALUES (?, ?, ?, ?, ?) "
+        "ON CONFLICT(code, numero) DO UPDATE SET dernier_id_version = excluded.dernier_id_version, "
+        "dernier_etat = excluded.dernier_etat, derniere_verification = excluded.derniere_verification",
+        (code, numero, id_version, etat, datetime.now().isoformat(timespec="seconds")),
+    )
+    conn.commit()
+    conn.close()
+
+
+# --- Veille des lois : alertes persistantes sur la fiche dossier --------
+#
+# Ne sont JAMAIS résolues automatiquement -- seul acquitter_alerte_article,
+# appelé depuis un bouton explicite de gui.py, change leur statut. Aucune
+# alerte ne modifie quoi que ce soit d'autre (analyse, plan, dossier) :
+# c'est strictement une information affichée, jamais une action.
+
+def creer_alerte_article(dossier_id: int, code: str, numero: str, ancien_etat, nouvel_etat, date_modification, lien_source) -> None:
+    conn = get_connection()
+    deja_active = conn.execute(
+        "SELECT id FROM alertes_articles_dossier WHERE dossier_id = ? AND code = ? AND numero = ? AND statut = 'active'",
+        (dossier_id, code, numero),
+    ).fetchone()
+    if deja_active is None:  # jamais deux alertes actives identiques pour le même dossier/article
+        conn.execute(
+            "INSERT INTO alertes_articles_dossier "
+            "(dossier_id, code, numero, ancien_etat, nouvel_etat, date_modification, lien_source, date_detection, statut) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'active')",
+            (dossier_id, code, numero, ancien_etat, nouvel_etat, date_modification, lien_source, datetime.now().isoformat(timespec="seconds")),
+        )
+        conn.commit()
+    conn.close()
+
+
+def get_alertes_actives_dossier(dossier_id: int) -> list:
+    conn = get_connection()
+    rows = conn.execute(
+        "SELECT * FROM alertes_articles_dossier WHERE dossier_id = ? AND statut = 'active' ORDER BY date_detection DESC",
+        (dossier_id,),
+    ).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+def acquitter_alerte_article(alerte_id: int) -> None:
+    """Marque une alerte comme vue/traitée -- jamais une suppression : la
+    ligne reste en base, seul son statut change, pour garder une trace de
+    ce qui a été signalé et acquitté."""
+    conn = get_connection()
+    conn.execute("UPDATE alertes_articles_dossier SET statut = 'acquittee' WHERE id = ?", (alerte_id,))
     conn.commit()
     conn.close()
 

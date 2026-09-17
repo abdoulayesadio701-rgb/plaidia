@@ -126,6 +126,61 @@ def get_article(article_id: str) -> dict:
     return resp.json()
 
 
+def verifier_article_a_jour(nom_code: str, numero: str) -> dict | None:
+    """Recherche l'état ACTUELLEMENT en vigueur d'un article (code + numéro)
+    sur Légifrance -- pour la veille des lois (voir veille_lois.py). Réutilise
+    search_texte + get_article, déjà en usage via rechercher_articles, plutôt
+    qu'un nouvel endpoint (/consult/code ou /consult/legiPart) non exercé
+    ailleurs dans ce projet.
+
+    ATTENTION -- non vérifié en direct contre l'API (pas d'accès réseau/clé
+    dans l'environnement où ce code a été écrit) : la forme exacte de la
+    réponse de get_article (champs imbriqués ou non sous "article") n'est
+    pas garantie à 100% avant un premier test contre le bac à sable PISTE.
+    Conçu pour échouer PROPREMENT (retourne None) plutôt que de faire une
+    fausse affirmation sur un texte de loi si un champ attendu manque.
+
+    Retourne {"id_version": str, "etat": str|None, "dateDebut": ..., "dateFin": ...,
+    "lien": str} pour la version actuellement en vigueur, ou None si
+    l'article n'a pas pu être retrouvé avec certitude."""
+    try:
+        resultats = search_texte(f"{nom_code} article {numero}", page_size=5)
+    except Exception:
+        return None
+
+    article_id = None
+    for hit in resultats.get("results", []):
+        for section in hit.get("sections", []):
+            for extract in section.get("extracts", []):
+                if extract.get("num") == numero and extract.get("id"):
+                    article_id = extract["id"]
+                    break
+            if article_id:
+                break
+        if article_id:
+            break
+    if not article_id:
+        return None
+
+    try:
+        detail = get_article(article_id)
+    except Exception:
+        return None
+    donnees = detail.get("article", detail)  # certaines réponses PISTE imbriquent sous "article", d'autres non
+
+    id_version = donnees.get("id") or article_id
+    if not id_version:
+        return None
+
+    return {
+        "id_version": id_version,
+        "etat": donnees.get("etat"),
+        "dateDebut": donnees.get("dateDebut"),
+        "dateFin": donnees.get("dateFin"),
+        "lien": f"https://www.legifrance.gouv.fr/codes/article_lc/{id_version}",
+    }
+
+
 def rechercher_articles(query: str, max_results: int = 5) -> list[dict]:
     """
     Recherche des articles de loi pertinents pour `query`.

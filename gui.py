@@ -354,20 +354,23 @@ class DialogueHistoriqueConversations(tk.Toplevel):
 
 
 class DialogueNotificationsVeille(tk.Toplevel):
-    """Fenêtre modale affichant les nouvelles décisions de jurisprudence
-    détectées pour les dossiers actifs — la veille juridique, consultée
-    d'un clic sur le badge 🔔, jamais imposée."""
+    """Fenêtre modale affichant les nouveautés de veille juridique détectées
+    pour les dossiers actifs -- jurisprudence (existant) ET modifications
+    d'articles de loi (voir veille_lois.py), plus le rappel OHADA le cas
+    échéant -- consultée d'un clic sur le badge 🔔, jamais imposée. Chaque
+    notification porte un "type" ("jurisprudence" | "loi" | "ohada") qui
+    détermine son rendu."""
 
     def __init__(self, parent, notifications):
         super().__init__(parent)
-        self.title("Veille juridique — nouvelles décisions")
+        self.title("Veille juridique")
         self.geometry("640x480")
         self.configure(bg=WHITE)
         self.transient(parent)
         self.grab_set()
 
         tk.Label(
-            self, text=f"{len(notifications)} nouvelle(s) décision(s) trouvée(s) pour vos dossiers actifs :",
+            self, text=f"{len(notifications)} nouveauté(s) pour vos dossiers actifs :",
             font=FONT_BASE, bg=WHITE, wraplength=600, justify="left",
         ).pack(anchor="w", padx=16, pady=(16, 8))
 
@@ -383,19 +386,116 @@ class DialogueNotificationsVeille(tk.Toplevel):
         import webbrowser
 
         for notif in notifications:
+            type_notif = notif.get("type", "jurisprudence")
             ligne = tk.Frame(frame_liste, bg=LIGHT_BG)
             ligne.pack(fill="x", pady=4, padx=(0, 12))
-            texte = f"📁 {notif['dossier_nom']}\n{notif['reference']}\n{notif['resume'][:150]}"
+
+            if type_notif == "jurisprudence":
+                texte = f"📁 {notif['dossier_nom']}\n{notif['reference']}\n{notif['resume'][:150]}"
+                lien = notif.get("source")
+            elif type_notif == "loi":
+                dossiers_txt = ", ".join(d["nom"] for d in notif["dossiers"]) or "(aucun dossier actif ne le cite plus)"
+                etats = f"{notif['ancien_etat'] or '?'} → {notif['nouvel_etat'] or '?'}"
+                texte = (
+                    f"⚠️ Article {notif['numero']} du {_CODES_LIBELLES.get(notif['code'], notif['code'])} modifié "
+                    f"({etats})\nDossier(s) concerné(s) : {dossiers_txt}"
+                )
+                lien = notif.get("lien")
+            else:  # "ohada" -- rappel global, non lié à un dossier précis (voir veille_lois.rappel_veille_ohada)
+                texte = f"📚 {notif['message']}"
+                lien = None
+
             tk.Label(ligne, text=texte, font=FONT_BASE, bg=LIGHT_BG, wraplength=420, justify="left", anchor="w").pack(
                 side="left", fill="x", expand=True, padx=8, pady=8
             )
-            if notif.get("source"):
+            zone_boutons = tk.Frame(ligne, bg=LIGHT_BG)
+            zone_boutons.pack(side="right", padx=8)
+            if lien:
                 tk.Button(
-                    ligne, text="🔗 Source", command=lambda url=notif["source"]: webbrowser.open(url),
+                    zone_boutons, text="🔗 Source", command=lambda url=lien: webbrowser.open(url),
                     font=FONT_BTN, bg=GOLD, fg="white", relief="flat",
-                ).pack(side="right", padx=8)
+                ).pack(side="top", pady=2, fill="x")
+            if type_notif == "ohada":
+                tk.Button(
+                    zone_boutons, text="Marquer vérifié", command=self._marquer_ohada_verifie,
+                    font=FONT_BTN, bg=WHITE, fg=TEXT, relief="flat",
+                ).pack(side="top", pady=2, fill="x")
 
         tk.Button(self, text="Fermer", command=self.destroy, font=FONT_BTN).pack(pady=(0, 16))
+
+    def _marquer_ohada_verifie(self):
+        import veille_lois
+        veille_lois.marquer_veille_ohada_verifiee()
+        messagebox.showinfo(
+            "Corpus OHADA",
+            "Noté : le corpus OHADA sera considéré comme revérifié à partir de maintenant. "
+            "Prochain rappel dans plusieurs mois.",
+        )
+
+
+class DialogueAlertesArticles(tk.Toplevel):
+    """Fenêtre listant les articles de loi modifiés référencés dans un
+    dossier précis -- ouverte depuis le signal « ⚠️ Loi modifiée » du
+    bandeau (voir PlaidIAApp._afficher_alertes_articles_dossier). Chaque
+    alerte ne peut être acquittée qu'explicitement (bouton « Vu, ignorer
+    cette alerte ») -- jamais automatiquement, et rien dans cette fenêtre
+    ne modifie le contenu du dossier lui-même."""
+
+    def __init__(self, parent, app, nom_dossier, alertes):
+        super().__init__(parent)
+        self.title(f"Lois modifiées — {nom_dossier}")
+        self.geometry("560x420")
+        self.configure(bg=WHITE)
+        self.transient(parent)
+        self.grab_set()
+
+        tk.Label(
+            self,
+            text=(
+                f"{len(alertes)} article(s) référencé(s) dans « {nom_dossier} » ont été modifiés depuis leur "
+                "dernière citation. Rien n'a été changé automatiquement dans vos analyses ou plans -- à vous de "
+                "vérifier et, si besoin, de relancer une génération."
+            ),
+            font=FONT_BASE, bg=WHITE, wraplength=520, justify="left",
+        ).pack(anchor="w", padx=16, pady=(16, 8))
+
+        import webbrowser
+
+        canvas = tk.Canvas(self, bg=WHITE, highlightthickness=0)
+        scrollbar = tk.Scrollbar(self, orient="vertical", command=canvas.yview)
+        frame_liste = tk.Frame(canvas, bg=WHITE)
+        frame_liste.bind("<Configure>", lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
+        canvas.create_window((0, 0), window=frame_liste, anchor="nw", width=500)
+        canvas.configure(yscrollcommand=scrollbar.set)
+        canvas.pack(side="left", fill="both", expand=True, padx=(16, 0), pady=8)
+        scrollbar.pack(side="right", fill="y", pady=8)
+
+        for alerte in alertes:
+            ligne = tk.Frame(frame_liste, bg=LIGHT_BG)
+            ligne.pack(fill="x", pady=4, padx=(0, 12))
+            etats = f"{alerte['ancien_etat'] or '?'} → {alerte['nouvel_etat'] or '?'}"
+            date_mod = f"\nDate d'effet : {alerte['date_modification']}" if alerte.get("date_modification") else ""
+            texte = f"Article {alerte['numero']} du {_CODES_LIBELLES.get(alerte['code'], alerte['code'])} ({etats}){date_mod}"
+            tk.Label(ligne, text=texte, font=FONT_BASE, bg=LIGHT_BG, wraplength=320, justify="left", anchor="w").pack(
+                side="left", fill="x", expand=True, padx=8, pady=8
+            )
+            zone_boutons = tk.Frame(ligne, bg=LIGHT_BG)
+            zone_boutons.pack(side="right", padx=8)
+            if alerte.get("lien_source"):
+                tk.Button(
+                    zone_boutons, text="🔗 Voir à jour", command=lambda url=alerte["lien_source"]: webbrowser.open(url),
+                    font=FONT_BTN, bg=GOLD, fg="white", relief="flat",
+                ).pack(side="top", pady=2, fill="x")
+            tk.Button(
+                zone_boutons, text="Vu, ignorer", command=lambda a=alerte, l=ligne: self._acquitter(app, a, l),
+                font=FONT_BTN, bg=WHITE, fg=TEXT, relief="flat",
+            ).pack(side="top", pady=2, fill="x")
+
+        tk.Button(self, text="Fermer", command=self.destroy, font=FONT_BTN).pack(pady=(0, 16))
+
+    def _acquitter(self, app, alerte, ligne):
+        app._acquitter_alerte_article(alerte["id"])
+        ligne.destroy()
 
 
 class Generation:
@@ -638,6 +738,7 @@ class PlaidIAApp:
         self._rafraichir_dossiers()
         self._rafraichir_juridictions()
         self._lancer_verification_veille()
+        self._lancer_verification_veille_lois()
 
     # ---------- Construction de l'interface ----------
     def _construire_interface(self):
@@ -700,7 +801,19 @@ class PlaidIAApp:
         self.bouton_generations.pack(side="left", padx=(10, 0))
 
         self.label_dossier_actif = tk.Label(bandeau, text="Aucun dossier sélectionné", font=FONT_BASE, fg="#C9D6E8", bg=NAVY)
-        self.label_dossier_actif.pack(side="right", padx=24)
+        self.label_dossier_actif.pack(side="right", padx=(4, 24))
+
+        # Signal d'alerte "article de loi modifié" pour le dossier actif --
+        # voir veille_lois.py. Masqué tant qu'aucune alerte active n'existe
+        # pour ce dossier précis (jamais affiché par défaut, contrairement
+        # aux badges 🔔/🔄 qui restent visibles en discret) ; recalculé à
+        # chaque changement de dossier (voir _selectionner_dossier).
+        self.bouton_alerte_dossier = tk.Button(
+            bandeau, text="⚠️ Loi modifiée", command=self._afficher_alertes_articles_dossier, font=("Segoe UI", 9, "bold"),
+            bg="#B45309", fg="white", activebackground="#92400E", activeforeground="white", relief="flat", cursor="hand2",
+        )
+        # Volontairement pas de .pack() ici -- affiché/masqué par
+        # _rafraichir_alerte_articles_dossier selon l'état du dossier actif.
 
         # Barre de commande en langage naturel — la vraie signature de l'outil :
         # parler à l'agent plutôt que naviguer dans des menus.
@@ -1025,6 +1138,7 @@ class PlaidIAApp:
                     references_ce_dossier.append(r["reference"])
                     if r["reference"] not in deja_vues:
                         nouvelles.append({
+                            "type": "jurisprudence",
                             "dossier_nom": d["nom"],
                             "dossier_id": d["id"],
                             "reference": r["reference"],
@@ -1038,19 +1152,99 @@ class PlaidIAApp:
 
         threading.Thread(target=travail, daemon=True).start()
 
+    def _lancer_verification_veille_lois(self):
+        """Vérification silencieuse et non bloquante des modifications
+        d'articles de loi référencés dans les dossiers actifs -- voir
+        veille_lois.py. Même mécanique de badge que
+        _lancer_verification_veille (jurisprudence, ci-dessus), mais thread
+        et logique entièrement séparés : construite EN PARALLÈLE, ne
+        modifie jamais son fonctionnement ni ses tables. Ne modifie non
+        plus JAMAIS le contenu d'une analyse/d'un plan/d'un dossier existant
+        -- seulement db.alertes_articles_dossier (une alerte informative)."""
+
+        def travail():
+            try:
+                import veille_lois
+            except Exception:
+                return
+            try:
+                dossiers_actifs = [dict(d) for d in db.list_dossiers() if d["statut"] == "en cours"]
+            except Exception:
+                return
+
+            # 1) Réextrait les articles [ART:...] cités par chaque dossier
+            #    actif, à partir du contenu déjà généré -- jamais réécrit,
+            #    seulement lu (analyses, generations, notes, faits bruts).
+            for d in dossiers_actifs:
+                try:
+                    textes = [d.get("faits") or ""]
+                    for a in db.get_analyses_for_dossier(d["id"]):
+                        textes.append(str(a.get("arguments") or ""))
+                        textes.append(str(a.get("points_attention") or ""))
+                    for g in db.list_generations(dossier_id=d["id"]):
+                        textes.append(str(g.get("contenu") or ""))
+                    for n in db.get_notes_dossier(d["id"]):
+                        textes.append(n.get("note_structuree") or "")
+                    db.remplacer_articles_cites_dossier(d["id"], veille_lois.extraire_articles_cites(*textes))
+                except Exception:
+                    continue
+
+            # 2) Une seule vérification Légifrance par article distinct,
+            #    même cité par plusieurs dossiers (voir veille_lois, qui
+            #    limite déjà à une vérification par jour par article).
+            nouvelles = []
+            try:
+                articles = db.tous_articles_cites()
+            except Exception:
+                articles = []
+            for code, numero in articles:
+                try:
+                    changement = veille_lois.verifier_et_detecter_changement(code, numero)
+                except Exception:
+                    continue
+                if not changement:
+                    continue
+                dossiers_concernes = db.lister_dossiers_citant_article(code, numero)
+                for dc in dossiers_concernes:
+                    db.creer_alerte_article(
+                        dc["id"], code, numero,
+                        changement["ancien_etat"], changement["nouvel_etat"],
+                        changement["date_modification"], changement["lien"],
+                    )
+                nouvelles.append({
+                    "type": "loi", "code": code, "numero": numero,
+                    "ancien_etat": changement["ancien_etat"], "nouvel_etat": changement["nouvel_etat"],
+                    "date_modification": changement["date_modification"], "lien": changement["lien"],
+                    "dossiers": dossiers_concernes,
+                })
+
+            try:
+                rappel_ohada = veille_lois.rappel_veille_ohada()
+            except Exception:
+                rappel_ohada = None
+            if rappel_ohada:
+                nouvelles.append({"type": "ohada", "message": rappel_ohada})
+
+            if nouvelles:
+                self.root.after(0, lambda: self._afficher_badge_veille(nouvelles))
+
+        threading.Thread(target=travail, daemon=True).start()
+
     def _afficher_badge_veille(self, nouvelles):
         """Rend le badge doré et affiche le nombre — au repos, il reste
-        visible en discret (voir construction du bandeau), jamais invisible."""
-        self.notifications_veille = nouvelles
-        self.bouton_veille.config(text=f"🔔 {len(nouvelles)}", fg=GOLD, activeforeground=GOLD)
+        visible en discret (voir construction du bandeau), jamais invisible.
+        Fusionne avec les notifications déjà présentes plutôt que d'écraser
+        -- jurisprudence et lois arrivent depuis deux threads indépendants,
+        pas nécessairement au même moment."""
+        self.notifications_veille = self.notifications_veille + nouvelles
+        self.bouton_veille.config(text=f"🔔 {len(self.notifications_veille)}", fg=GOLD, activeforeground=GOLD)
 
     def _afficher_notifications_veille(self):
         if not self.notifications_veille:
             messagebox.showinfo(
                 "Veille juridique",
-                "Aucune nouvelle décision pour l'instant.\n\n"
-                "La vérification se fait au lancement de l'application, pour les dossiers "
-                "« en cours » ayant un domaine renseigné.",
+                "Aucune nouveauté pour l'instant (jurisprudence ou modification de loi).\n\n"
+                "La vérification se fait au lancement de l'application, pour les dossiers « en cours ».",
             )
             return
         DialogueNotificationsVeille(self.root, self.notifications_veille)
@@ -1059,6 +1253,37 @@ class PlaidIAApp:
         # fois consulté.
         self.notifications_veille = []
         self.bouton_veille.config(text="🔔", fg="#5578A0", activeforeground="#5578A0")
+
+    def _rafraichir_alerte_articles_dossier(self):
+        """(Ré)affiche ou masque le signal « ⚠️ Loi modifiée » du bandeau
+        selon l'existence d'alertes actives pour le dossier actif -- voir
+        veille_lois.py. Recalculé à chaque changement de dossier."""
+        if self.dossier_actuel is None:
+            self.bouton_alerte_dossier.pack_forget()
+            return
+        alertes = db.get_alertes_actives_dossier(self.dossier_actuel["id"])
+        if alertes:
+            self.bouton_alerte_dossier.config(text=f"⚠️ {len(alertes)} loi(s) modifiée(s)")
+            self.bouton_alerte_dossier.pack(side="right", padx=(0, 8))
+        else:
+            self.bouton_alerte_dossier.pack_forget()
+
+    def _afficher_alertes_articles_dossier(self):
+        if self.dossier_actuel is None:
+            return
+        alertes = db.get_alertes_actives_dossier(self.dossier_actuel["id"])
+        if not alertes:
+            self._rafraichir_alerte_articles_dossier()
+            return
+        DialogueAlertesArticles(self.root, self, self.dossier_actuel["nom"], alertes)
+
+    def _acquitter_alerte_article(self, alerte_id):
+        """Marque une alerte comme vue/traitée -- appelée depuis
+        DialogueAlertesArticles. Ne modifie STRICTEMENT que le statut de
+        l'alerte : aucune analyse, aucun plan, aucun contenu du dossier
+        n'est jamais touché par cette action (voir db.acquitter_alerte_article)."""
+        db.acquitter_alerte_article(alerte_id)
+        self._rafraichir_alerte_articles_dossier()
 
     def _nouveau_dossier(self):
         dialogue = DialogueNouveauDossier(self.root)
@@ -1079,6 +1304,7 @@ class PlaidIAApp:
         for b in self.boutons_actions:
             b.config(state="normal")
         self.label_dossier_actif.config(text=f"Dossier actif : {nom}")
+        self._rafraichir_alerte_articles_dossier()
         self._afficher(f"→ Dossier sélectionné : {nom}\n", "titre")
         # Changer de dossier démarre implicitement une nouvelle conversation :
         # le contexte d'un autre dossier n'a pas de sens à mélanger ici.
@@ -1860,6 +2086,7 @@ class PlaidIAApp:
         self.dossier_var.set("")
         self._rafraichir_dossiers()
         self.label_dossier_actif.config(text="Aucun dossier sélectionné")
+        self.bouton_alerte_dossier.pack_forget()
         for b in self.boutons_actions:
             b.config(state="disabled")
         self._afficher_vue_sortie()
