@@ -177,14 +177,21 @@ Alternative avec `make` (macOS/Linux, ou Windows via WSL/Git Bash) :
 ## Tests
 
 ```bash
-# Backend (pytest, mode démo — n'appelle jamais l'API Anthropic ni la base réelle)
+# Modules métier racine (pytest — db.py, cli.py, export.py, extract.py...)
+pip install -r requirements.txt -r backend/requirements-dev.txt && pytest
+
+# Backend API (pytest, mode démo — n'appelle jamais l'API Anthropic ni la base réelle)
 cd backend && pip install -r requirements-dev.txt && pytest
 
 # Frontend (Vitest)
 cd frontend && npm install && npm test
 ```
 
-Ou les deux d'un coup depuis la racine : `npm run test` (voir `package.json`).
+Les trois d'un coup depuis la racine : `npm run test` (voir `package.json`) ou
+`make test`. Ce sont deux suites pytest distinctes (`tests/` à la racine et
+`backend/tests/`) — `pytest.ini` résout `testpaths = tests` relativement au
+répertoire d'où la commande est lancée, donc bien lancer les deux commandes
+séparément (ou passer par `npm run test`/`make test`, qui le font déjà).
 
 Voir la section "Ce qui reste imparfait" plus bas pour la portée exacte de
 cette suite de tests — volontairement minimale, pas une couverture
@@ -203,25 +210,14 @@ une fois le déploiement effectué.
 Liste honnête, à date — voir la conversation de développement pour le
 détail complet de chaque point :
 
-- **Jamais compilé/exécuté en conditions réelles** : tout le frontend a
-  été écrit et relu sans Node.js disponible dans l'environnement de
-  développement. Un premier `npm install && npm run build` réel peut
-  révéler des erreurs de type ou de compilation non détectées par simple
-  lecture.
-- **Tests frontend jamais exécutés** pour la même raison (voir
-  `frontend/src/components/__tests__/RichOutput.test.tsx`) — écrits avec
-  soin, mais pas encore validés par un vrai `npm test`.
 - **Couverture de tests backend volontairement minimale** : couvre le
   mode démo (réponses cannées, blocage 503, limite de taille, bascule clé
   personnelle) mais pas les routes CRUD complètes, pas les exports
   Word/PDF, pas le déclenchement réel du débit limite (slowapi).
-- **Barre latérale mobile** : repliée par défaut sous 768px (correctif de
-  cette session), mais reste un panneau fixe, pas un tiroir superposable —
-  encore un peu à l'étroit sur un très petit écran.
-- **Historique des conversations de chat** : l'API et le client existent
-  (`GET /api/chat/conversations`) mais aucun écran ne permet de les
-  parcourir depuis l'interface — seule la conversation en cours est
-  visible.
+- **Bundle frontend au-dessus du seuil de 500 kB** (`vite build` avertit
+  sur `index-*.js`, ~618 kB avant gzip) : pas bloquant, mais un
+  `import()` dynamique sur les écrans les moins visités réduirait le temps
+  de premier chargement.
 - **`render.yaml`/`railway.json`** validés comme YAML/JSON syntaxiquement
   corrects, pas contre le schéma réel de chaque plateforme (jamais testés
   sur un vrai compte) — une configuration manuelle de repli est documentée

@@ -76,6 +76,27 @@ def test_transitions_document_et_verrou_final(client: TestClient, dossier_demo_i
 def test_consultation_est_rattachee_au_dossier(monkeypatch, client: TestClient, dossier_demo_id: int):
     import analyse as legacy_analyse
 
+    # Le header x-anthropic-api-key ci-dessous fait sortir la requête du mode
+    # démo (voir main.py, "Utiliser ma propre clé Anthropic") : /consulter
+    # passe alors par le pipeline complet (garde-fou + trio qualité, voir
+    # quality_pipeline.executer_pipeline_complet), qui fait de vrais appels
+    # réseau à l'API Anthropic avec une clé factice si on ne mocke pas les
+    # quatre agents -- ça pendait au lieu d'échouer vite dans un environnement
+    # sans accès réseau sortant (découvert via pytest-timeout : ce test
+    # dépassait les 10s). Même mocks que _mocker_agents_qualite dans
+    # test_quality_pipeline.py.
+    monkeypatch.setattr(
+        legacy_analyse,
+        "evaluer_garde_fou_entree",
+        lambda texte: {"allowed": True, "risk_level": "low", "reason": "Demande légitime.", "requires_clarification": False},
+    )
+    monkeypatch.setattr(legacy_analyse, "verifier_juridiquement", lambda *a, **k: {"statut_global": "A_VERIFIER", "elements": []})
+    monkeypatch.setattr(legacy_analyse, "critiquer_reponse", lambda *a, **k: {"critiques": [], "synthese": ""})
+    monkeypatch.setattr(
+        legacy_analyse,
+        "valider_finalement",
+        lambda verif, crit: {"statut_global": "A_VERIFIER", "points_a_verifier": [], "points_forts": [], "synthese_utilisateur": "Synthèse."},
+    )
     monkeypatch.setattr(legacy_analyse, "identifier_notions_juridiques", lambda question, but: {"mots_cles_recherche": [], "but": but})
     monkeypatch.setattr(legacy_analyse, "consulter_jurisprudence", lambda *args, **kwargs: "Réponse sauvegardée")
     response = client.post(

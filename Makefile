@@ -24,8 +24,12 @@ dev-frontend:
 	cd frontend && npm run dev
 
 test:
+	python -m pytest
 	cd backend && python -m pytest
 	cd frontend && npm test
+
+test-legacy:
+	python -m pytest
 
 test-backend:
 	cd backend && python -m pytest
