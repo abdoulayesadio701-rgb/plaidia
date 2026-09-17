@@ -699,6 +699,13 @@ class DialogueImporterTexte(tk.Toplevel):
 
 
 class PlaidIAApp:
+    # Fréquence de re-vérification des veilles (jurisprudence + lois)
+    # PENDANT que l'app reste ouverte, pas seulement à son lancement --
+    # voir _boucle_veille. Le throttle propre à chaque article
+    # (veille_lois.DELAI_MIN_ENTRE_VERIFICATIONS_HEURES) protège le quota
+    # Légifrance indépendamment de cette fréquence.
+    INTERVALLE_VEILLE_MS = 60 * 60 * 1000  # 1 heure
+
     def __init__(self, root):
         self.root = root
         self.root.title("Plaid'IA — Assistant de préparation de plaidoirie")
@@ -733,12 +740,15 @@ class PlaidIAApp:
         # été envoyé ; sauvegarde automatique à chaque échange, sans que
         # l'avocat ait à cliquer sur « Enregistrer » (comme Claude.ai).
         self.conversation_chat_id = None
+        # Garde-fous anti-superposition des veilles (voir _boucle_veille) --
+        # évitent qu'un cycle démarre alors que le précédent tourne encore.
+        self._veille_jurisprudence_en_cours = False
+        self._veille_lois_en_cours = False
 
         self._construire_interface()
         self._rafraichir_dossiers()
         self._rafraichir_juridictions()
-        self._lancer_verification_veille()
-        self._lancer_verification_veille_lois()
+        self._boucle_veille()
 
     # ---------- Construction de l'interface ----------
     def _construire_interface(self):
@@ -1106,49 +1116,62 @@ class PlaidIAApp:
         db.set_parametre("juridiction_active", nouvelle)
 
     def _lancer_verification_veille(self):
-        """Vérification silencieuse et non bloquante, au lancement de
-        l'application, de l'existence de jurisprudence nouvelle liée aux
-        dossiers actifs — sur le modèle d'une application moderne (badge
-        discret, jamais de fenêtre imposée). Si Judilibre n'est pas
-        configuré, ou en cas d'erreur réseau, échoue silencieusement :
-        cette vérification en arrière-plan ne doit jamais perturber le
-        lancement normal de l'application ni afficher d'erreur intrusive."""
+        """Vérification silencieuse et non bloquante de l'existence de
+        jurisprudence nouvelle liée aux dossiers actifs — sur le modèle
+        d'une application moderne (badge discret, jamais de fenêtre
+        imposée). Si Judilibre n'est pas configuré, ou en cas d'erreur
+        réseau, échoue silencieusement : cette vérification en
+        arrière-plan ne doit jamais perturber l'usage normal de
+        l'application ni afficher d'erreur intrusive.
+
+        Relancée toutes les INTERVALLE_VEILLE_MS millisecondes tant que
+        l'app reste ouverte (voir _boucle_veille), pas seulement au
+        lancement -- un garde-fou (_veille_jurisprudence_en_cours) évite
+        de superposer deux vérifications si l'une n'est pas encore
+        terminée quand la suivante devrait démarrer (ne devrait pas
+        arriver à l'intervalle choisi, mais coûte rien à prévenir)."""
+        if self._veille_jurisprudence_en_cours:
+            return
+        self._veille_jurisprudence_en_cours = True
 
         def travail():
             try:
-                import judilibre
-            except Exception:
-                return
-
-            try:
-                dossiers = db.list_dossiers()
-            except Exception:
-                return
-
-            dossiers_actifs = [dict(d) for d in dossiers if d["statut"] == "en cours" and d["domaine"]][:5]
-            nouvelles = []
-            for d in dossiers_actifs:
                 try:
-                    resultats = judilibre.collecter_jurisprudence(query=d["domaine"], max_results=5)
+                    import judilibre
                 except Exception:
-                    continue
-                deja_vues = db.get_references_vues(d["id"])
-                references_ce_dossier = []
-                for r in resultats:
-                    references_ce_dossier.append(r["reference"])
-                    if r["reference"] not in deja_vues:
-                        nouvelles.append({
-                            "type": "jurisprudence",
-                            "dossier_nom": d["nom"],
-                            "dossier_id": d["id"],
-                            "reference": r["reference"],
-                            "resume": r["resume"],
-                            "source": r["source"],
-                        })
-                db.marquer_references_vues(d["id"], references_ce_dossier)
+                    return
 
-            if nouvelles:
-                self.root.after(0, lambda: self._afficher_badge_veille(nouvelles))
+                try:
+                    dossiers = db.list_dossiers()
+                except Exception:
+                    return
+
+                dossiers_actifs = [dict(d) for d in dossiers if d["statut"] == "en cours" and d["domaine"]][:5]
+                nouvelles = []
+                for d in dossiers_actifs:
+                    try:
+                        resultats = judilibre.collecter_jurisprudence(query=d["domaine"], max_results=5)
+                    except Exception:
+                        continue
+                    deja_vues = db.get_references_vues(d["id"])
+                    references_ce_dossier = []
+                    for r in resultats:
+                        references_ce_dossier.append(r["reference"])
+                        if r["reference"] not in deja_vues:
+                            nouvelles.append({
+                                "type": "jurisprudence",
+                                "dossier_nom": d["nom"],
+                                "dossier_id": d["id"],
+                                "reference": r["reference"],
+                                "resume": r["resume"],
+                                "source": r["source"],
+                            })
+                    db.marquer_references_vues(d["id"], references_ce_dossier)
+
+                if nouvelles:
+                    self.root.after(0, lambda: self._afficher_badge_veille(nouvelles))
+            finally:
+                self._veille_jurisprudence_en_cours = False
 
         threading.Thread(target=travail, daemon=True).start()
 
@@ -1160,75 +1183,103 @@ class PlaidIAApp:
         et logique entièrement séparés : construite EN PARALLÈLE, ne
         modifie jamais son fonctionnement ni ses tables. Ne modifie non
         plus JAMAIS le contenu d'une analyse/d'un plan/d'un dossier existant
-        -- seulement db.alertes_articles_dossier (une alerte informative)."""
+        -- seulement db.alertes_articles_dossier (une alerte informative).
+
+        Relancée toutes les INTERVALLE_VEILLE_MS millisecondes tant que
+        l'app reste ouverte (voir _boucle_veille), pas seulement au
+        lancement -- même garde-fou anti-superposition que
+        _lancer_verification_veille (_veille_lois_en_cours) ; le throttle
+        par article (veille_lois.DELAI_MIN_ENTRE_VERIFICATIONS_HEURES)
+        continue de protéger le quota Légifrance indépendamment de la
+        fréquence de cette boucle."""
+        if self._veille_lois_en_cours:
+            return
+        self._veille_lois_en_cours = True
 
         def travail():
             try:
-                import veille_lois
-            except Exception:
-                return
-            try:
-                dossiers_actifs = [dict(d) for d in db.list_dossiers() if d["statut"] == "en cours"]
-            except Exception:
-                return
-
-            # 1) Réextrait les articles [ART:...] cités par chaque dossier
-            #    actif, à partir du contenu déjà généré -- jamais réécrit,
-            #    seulement lu (analyses, generations, notes, faits bruts).
-            for d in dossiers_actifs:
                 try:
-                    textes = [d.get("faits") or ""]
-                    for a in db.get_analyses_for_dossier(d["id"]):
-                        textes.append(str(a.get("arguments") or ""))
-                        textes.append(str(a.get("points_attention") or ""))
-                    for g in db.list_generations(dossier_id=d["id"]):
-                        textes.append(str(g.get("contenu") or ""))
-                    for n in db.get_notes_dossier(d["id"]):
-                        textes.append(n.get("note_structuree") or "")
-                    db.remplacer_articles_cites_dossier(d["id"], veille_lois.extraire_articles_cites(*textes))
+                    import veille_lois
                 except Exception:
-                    continue
-
-            # 2) Une seule vérification Légifrance par article distinct,
-            #    même cité par plusieurs dossiers (voir veille_lois, qui
-            #    limite déjà à une vérification par jour par article).
-            nouvelles = []
-            try:
-                articles = db.tous_articles_cites()
-            except Exception:
-                articles = []
-            for code, numero in articles:
+                    return
                 try:
-                    changement = veille_lois.verifier_et_detecter_changement(code, numero)
+                    dossiers_actifs = [dict(d) for d in db.list_dossiers() if d["statut"] == "en cours"]
                 except Exception:
-                    continue
-                if not changement:
-                    continue
-                dossiers_concernes = db.lister_dossiers_citant_article(code, numero)
-                for dc in dossiers_concernes:
-                    db.creer_alerte_article(
-                        dc["id"], code, numero,
-                        changement["ancien_etat"], changement["nouvel_etat"],
-                        changement["date_modification"], changement["lien"],
-                    )
-                nouvelles.append({
-                    "type": "loi", "code": code, "numero": numero,
-                    "ancien_etat": changement["ancien_etat"], "nouvel_etat": changement["nouvel_etat"],
-                    "date_modification": changement["date_modification"], "lien": changement["lien"],
-                    "dossiers": dossiers_concernes,
-                })
+                    return
 
-            try:
-                rappel_ohada = veille_lois.rappel_veille_ohada()
-            except Exception:
-                rappel_ohada = None
-            if rappel_ohada:
-                nouvelles.append({"type": "ohada", "message": rappel_ohada})
+                # 1) Réextrait les articles [ART:...] cités par chaque dossier
+                #    actif, à partir du contenu déjà généré -- jamais réécrit,
+                #    seulement lu (analyses, generations, notes, faits bruts).
+                for d in dossiers_actifs:
+                    try:
+                        textes = [d.get("faits") or ""]
+                        for a in db.get_analyses_for_dossier(d["id"]):
+                            textes.append(str(a.get("arguments") or ""))
+                            textes.append(str(a.get("points_attention") or ""))
+                        for g in db.list_generations(dossier_id=d["id"]):
+                            textes.append(str(g.get("contenu") or ""))
+                        for n in db.get_notes_dossier(d["id"]):
+                            textes.append(n.get("note_structuree") or "")
+                        db.remplacer_articles_cites_dossier(d["id"], veille_lois.extraire_articles_cites(*textes))
+                    except Exception:
+                        continue
 
-            if nouvelles:
-                self.root.after(0, lambda: self._afficher_badge_veille(nouvelles))
+                # 2) Une seule vérification Légifrance par article distinct,
+                #    même cité par plusieurs dossiers (voir veille_lois, qui
+                #    limite déjà à une vérification par jour par article).
+                nouvelles = []
+                try:
+                    articles = db.tous_articles_cites()
+                except Exception:
+                    articles = []
+                for code, numero in articles:
+                    try:
+                        changement = veille_lois.verifier_et_detecter_changement(code, numero)
+                    except Exception:
+                        continue
+                    if not changement:
+                        continue
+                    dossiers_concernes = db.lister_dossiers_citant_article(code, numero)
+                    for dc in dossiers_concernes:
+                        db.creer_alerte_article(
+                            dc["id"], code, numero,
+                            changement["ancien_etat"], changement["nouvel_etat"],
+                            changement["date_modification"], changement["lien"],
+                        )
+                    nouvelles.append({
+                        "type": "loi", "code": code, "numero": numero,
+                        "ancien_etat": changement["ancien_etat"], "nouvel_etat": changement["nouvel_etat"],
+                        "date_modification": changement["date_modification"], "lien": changement["lien"],
+                        "dossiers": dossiers_concernes,
+                    })
+
+                try:
+                    rappel_ohada = veille_lois.rappel_veille_ohada()
+                except Exception:
+                    rappel_ohada = None
+                if rappel_ohada:
+                    nouvelles.append({"type": "ohada", "message": rappel_ohada})
+
+                if nouvelles:
+                    self.root.after(0, lambda: self._afficher_badge_veille(nouvelles))
+            finally:
+                self._veille_lois_en_cours = False
 
         threading.Thread(target=travail, daemon=True).start()
+
+    def _boucle_veille(self):
+        """Relance les deux veilles (jurisprudence + lois) toutes les
+        INTERVALLE_VEILLE_MS millisecondes tant que l'app reste ouverte --
+        pas seulement au lancement, pour que le badge/l'alerte apparaissent
+        sans attendre un redémarrage. Chaque veille garde sa propre
+        protection anti-répétition (db.elements_veille_vus pour la
+        jurisprudence, db.articles_surveilles avec son throttle quotidien
+        par article pour les lois) : relancer souvent ne duplique jamais
+        une notification déjà vue, ça raccourcit seulement le délai avant
+        qu'une vraie nouveauté ne soit détectée."""
+        self._lancer_verification_veille()
+        self._lancer_verification_veille_lois()
+        self.root.after(self.INTERVALLE_VEILLE_MS, self._boucle_veille)
 
     def _afficher_badge_veille(self, nouvelles):
         """Rend le badge doré et affiche le nombre — au repos, il reste
