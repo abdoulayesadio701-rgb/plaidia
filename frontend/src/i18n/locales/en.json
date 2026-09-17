@@ -859,6 +859,7 @@
     "conversationSansTitre": "Untitled conversation",
     "echecImportFichier": "Failed to import the file.",
     "echecCopie": "Unable to copy - clipboard unavailable in this context.",
+    "reglages": "Settings",
     "rechercheLive": "Live Legifrance / Judilibre search",
     "nouvelleConversation": "New conversation",
     "videConsigne": "Type your question below. The conversation stays active until you click \"{{nouvelleConversation}}\".",

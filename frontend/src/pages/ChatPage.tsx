@@ -61,6 +61,7 @@ export default function ChatPage() {
   const pousserToast = useAppStore((s) => s.pousserToast);
 
   const [texte, setTexte] = useState("");
+  const [reglagesOuverts, setReglagesOuverts] = useState(true);
   const [rechercheLive, setRechercheLive] = useState(false);
   const [genererEnCours, setGenererEnCours] = useState(false);
   const [statutRecherche, setStatutRecherche] = useState<StatutRecherche | null>(null);
@@ -274,27 +275,45 @@ export default function ChatPage() {
 
   return (
     <div className="flex h-full flex-col">
-      {/* En-tête de la vue chat */}
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3 border-b border-gold-600/15 pb-4">
-        <label className="flex cursor-pointer items-center gap-2.5 text-sm text-warmgray">
-          <button
-            type="button"
-            role="switch"
-            aria-checked={rechercheLive}
-            onClick={() => setRechercheLive((v) => !v)}
-            className={`relative h-5 w-9 shrink-0 rounded-pill transition-colors ${rechercheLive ? "bg-amethyst-400" : "bg-surface-3"}`}
-          >
-            <span
-              className={`absolute top-0.5 h-4 w-4 rounded-pill bg-ivory transition-transform ${
-                rechercheLive ? "translate-x-[18px]" : "translate-x-0.5"
-              }`}
-            />
-          </button>
-          {t("chatPage.rechercheLive")}
-        </label>
-        <Button variant="ghost" onClick={nouvelleConversation}>
-          🔄 {t("chatPage.nouvelleConversation")}
-        </Button>
+      {/* En-tête de la vue chat -- rideau repliable (déplié par défaut) pour
+          libérer de la place à l'écran sans faire disparaître les réglages :
+          un clic sur le chevron suffit à les retrouver. */}
+      <div className="mb-4 border-b border-gold-600/15 pb-4">
+        <button
+          type="button"
+          onClick={() => setReglagesOuverts((v) => !v)}
+          className="flex items-center gap-1.5 text-xs font-medium text-warmgray transition-colors hover:text-ivory"
+          aria-expanded={reglagesOuverts}
+        >
+          <span className={`transition-transform duration-200 ${reglagesOuverts ? "rotate-180" : ""}`} aria-hidden="true">
+            ▾
+          </span>
+          {t("chatPage.reglages")}
+        </button>
+
+        {reglagesOuverts && (
+          <div className="mt-3 flex animate-[rise_0.2s_ease] flex-wrap items-center justify-between gap-3">
+            <label className="flex cursor-pointer items-center gap-2.5 text-sm text-warmgray">
+              <button
+                type="button"
+                role="switch"
+                aria-checked={rechercheLive}
+                onClick={() => setRechercheLive((v) => !v)}
+                className={`relative h-5 w-9 shrink-0 rounded-pill transition-colors ${rechercheLive ? "bg-amethyst-400" : "bg-surface-3"}`}
+              >
+                <span
+                  className={`absolute top-0.5 h-4 w-4 rounded-pill bg-ivory transition-transform ${
+                    rechercheLive ? "translate-x-[18px]" : "translate-x-0.5"
+                  }`}
+                />
+              </button>
+              {t("chatPage.rechercheLive")}
+            </label>
+            <Button variant="ghost" onClick={nouvelleConversation}>
+              🔄 {t("chatPage.nouvelleConversation")}
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* Fil de discussion */}

@@ -859,6 +859,7 @@
     "conversationSansTitre": "Conversation sans titre",
     "echecImportFichier": "Échec de l'import du fichier.",
     "echecCopie": "Impossible de copier — presse-papiers indisponible dans ce contexte.",
+    "reglages": "Réglages",
     "rechercheLive": "Recherche live Légifrance / Judilibre",
     "nouvelleConversation": "Nouvelle conversation",
     "videConsigne": "Formulez votre question ci-dessous. La conversation demeure active tant que vous ne cliquez pas sur « {{nouvelleConversation}} ».",
