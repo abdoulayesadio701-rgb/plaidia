@@ -866,5 +866,57 @@
     "codeAcces": "Code d'acces",
     "clefInvitation": "Clef d'invitation",
     "codeOublie": "Code oublie ? Demander un acces"
+  },
+  "domaine": {
+    "Prud'hommes": "Prud'hommes",
+    "Pénal": "Pénal",
+    "Civil": "Civil",
+    "Commercial": "Commercial",
+    "Bail commercial": "Bail commercial",
+    "Famille / Divorce": "Famille / Divorce",
+    "Administratif": "Administratif",
+    "Social": "Social",
+    "Immobilier": "Immobilier",
+    "Autre": "Autre"
+  },
+  "stadeProcedure": {
+    "Première instance": "Première instance",
+    "Appel": "Appel",
+    "Cassation": "Cassation"
+  },
+  "posture": {
+    "Prévenu": "Prévenu",
+    "Accusé": "Accusé",
+    "Mis en examen": "Mis en examen",
+    "Partie civile": "Partie civile",
+    "Ministère public": "Ministère public",
+    "Employeur": "Employeur",
+    "Salarié": "Salarié",
+    "Demandeur": "Demandeur",
+    "Défendeur": "Défendeur",
+    "Créancier": "Créancier",
+    "Débiteur": "Débiteur",
+    "Requérant": "Requérant",
+    "Administration défenderesse": "Administration défenderesse",
+    "Assuré": "Assuré",
+    "Organisme social": "Organisme social",
+    "Autre": "Autre"
+  },
+  "sourceCorpus": {
+    "OHADA": "OHADA",
+    "Union européenne": "Union européenne",
+    "Sénégal": "Sénégal",
+    "CEDEAO": "CEDEAO",
+    "CEDH": "CEDH",
+    "Autre": "Autre"
+  },
+  "typeTexteCorpus": {
+    "Loi": "Loi",
+    "Règlement": "Règlement",
+    "Traité": "Traité",
+    "Directive": "Directive",
+    "Convention": "Convention",
+    "Jurisprudence": "Jurisprudence",
+    "Autre": "Autre"
   }
 }

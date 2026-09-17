@@ -83,7 +83,7 @@ export default function GererJurisprudencePage() {
           <option value="">{t("gererJurisprudence.tousLesDomaines")}</option>
           {DOMAINES.map((d) => (
             <option key={d} value={d}>
-              {d}
+              {t(`domaine.${d}`, d)}
             </option>
           ))}
         </select>

@@ -866,5 +866,57 @@
     "codeAcces": "Access code",
     "clefInvitation": "Invitation key",
     "codeOublie": "Forgot your code? Request access"
+  },
+  "domaine": {
+    "Prud'hommes": "Labour law",
+    "Pénal": "Criminal",
+    "Civil": "Civil",
+    "Commercial": "Commercial",
+    "Bail commercial": "Commercial lease",
+    "Famille / Divorce": "Family / Divorce",
+    "Administratif": "Administrative",
+    "Social": "Social security",
+    "Immobilier": "Real estate",
+    "Autre": "Other"
+  },
+  "stadeProcedure": {
+    "Première instance": "First instance",
+    "Appel": "Appeal",
+    "Cassation": "Cassation (Supreme Court)"
+  },
+  "posture": {
+    "Prévenu": "Defendant (misdemeanor court)",
+    "Accusé": "Defendant (assize court)",
+    "Mis en examen": "Person under judicial investigation",
+    "Partie civile": "Civil party",
+    "Ministère public": "Public prosecutor",
+    "Employeur": "Employer",
+    "Salarié": "Employee",
+    "Demandeur": "Claimant",
+    "Défendeur": "Defendant",
+    "Créancier": "Creditor",
+    "Débiteur": "Debtor",
+    "Requérant": "Applicant",
+    "Administration défenderesse": "Respondent authority",
+    "Assuré": "Insured party",
+    "Organisme social": "Social security body",
+    "Autre": "Other"
+  },
+  "sourceCorpus": {
+    "OHADA": "OHADA",
+    "Union européenne": "European Union",
+    "Sénégal": "Senegal",
+    "CEDEAO": "ECOWAS",
+    "CEDH": "ECHR",
+    "Autre": "Other"
+  },
+  "typeTexteCorpus": {
+    "Loi": "Statute",
+    "Règlement": "Regulation",
+    "Traité": "Treaty",
+    "Directive": "Directive",
+    "Convention": "Convention",
+    "Jurisprudence": "Case law",
+    "Autre": "Other"
   }
 }

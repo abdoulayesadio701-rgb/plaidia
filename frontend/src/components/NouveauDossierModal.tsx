@@ -97,14 +97,14 @@ export default function NouveauDossierModal({ onFermer, onCree, nomInitial = "" 
           <label htmlFor="nd-partie" className="mb-1.5 block text-sm text-warmgray">{t("nouveauDossier.partieRepresentee")}</label>
           <select id="nd-partie" className="input" value={partieRepresentee} onChange={(e) => setPartieRepresentee(e.target.value)}>
             <option value="">{t("modifierDomaine.nonPreciseeF")}</option>
-            {posturesPourDomaine(domaine).map((partie) => <option key={partie} value={partie}>{partie}</option>)}
+            {posturesPourDomaine(domaine).map((partie) => <option key={partie} value={partie}>{t(`posture.${partie}`, partie)}</option>)}
           </select>
         </div>
         <div>
           <label htmlFor="nd-stade" className="mb-1.5 block text-sm text-warmgray">{t("nouveauDossier.stade")}</label>
           <select id="nd-stade" className="input" value={stadeProcedure} onChange={(e) => setStadeProcedure(e.target.value)}>
             <option value="">{t("modifierDomaine.nonPrecise")}</option>
-            {STADES_PROCEDURE.map((stade) => <option key={stade} value={stade}>{stade}</option>)}
+            {STADES_PROCEDURE.map((stade) => <option key={stade} value={stade}>{t(`stadeProcedure.${stade}`, stade)}</option>)}
           </select>
         </div>
         <div>
@@ -125,7 +125,7 @@ export default function NouveauDossierModal({ onFermer, onCree, nomInitial = "" 
             <option value="">{t("modifierDomaine.nonPrecise")}</option>
             {DOMAINES.map((d) => (
               <option key={d} value={d}>
-                {d}
+                {t(`domaine.${d}`, d)}
               </option>
             ))}
           </select>

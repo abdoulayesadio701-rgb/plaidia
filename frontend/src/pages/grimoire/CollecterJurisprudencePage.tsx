@@ -58,7 +58,7 @@ export default function CollecterJurisprudencePage() {
           <input id="cj-domaine" list="cj-domaines" className="input" value={domaine} onChange={(e) => setDomaine(e.target.value)} disabled={loading} />
           <datalist id="cj-domaines">
             {DOMAINES.map((d) => (
-              <option key={d} value={d} />
+              <option key={d} value={d} label={t(`domaine.${d}`, d)} />
             ))}
           </datalist>
         </div>

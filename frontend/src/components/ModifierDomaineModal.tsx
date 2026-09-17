@@ -57,7 +57,7 @@ export default function ModifierDomaineModal({ dossier, onFermer }: ModifierDoma
             <option value="">{t("modifierDomaine.nonPrecise")}</option>
             {DOMAINES.map((d) => (
               <option key={d} value={d}>
-                {d}
+                {t(`domaine.${d}`, d)}
               </option>
             ))}
           </select>
@@ -66,14 +66,14 @@ export default function ModifierDomaineModal({ dossier, onFermer }: ModifierDoma
           <label htmlFor="md-partie" className="mb-1.5 block text-sm text-warmgray">{t("modifierDomaine.partieRepresentee")}</label>
           <select id="md-partie" className="input" value={partieRepresentee} onChange={(e) => setPartieRepresentee(e.target.value)}>
             <option value="">{t("modifierDomaine.nonPreciseeF")}</option>
-            {posturesPourDomaine(domaine).map((partie) => <option key={partie} value={partie}>{partie}</option>)}
+            {posturesPourDomaine(domaine).map((partie) => <option key={partie} value={partie}>{t(`posture.${partie}`, partie)}</option>)}
           </select>
         </div>
         <div>
           <label htmlFor="md-stade" className="mb-1.5 block text-sm text-warmgray">{t("modifierDomaine.stade")}</label>
           <select id="md-stade" className="input" value={stadeProcedure} onChange={(e) => setStadeProcedure(e.target.value)}>
             <option value="">{t("modifierDomaine.nonPrecise")}</option>
-            {STADES_PROCEDURE.map((stade) => <option key={stade} value={stade}>{stade}</option>)}
+            {STADES_PROCEDURE.map((stade) => <option key={stade} value={stade}>{t(`stadeProcedure.${stade}`, stade)}</option>)}
           </select>
         </div>
         <div>

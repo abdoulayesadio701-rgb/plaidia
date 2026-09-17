@@ -142,7 +142,7 @@ function ImporterTexteSection() {
               <select id="it-source" className="input" value={source} onChange={(e) => setSource(e.target.value)}>
                 {SOURCES_CORPUS.map((s) => (
                   <option key={s} value={s}>
-                    {s}
+                    {t(`sourceCorpus.${s}`, s)}
                   </option>
                 ))}
               </select>
@@ -168,7 +168,7 @@ function ImporterTexteSection() {
               <input id="it-type" list="it-types" className="input" value={typeTexte} onChange={(e) => setTypeTexte(e.target.value)} />
               <datalist id="it-types">
                 {TYPES_TEXTE_CORPUS.map((tt) => (
-                  <option key={tt} value={tt} />
+                  <option key={tt} value={tt} label={t(`typeTexteCorpus.${tt}`, tt)} />
                 ))}
               </datalist>
             </div>
@@ -179,7 +179,7 @@ function ImporterTexteSection() {
               <input id="it-domaine" list="it-domaines" className="input" value={domaine} onChange={(e) => setDomaine(e.target.value)} />
               <datalist id="it-domaines">
                 {DOMAINES.map((d) => (
-                  <option key={d} value={d} />
+                  <option key={d} value={d} label={t(`domaine.${d}`, d)} />
                 ))}
               </datalist>
             </div>
@@ -372,7 +372,7 @@ function GererCorpusSection() {
               <option value="">{t("gererCorpus.toutesLesSources")}</option>
               {SOURCES_CORPUS.filter((s) => s !== "Autre").map((s) => (
                 <option key={s} value={s}>
-                  {s}
+                  {t(`sourceCorpus.${s}`, s)}
                 </option>
               ))}
             </select>
@@ -381,7 +381,7 @@ function GererCorpusSection() {
               <option value="">{t("gererJurisprudence.tousLesDomaines")}</option>
               {DOMAINES.map((d) => (
                 <option key={d} value={d}>
-                  {d}
+                  {t(`domaine.${d}`, d)}
                 </option>
               ))}
             </select>
