@@ -387,6 +387,52 @@ def _reparer_json_tronque(raw: str) -> dict | None:
         return None
 
 
+def _echapper_guillemets_internes(raw: str) -> str:
+    """Échappe les guillemets droits internes non échappés dans les valeurs
+    de chaîne (cas réel observé, distinct d'une troncature par budget --
+    voir _reparer_json_tronque : le modèle cite des propos ou une
+    qualification juridique, ex. la "légitime défense", sans échapper les
+    guillemets qui l'entourent, ce qui casse le JSON dès ce point plutôt
+    qu'à la fin de la génération).
+
+    Heuristique : à l'intérieur d'une chaîne, un guillemet n'est traité
+    comme une fermeture légitime que s'il est suivi (après espaces) d'un
+    délimiteur structurel JSON (`,` `:` `}` `]`) ou de la fin du texte --
+    sinon c'est un guillemet interne, à échapper plutôt qu'à interpréter
+    comme la fin de la chaîne. Laisse intact tout ce qui est hors chaîne et
+    toute séquence déjà échappée."""
+    resultat = []
+    en_chaine = False
+    echappement = False
+    n = len(raw)
+    for i, c in enumerate(raw):
+        if not en_chaine:
+            resultat.append(c)
+            if c == '"':
+                en_chaine = True
+            continue
+        if echappement:
+            resultat.append(c)
+            echappement = False
+            continue
+        if c == "\\":
+            resultat.append(c)
+            echappement = True
+            continue
+        if c == '"':
+            j = i + 1
+            while j < n and raw[j] in " \t\r\n":
+                j += 1
+            if j >= n or raw[j] in ",:}]":
+                resultat.append(c)
+                en_chaine = False
+            else:
+                resultat.append('\\"')
+            continue
+        resultat.append(c)
+    return "".join(resultat)
+
+
 def _appeler_modele(type_tache: TypeTache, system: str, messages: list[dict], max_tokens: int) -> str:
     """Point d'entrée unique pour les fonctions qui veulent router leur
     appel selon la tâche plutôt que d'appeler _client() directement --
@@ -959,14 +1005,25 @@ def rediger_note_client(contexte_dossier: str) -> str:
 
 def _resultat_depuis_appel(appel) -> dict:
     """Nettoie/parse la réponse d'un appel modèle, avec réparation si elle
-    est signalée ou détectée comme tronquée -- factorisé pour être appliqué
+    est signalée ou détectée comme tronquée, ou si des guillemets internes
+    non échappés cassent le JSON -- factorisé pour être appliqué
     identiquement à l'appel principal (DeepSeek) et au repli (Claude) dans
     resumer_dossier(). `appel` est un callable sans argument qui renvoie le
-    texte brut ou lève ReponseTronqueeError."""
+    texte brut ou lève ReponseTronqueeError.
+
+    Deux défauts distincts peuvent rendre la réponse non-JSON, avec chacun
+    leur réparation (voir _reparer_json_tronque et
+    _echapper_guillemets_internes) -- et parfois les deux à la fois (un
+    guillemet interne plus tôt dans la réponse, puis une troncature par
+    budget plus loin), d'où l'essai des deux réparations combinées en tout
+    dernier recours avant d'abandonner."""
     try:
         raw = appel()
     except ReponseTronqueeError as e:
         repare = _reparer_json_tronque(e.raw)
+        if repare is not None:
+            return repare
+        repare = _reparer_json_tronque(_echapper_guillemets_internes(e.raw))
         if repare is not None:
             return repare
         raise
@@ -975,6 +1032,14 @@ def _resultat_depuis_appel(appel) -> dict:
         return json.loads(raw)
     except json.JSONDecodeError:
         repare = _reparer_json_tronque(raw)
+        if repare is not None:
+            return repare
+        raw_echappe = _echapper_guillemets_internes(raw)
+        try:
+            return json.loads(raw_echappe)
+        except json.JSONDecodeError:
+            pass
+        repare = _reparer_json_tronque(raw_echappe)
         if repare is not None:
             return repare
         raise

@@ -277,6 +277,46 @@ def test_reparer_json_tronque_renvoie_none_si_pas_coupe_en_plein_milieu_dune_cha
     assert legacy_analyse._reparer_json_tronque("pas du JSON du tout") is None
 
 
+# --- Guillemets internes non échappés (_echapper_guillemets_internes) -------
+
+def test_echapper_guillemets_internes_repare_une_citation_non_echappee():
+    """Cas réel : le modèle cite une qualification juridique entre
+    guillemets droits sans les échapper, ce qui casse le JSON à cet endroit
+    précis -- pas en fin de génération, donc _reparer_json_tronque (qui ne
+    couvre qu'une coupure en plein milieu de chaîne) ne peut rien pour ce
+    cas-là."""
+    brut = '{"resume_court": "Il invoque la "legitime defense".", "points_cles": [], "elements_manquants": []}'
+    assert legacy_analyse._reparer_json_tronque(brut) is None
+    import json
+    repare = json.loads(legacy_analyse._echapper_guillemets_internes(brut))
+    assert repare == {"resume_court": 'Il invoque la "legitime defense".', "points_cles": [], "elements_manquants": []}
+
+
+def test_echapper_guillemets_internes_puis_reparer_json_tronque_cumule_les_deux_defauts():
+    """Les deux défauts peuvent se cumuler : un guillemet interne plus tôt
+    dans la réponse, puis une troncature par budget plus loin."""
+    brut = (
+        '{"resume_court": "Il invoque la "legitime defense".", '
+        '"points_cles": ["Un point cle assez long qui se coupe ici en pl'
+    )
+    echappe = legacy_analyse._echapper_guillemets_internes(brut)
+    repare = legacy_analyse._reparer_json_tronque(echappe)
+    assert repare == {"resume_court": 'Il invoque la "legitime defense".', "points_cles": []}
+
+
+def test_resumer_dossier_repare_une_reponse_avec_guillemets_internes_non_echappes(monkeypatch):
+    """Bout en bout : resumer_dossier() ne doit pas échouer quand DeepSeek
+    renvoie une réponse par ailleurs complète mais avec une citation entre
+    guillemets droits non échappés."""
+    def _deepseek_guillemets_non_echappes(type_tache, system, messages, max_tokens):
+        return '{"resume_court": "Il invoque la "legitime defense".", "points_cles": ["a"], "elements_manquants": []}'
+
+    monkeypatch.setattr(legacy_analyse, "_appeler_modele", _deepseek_guillemets_non_echappes)
+    resultat = legacy_analyse.resumer_dossier("contenu du dossier")
+    assert resultat["resume_court"] == 'Il invoque la "legitime defense".'
+    assert resultat["points_cles"] == ["a"]
+
+
 def test_resumer_dossier_se_repare_seul_sans_solliciter_claude(monkeypatch):
     """Quand DeepSeek signale une troncature mais que le texte partiel est
     réparable, resumer_dossier() doit s'en contenter -- pas besoin
