@@ -353,10 +353,25 @@ def _appeler_modele(type_tache: TypeTache, system: str, messages: list[dict], ma
             messages=[{"role": "system", "content": system}, *messages],
         )
         texte = response.choices[0].message.content.strip()
+        # Les tokens de la réponse tronquée ont quand même été facturés --
+        # on journalise l'usage avant de lever, pas seulement en cas de
+        # succès.
         usage_log.journaliser_usage(
             "deepseek", type_tache.value, MODEL_DEEPSEEK,
             response.usage.prompt_tokens, response.usage.completion_tokens,
         )
+        # Détection explicite d'une réponse coupée par la limite de tokens
+        # plutôt que de laisser json.loads() échouer plus loin avec un
+        # message cryptique ("Unterminated string...") qui ne dit pas SI
+        # c'est bien la cause -- voir resumer_dossier() et le repli associé
+        # (seed=42 rend une coupure reproductible d'un essai à l'autre, y
+        # compris quand elle vient du modèle lui-même plutôt que d'un
+        # budget réellement trop court).
+        if response.choices[0].finish_reason == "length":
+            raise ValueError(
+                f"Réponse DeepSeek tronquée : la limite de {max_tokens} tokens a été atteinte "
+                "avant la fin de la génération."
+            )
         return texte
 
     client = _client()
@@ -369,6 +384,27 @@ def _appeler_modele(type_tache: TypeTache, system: str, messages: list[dict], ma
     texte = response.content[0].text.strip()
     usage_log.journaliser_usage(
         "claude", type_tache.value, MODEL_ACTIF,
+        response.usage.input_tokens, response.usage.output_tokens,
+    )
+    return texte
+
+
+def _appeler_claude_secours(system: str, messages: list[dict], max_tokens: int) -> str:
+    """Repli sur Claude (MODEL_LEGER, moins coûteux que MODEL_ACTIF -- une
+    tâche de résumé/structuration n'a pas besoin du modèle de raisonnement
+    juridique) quand DeepSeek échoue à produire une réponse exploitable
+    (tronquée ou JSON malformé). Utilisé uniquement en secours, jamais en
+    chemin normal -- voir resumer_dossier()."""
+    client = _client()
+    response = client.messages.create(
+        model=MODEL_LEGER,
+        max_tokens=max_tokens,
+        system=system,
+        messages=messages,
+    )
+    texte = response.content[0].text.strip()
+    usage_log.journaliser_usage(
+        "claude", "resume_secours", MODEL_LEGER,
         response.usage.input_tokens, response.usage.output_tokens,
     )
     return texte
@@ -859,24 +895,36 @@ def resumer_dossier(contexte_dossier: str) -> dict:
     DeepSeek (chantier "optimisation des coûts API") -- tâche de résumé,
     jamais d'analyse d'arguments ni de génération de plaidoirie.
 
-    max_tokens=4096 (plutôt que 2200 avant ce correctif) : RESUME_SYSTEM_PROMPT
-    demande explicitement un résumé "aussi développé que nécessaire" et une
-    liste points_cles "autant que nécessaire" -- un budget trop serré coupe
-    la réponse du modèle en plein milieu d'une chaîne JSON sur un dossier un
-    peu fourni, ce que json.loads() ne peut plus parser ensuite (ValueError
-    "non-JSON" remontée telle quelle au front, voir main.py::value_error_handler)."""
-    raw = _appeler_modele(
-        TypeTache.RESUME,
-        RESUME_SYSTEM_PROMPT,
-        [{"role": "user", "content": f"Contenu du dossier :\n{contexte_dossier}"}],
-        4096,
-    )
-    raw = raw.replace("```json", "").replace("```", "").strip()
-
+    max_tokens=4096 (plutôt que 2200 avant un premier correctif insuffisant) :
+    RESUME_SYSTEM_PROMPT demande explicitement un résumé "aussi développé que
+    nécessaire" et une liste points_cles "autant que nécessaire". Repli sur
+    Claude (_appeler_claude_secours) si DeepSeek échoue malgré tout à
+    produire un JSON exploitable -- reproduit en conditions réelles sur un
+    dossier détaillé où DeepSeek coupait systématiquement sa réponse au même
+    endroit (seed=42 : ni relancer la requête ni augmenter le budget ne
+    changeait rien, la coupure venait du modèle lui-même, pas de la
+    longueur ; voir _appeler_modele, qui distingue maintenant explicitement
+    ce cas via finish_reason == "length")."""
+    messages = [{"role": "user", "content": f"Contenu du dossier :\n{contexte_dossier}"}]
+    raw: str | None = None
     try:
+        raw = _appeler_modele(TypeTache.RESUME, RESUME_SYSTEM_PROMPT, messages, 4096)
+        raw = raw.replace("```json", "").replace("```", "").strip()
         parsed = json.loads(raw)
-    except json.JSONDecodeError as e:
-        raise ValueError(f"Réponse du modèle non-JSON : {e}\n\nRéponse brute :\n{raw}")
+    except (ValueError, json.JSONDecodeError) as erreur_deepseek:
+        try:
+            raw_secours = _appeler_claude_secours(RESUME_SYSTEM_PROMPT, messages, 4096)
+            raw_secours = raw_secours.replace("```json", "").replace("```", "").strip()
+            parsed = json.loads(raw_secours)
+        except json.JSONDecodeError:
+            # Les deux fournisseurs ont échoué -- on remonte l'erreur
+            # DeepSeek d'origine (la plus représentative du problème réel)
+            # avec sa réponse brute si on a pu l'obtenir (pas le cas si
+            # c'est _appeler_modele lui-même qui a levé, avant tout texte).
+            detail = f"Réponse du modèle non-JSON : {erreur_deepseek}"
+            if raw is not None:
+                detail += f"\n\nRéponse brute :\n{raw}"
+            raise ValueError(detail) from erreur_deepseek
 
     parsed.setdefault("points_cles", [])
     parsed.setdefault("elements_manquants", [])

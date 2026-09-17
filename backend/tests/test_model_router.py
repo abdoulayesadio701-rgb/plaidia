@@ -26,30 +26,32 @@ class _FakeUsageDeepseek:
 
 
 class _FakeChoice:
-    def __init__(self, content):
+    def __init__(self, content, finish_reason="stop"):
         self.message = type("M", (), {"content": content})()
+        self.finish_reason = finish_reason
 
 
 class _FakeReponseDeepseek:
-    def __init__(self, content):
-        self.choices = [_FakeChoice(content)]
+    def __init__(self, content, finish_reason="stop"):
+        self.choices = [_FakeChoice(content, finish_reason)]
         self.usage = _FakeUsageDeepseek()
 
 
 class _FakeCompletions:
-    def __init__(self, content):
+    def __init__(self, content, finish_reason="stop"):
         self._content = content
+        self._finish_reason = finish_reason
         self.captured = None
 
     def create(self, **kwargs):
         self.captured = kwargs
-        return _FakeReponseDeepseek(self._content)
+        return _FakeReponseDeepseek(self._content, self._finish_reason)
 
 
 class _FakeClientDeepseek:
-    def __init__(self, content="{}"):
+    def __init__(self, content="{}", finish_reason="stop"):
         self.chat = type("Chat", (), {})()
-        self.chat.completions = _FakeCompletions(content)
+        self.chat.completions = _FakeCompletions(content, finish_reason)
 
 
 # --- Fakes SDK Anthropic (fournisseur Claude) --------------------------------
@@ -142,6 +144,21 @@ def test_appeler_modele_route_extraction_vers_deepseek_avec_les_bons_parametres(
     assert journaux == [("deepseek", "extraction", legacy_analyse.MODEL_DEEPSEEK, 10, 5)]
 
 
+def test_appeler_modele_leve_une_erreur_claire_si_deepseek_tronque(monkeypatch):
+    """finish_reason == "length" (voir l'API OpenAI-compatible de NVIDIA
+    NIM) doit être détecté explicitement plutôt que de laisser l'appelant
+    échouer plus loin sur un json.loads() du texte partiel, avec un message
+    qui ne dit pas si c'est bien une troncature par longueur."""
+    fake = _FakeClientDeepseek('{"resume_court": "incompl', finish_reason="length")
+    monkeypatch.setattr(legacy_analyse, "_client_deepseek", lambda: fake)
+    monkeypatch.setattr(legacy_analyse.usage_log, "journaliser_usage", lambda *a: None)
+
+    with pytest.raises(ValueError, match="tronquée"):
+        legacy_analyse._appeler_modele(
+            legacy_analyse.TypeTache.RESUME, "system prompt", [{"role": "user", "content": "bonjour"}], 500,
+        )
+
+
 def test_appeler_modele_route_analyse_vers_claude_sans_toucher_a_deepseek(monkeypatch):
     fake = _FakeClientClaude("réponse Claude")
     monkeypatch.setattr(legacy_analyse, "_client", lambda: fake)
@@ -204,6 +221,41 @@ def test_resumer_dossier_reserve_assez_de_budget_pour_ne_pas_tronquer(monkeypatc
     monkeypatch.setattr(legacy_analyse, "_appeler_modele", _espion)
     legacy_analyse.resumer_dossier("contenu du dossier")
     assert budgets[0] >= 3000
+
+
+def test_resumer_dossier_bascule_sur_claude_si_deepseek_echoue(monkeypatch):
+    """Reproduit le cas réel : DeepSeek tronque systématiquement sa réponse
+    (seed=42, donc reproductible -- relancer la requête ne change rien),
+    _appeler_modele le signale par une ValueError explicite (voir
+    finish_reason == "length"). resumer_dossier() doit alors basculer sur
+    Claude (_appeler_claude_secours) plutôt que d'échouer directement."""
+    appels_secours = []
+
+    def _deepseek_tronque(type_tache, system, messages, max_tokens):
+        raise ValueError("Réponse DeepSeek tronquée : la limite de 4096 tokens a été atteinte avant la fin de la génération.")
+
+    def _secours(system, messages, max_tokens):
+        appels_secours.append(max_tokens)
+        return '{"resume_court": "ok", "points_cles": ["a"], "elements_manquants": []}'
+
+    monkeypatch.setattr(legacy_analyse, "_appeler_modele", _deepseek_tronque)
+    monkeypatch.setattr(legacy_analyse, "_appeler_claude_secours", _secours)
+    resultat = legacy_analyse.resumer_dossier("contenu du dossier")
+    assert resultat["resume_court"] == "ok"
+    assert appels_secours == [4096]
+
+
+def test_resumer_dossier_leve_si_deepseek_et_claude_echouent_tous_les_deux(monkeypatch):
+    def _deepseek_tronque(type_tache, system, messages, max_tokens):
+        raise ValueError("Réponse DeepSeek tronquée : la limite de 4096 tokens a été atteinte avant la fin de la génération.")
+
+    def _secours_invalide(system, messages, max_tokens):
+        return "pas du JSON du tout"
+
+    monkeypatch.setattr(legacy_analyse, "_appeler_modele", _deepseek_tronque)
+    monkeypatch.setattr(legacy_analyse, "_appeler_claude_secours", _secours_invalide)
+    with pytest.raises(ValueError, match="non-JSON"):
+        legacy_analyse.resumer_dossier("contenu du dossier")
 
 
 # --- Fonctions migrées : structuration (chronologie, PV, réquisitoire, ------
