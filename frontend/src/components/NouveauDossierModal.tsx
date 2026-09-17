@@ -11,6 +11,7 @@ import { useImportTexte } from "@/hooks/useImportTexte";
 import { DOMAINES } from "@/config/domaines";
 import { STADES_PROCEDURE, posturesPourDomaine } from "@/config/postures";
 import { EXTENSIONS_DOCUMENT } from "@/config/fichiers";
+import { CAS_EXEMPLE_PENAL } from "@/config/casExemple";
 import Modal from "./Modal";
 import Button from "./Button";
 import ChoixImportModal from "./ChoixImportModal";
@@ -35,6 +36,22 @@ export default function NouveauDossierModal({ onFermer, onCree, nomInitial = "" 
   const [objectif, setObjectif] = useState("");
   const [enCours, setEnCours] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
+  const [casExempleApplique, setCasExempleApplique] = useState(false);
+
+  // Cas d'exemple optionnel (voir @/config/casExemple) : pré-remplit le
+  // formulaire pour qu'un nouvel utilisateur explore l'app sans avoir à
+  // saisir ses propres données -- rien n'est créé tant que le formulaire
+  // n'est pas soumis normalement, comme pour toute autre saisie manuelle.
+  const appliquerCasExemple = () => {
+    setNom(CAS_EXEMPLE_PENAL.nom);
+    setNumeroDossier(CAS_EXEMPLE_PENAL.numeroDossier);
+    setDomaine(CAS_EXEMPLE_PENAL.domaine);
+    setFaits(CAS_EXEMPLE_PENAL.faits);
+    setStadeProcedure(CAS_EXEMPLE_PENAL.stadeProcedure);
+    setObjectif(CAS_EXEMPLE_PENAL.objectif);
+    setPartieRepresentee("");
+    setCasExempleApplique(true);
+  };
 
   const ajouterDossierLocal = useAppStore((s) => s.ajouterDossierLocal);
   const selectionnerDossier = useAppStore((s) => s.selectionnerDossier);
@@ -80,6 +97,19 @@ export default function NouveauDossierModal({ onFermer, onCree, nomInitial = "" 
   return (
     <Modal titre={t("nouveauDossier.titre")} onFermer={onFermer}>
       <form onSubmit={soumettre} className="space-y-4">
+        <div className="rounded-md border border-gold-600/20 bg-surface-2 p-3">
+          <button
+            type="button"
+            onClick={appliquerCasExemple}
+            className="text-sm font-medium text-gold-500 transition-colors hover:text-gold-400"
+          >
+            {t("nouveauDossier.preremplirCasExemple")}
+          </button>
+          <p className="mt-1 text-xs text-muted">
+            {casExempleApplique ? t("nouveauDossier.casExempleApplique") : t("nouveauDossier.casExempleDescription")}
+          </p>
+        </div>
+
         <div>
           <label htmlFor="nd-nom" className="mb-1.5 block text-sm text-warmgray">
             {t("nouveauDossier.nomDossier")}

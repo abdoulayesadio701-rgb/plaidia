@@ -116,7 +116,10 @@
     "numeroReference": "Reference number (optional)",
     "faits": "Facts (optional)",
     "faitsPlaceholder": "Describe the facts, or drop a file…",
-    "formatsAcceptes": "PDF, Word, Excel, image — the extracted text is injected above."
+    "formatsAcceptes": "PDF, Word, Excel, image — the extracted text is injected above.",
+    "preremplirCasExemple": "🎓 Prefill with a sample case (criminal law)",
+    "casExempleDescription": "Try the app on an already-filled fictional case — edit or replace any field before creating it.",
+    "casExempleApplique": "Sample case prefilled — feel free to edit any field before creating."
   },
   "planTimeline": {
     "accroche": "Hook",

@@ -116,7 +116,10 @@
     "numeroReference": "Numéro de référence (optionnel)",
     "faits": "Faits (optionnel)",
     "faitsPlaceholder": "Décrivez les faits, ou déposez un fichier…",
-    "formatsAcceptes": "PDF, Word, Excel, image — le texte extrait est injecté ci-dessus."
+    "formatsAcceptes": "PDF, Word, Excel, image — le texte extrait est injecté ci-dessus.",
+    "preremplirCasExemple": "🎓 Pré-remplir avec un cas d'exemple (pénal)",
+    "casExempleDescription": "Découvrez l'app sur un dossier fictif déjà rempli, à modifier ou remplacer librement avant de créer.",
+    "casExempleApplique": "Cas d'exemple pré-rempli — modifiez librement les champs avant de créer."
   },
   "planTimeline": {
     "accroche": "Accroche",
