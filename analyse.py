@@ -332,6 +332,61 @@ _TACHES_VERS_FOURNISSEUR: dict[TypeTache, str] = {
 }
 
 
+class ReponseTronqueeError(ValueError):
+    """Levée quand un fournisseur signale explicitement une réponse coupée
+    par la limite de tokens (finish_reason == "length" côté OpenAI/NVIDIA
+    NIM, stop_reason == "max_tokens" côté Anthropic) avant la fin de la
+    génération. Porte le texte partiel déjà produit (`raw`) pour permettre
+    une réparation par l'appelant (voir _reparer_json_tronque) plutôt que
+    de le perdre purement et simplement."""
+
+    def __init__(self, message: str, raw: str):
+        super().__init__(message)
+        self.raw = raw
+
+
+def _reparer_json_tronque(raw: str) -> dict | None:
+    """Tente de récupérer un objet JSON exploitable à partir d'une réponse
+    coupée en plein milieu d'une chaîne de caractères (le cas observé en
+    pratique : troncature par longueur en plein milieu d'un élément de
+    liste) : retire la chaîne inachevée puis referme les structures encore
+    ouvertes, plutôt que de perdre tout le travail déjà généré.
+
+    Retourne None si le texte ne correspond pas à cette forme précise de
+    troncature (pas coupé en plein milieu d'une chaîne) -- dans ce cas la
+    réponse est invalide pour une autre raison, pas seulement tronquée, et
+    il n'y a rien de fiable à réparer ici."""
+    pile: list[str] = []
+    en_chaine = False
+    echappement = False
+    dernier_debut_chaine: int | None = None
+    for i, c in enumerate(raw):
+        if en_chaine:
+            if echappement:
+                echappement = False
+            elif c == "\\":
+                echappement = True
+            elif c == '"':
+                en_chaine = False
+            continue
+        if c == '"':
+            en_chaine = True
+            dernier_debut_chaine = i
+        elif c in "{[":
+            pile.append(c)
+        elif c in "}]":
+            if pile:
+                pile.pop()
+    if not en_chaine or dernier_debut_chaine is None:
+        return None
+    tronque = raw[:dernier_debut_chaine].rstrip().rstrip(",")
+    fermeture = "".join("}" if o == "{" else "]" for o in reversed(pile))
+    try:
+        return json.loads(tronque + fermeture)
+    except json.JSONDecodeError:
+        return None
+
+
 def _appeler_modele(type_tache: TypeTache, system: str, messages: list[dict], max_tokens: int) -> str:
     """Point d'entrée unique pour les fonctions qui veulent router leur
     appel selon la tâche plutôt que d'appeler _client() directement --
@@ -368,9 +423,10 @@ def _appeler_modele(type_tache: TypeTache, system: str, messages: list[dict], ma
         # compris quand elle vient du modèle lui-même plutôt que d'un
         # budget réellement trop court).
         if response.choices[0].finish_reason == "length":
-            raise ValueError(
+            raise ReponseTronqueeError(
                 f"Réponse DeepSeek tronquée : la limite de {max_tokens} tokens a été atteinte "
-                "avant la fin de la génération."
+                "avant la fin de la génération.",
+                texte,
             )
         return texte
 
@@ -407,6 +463,17 @@ def _appeler_claude_secours(system: str, messages: list[dict], max_tokens: int) 
         "claude", "resume_secours", MODEL_LEGER,
         response.usage.input_tokens, response.usage.output_tokens,
     )
+    # Même détection de troncature que côté DeepSeek (voir _appeler_modele),
+    # nommage Anthropic ("stop_reason" / "max_tokens" au lieu de
+    # "finish_reason" / "length") -- ce repli n'est pas à l'abri du même
+    # problème si le dossier est particulièrement volumineux.
+    if response.stop_reason == "max_tokens":
+        raise ReponseTronqueeError(
+            f"Réponse Claude (secours) tronquée : la limite de {max_tokens} tokens a été atteinte "
+            "avant la fin de la génération.",
+            texte,
+        )
+    return texte
     return texte
 
 
@@ -598,20 +665,21 @@ def simuler_objections(contexte_dossier: str, contexte_recherche: str | None = N
 
 RESUME_SYSTEM_PROMPT = """Tu es un assistant qui aide un avocat francophone à retrouver rapidement l'essentiel d'un dossier qu'il a accumulé au fil de plusieurs documents importés.
 
-À partir du contenu brut du dossier fourni (qui peut mélanger plusieurs documents importés à des moments différents), produis un résumé complet et exploitable — ne sacrifie pas les détails factuels importants pour la brièveté.
+À partir du contenu brut du dossier fourni (qui peut mélanger plusieurs documents importés à des moments différents), produis un résumé complet et exploitable — ne sacrifie pas les détails factuels importants pour la brièveté, mais respecte strictement les limites de longueur ci-dessous : elles garantissent que ta réponse tient entièrement dans le budget alloué, sans être coupée en cours de génération avant sa fin (ce qui produirait un JSON invalide et inexploitable).
 
 Réponds UNIQUEMENT avec un objet JSON valide, sans texte avant ou après, sans balises markdown, selon ce schéma exact :
 
 {
-  "resume_court": "un résumé de la situation dans son ensemble, aussi développé que nécessaire pour couvrir les éléments importants (plusieurs phrases si le dossier le justifie)",
-  "points_cles": ["tous les faits ou éléments importants du dossier, autant que nécessaire — ne te limite pas à un nombre arbitraire"],
-  "elements_manquants": ["informations qui semblent manquer pour bien traiter ce dossier, s'il y en a"]
+  "resume_court": "un résumé de la situation dans son ensemble, en 3 à 6 phrases maximum",
+  "points_cles": ["les faits ou éléments les plus importants du dossier -- 10 maximum, une phrase courte chacun ; si le dossier en contient davantage, ne garde que les plus déterminants"],
+  "elements_manquants": ["informations qui semblent manquer pour bien traiter ce dossier -- 6 maximum, s'il y en a"]
 }
 
 Règles impératives :
 - Reste strictement factuel : ne déduis rien qui ne soit pas dans le texte fourni.
 - Ne cite aucune référence juridique — ce résumé porte sur les faits, pas le droit.
 - Rédige en français soutenu et professionnel.
+- Respecte impérativement les limites de longueur ci-dessus, y compris sur un dossier volumineux : mieux vaut prioriser l'essentiel qu'un résumé tronqué et inutilisable.
 - Si le contenu du dossier est trop pauvre pour un résumé utile, dis-le clairement dans elements_manquants plutôt que d'inventer."""
 
 
@@ -889,41 +957,64 @@ def rediger_note_client(contexte_dossier: str) -> str:
     return response.content[0].text.strip()
 
 
+def _resultat_depuis_appel(appel) -> dict:
+    """Nettoie/parse la réponse d'un appel modèle, avec réparation si elle
+    est signalée ou détectée comme tronquée -- factorisé pour être appliqué
+    identiquement à l'appel principal (DeepSeek) et au repli (Claude) dans
+    resumer_dossier(). `appel` est un callable sans argument qui renvoie le
+    texte brut ou lève ReponseTronqueeError."""
+    try:
+        raw = appel()
+    except ReponseTronqueeError as e:
+        repare = _reparer_json_tronque(e.raw)
+        if repare is not None:
+            return repare
+        raise
+    raw = raw.replace("```json", "").replace("```", "").strip()
+    try:
+        return json.loads(raw)
+    except json.JSONDecodeError:
+        repare = _reparer_json_tronque(raw)
+        if repare is not None:
+            return repare
+        raise
+
+
 def resumer_dossier(contexte_dossier: str) -> dict:
     """Produit un résumé synthétique d'un dossier, utile après plusieurs
     imports de documents pour retrouver rapidement l'essentiel. Routée vers
     DeepSeek (chantier "optimisation des coûts API") -- tâche de résumé,
     jamais d'analyse d'arguments ni de génération de plaidoirie.
 
-    max_tokens=4096 (plutôt que 2200 avant un premier correctif insuffisant) :
-    RESUME_SYSTEM_PROMPT demande explicitement un résumé "aussi développé que
-    nécessaire" et une liste points_cles "autant que nécessaire". Repli sur
-    Claude (_appeler_claude_secours) si DeepSeek échoue malgré tout à
-    produire un JSON exploitable -- reproduit en conditions réelles sur un
-    dossier détaillé où DeepSeek coupait systématiquement sa réponse au même
-    endroit (seed=42 : ni relancer la requête ni augmenter le budget ne
-    changeait rien, la coupure venait du modèle lui-même, pas de la
-    longueur ; voir _appeler_modele, qui distingue maintenant explicitement
-    ce cas via finish_reason == "length")."""
+    Trois filets successifs contre une réponse tronquée (observée en
+    conditions réelles sur un dossier volumineux, de façon parfaitement
+    reproductible : seed=42 -- ni relancer la requête ni, initialement,
+    augmenter le budget ne changeait rien, la coupure venait de la
+    combinaison prompt/longueur, pas d'un simple manque de tokens) :
+    1. RESUME_SYSTEM_PROMPT borne désormais explicitement la taille des
+       listes plutôt que d'inviter à l'exhaustivité ("autant que
+       nécessaire") sans egard pour le budget disponible.
+    2. max_tokens=6144 (marge confortable au-delà du besoin réel une fois
+       le prompt borné).
+    3. Si la réponse est malgré tout tronquée (finish_reason/stop_reason),
+       _reparer_json_tronque() retire l'élément de liste inachevé et
+       referme le JSON plutôt que d'échouer -- puis, si la réparation
+       elle-même échoue, repli sur Claude (_appeler_claude_secours), avec
+       la même tentative de réparation sur sa propre réponse."""
     messages = [{"role": "user", "content": f"Contenu du dossier :\n{contexte_dossier}"}]
-    raw: str | None = None
     try:
-        raw = _appeler_modele(TypeTache.RESUME, RESUME_SYSTEM_PROMPT, messages, 4096)
-        raw = raw.replace("```json", "").replace("```", "").strip()
-        parsed = json.loads(raw)
+        parsed = _resultat_depuis_appel(lambda: _appeler_modele(TypeTache.RESUME, RESUME_SYSTEM_PROMPT, messages, 6144))
     except (ValueError, json.JSONDecodeError) as erreur_deepseek:
         try:
-            raw_secours = _appeler_claude_secours(RESUME_SYSTEM_PROMPT, messages, 4096)
-            raw_secours = raw_secours.replace("```json", "").replace("```", "").strip()
-            parsed = json.loads(raw_secours)
-        except json.JSONDecodeError:
-            # Les deux fournisseurs ont échoué -- on remonte l'erreur
-            # DeepSeek d'origine (la plus représentative du problème réel)
-            # avec sa réponse brute si on a pu l'obtenir (pas le cas si
-            # c'est _appeler_modele lui-même qui a levé, avant tout texte).
+            parsed = _resultat_depuis_appel(lambda: _appeler_claude_secours(RESUME_SYSTEM_PROMPT, messages, 6144))
+        except (ValueError, json.JSONDecodeError):
+            # Les deux fournisseurs ont échoué, réparation comprise -- on
+            # remonte l'erreur DeepSeek d'origine, la plus représentative
+            # du problème réel, avec son texte partiel s'il est disponible.
             detail = f"Réponse du modèle non-JSON : {erreur_deepseek}"
-            if raw is not None:
-                detail += f"\n\nRéponse brute :\n{raw}"
+            raw_partiel = getattr(erreur_deepseek, "raw", None)
+            if raw_partiel:
+                detail += f"\n\nRéponse brute :\n{raw_partiel}"
             raise ValueError(detail) from erreur_deepseek
 
     parsed.setdefault("points_cles", [])

@@ -242,7 +242,7 @@ def test_resumer_dossier_bascule_sur_claude_si_deepseek_echoue(monkeypatch):
     monkeypatch.setattr(legacy_analyse, "_appeler_claude_secours", _secours)
     resultat = legacy_analyse.resumer_dossier("contenu du dossier")
     assert resultat["resume_court"] == "ok"
-    assert appels_secours == [4096]
+    assert appels_secours == [6144]
 
 
 def test_resumer_dossier_leve_si_deepseek_et_claude_echouent_tous_les_deux(monkeypatch):
@@ -256,6 +256,49 @@ def test_resumer_dossier_leve_si_deepseek_et_claude_echouent_tous_les_deux(monke
     monkeypatch.setattr(legacy_analyse, "_appeler_claude_secours", _secours_invalide)
     with pytest.raises(ValueError, match="non-JSON"):
         legacy_analyse.resumer_dossier("contenu du dossier")
+
+
+# --- Réparation d'une réponse tronquée (_reparer_json_tronque) ---------------
+
+def test_reparer_json_tronque_referme_une_liste_coupee_en_plein_milieu_dune_chaine():
+    """Cas réel reproduit : la réponse s'arrête sans guillemet fermant en
+    plein milieu du dernier élément de la liste elements_manquants."""
+    brut = (
+        '{"resume_court": "x", "points_cles": ["a", "b"], '
+        '"elements_manquants": ["c", "d incomplet'
+    )
+    repare = legacy_analyse._reparer_json_tronque(brut)
+    assert repare == {"resume_court": "x", "points_cles": ["a", "b"], "elements_manquants": ["c"]}
+
+
+def test_reparer_json_tronque_renvoie_none_si_pas_coupe_en_plein_milieu_dune_chaine():
+    """Un texte qui n'est pas du JSON du tout (aucune troncature en plein
+    milieu d'une chaîne à réparer) ne doit pas être bricolé en silence."""
+    assert legacy_analyse._reparer_json_tronque("pas du JSON du tout") is None
+
+
+def test_resumer_dossier_se_repare_seul_sans_solliciter_claude(monkeypatch):
+    """Quand DeepSeek signale une troncature mais que le texte partiel est
+    réparable, resumer_dossier() doit s'en contenter -- pas besoin
+    d'appeler Claude en secours."""
+    appels_secours = []
+
+    def _deepseek_tronque_reparable(type_tache, system, messages, max_tokens):
+        raise legacy_analyse.ReponseTronqueeError(
+            "tronquée",
+            '{"resume_court": "x", "points_cles": ["a", "b incomplet',
+        )
+
+    def _secours_jamais_appele(system, messages, max_tokens):
+        appels_secours.append(1)
+        return "{}"
+
+    monkeypatch.setattr(legacy_analyse, "_appeler_modele", _deepseek_tronque_reparable)
+    monkeypatch.setattr(legacy_analyse, "_appeler_claude_secours", _secours_jamais_appele)
+    resultat = legacy_analyse.resumer_dossier("contenu du dossier")
+    assert resultat["resume_court"] == "x"
+    assert resultat["points_cles"] == ["a"]
+    assert appels_secours == []
 
 
 # --- Fonctions migrées : structuration (chronologie, PV, réquisitoire, ------
