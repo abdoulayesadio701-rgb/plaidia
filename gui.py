@@ -11,6 +11,8 @@ Lancement : python gui.py
 import re
 import sys
 import threading
+import time
+import uuid
 import tkinter as tk
 from tkinter import ttk, scrolledtext, messagebox, simpledialog
 
@@ -395,6 +397,86 @@ class DialogueNotificationsVeille(tk.Toplevel):
         tk.Button(self, text="Fermer", command=self.destroy, font=FONT_BTN).pack(pady=(0, 16))
 
 
+class Generation:
+    """Un traitement long (analyse, plan, plaidoirie, simulateur...) suivi
+    indépendamment de l'écran affiché -- voir PlaidIAApp._lancer_generation.
+
+    `dossier_id`/`dossier_nom` sont figés au lancement, jamais relus depuis
+    self.dossier_actuel plus tard : sans ça, changer de dossier (ou de
+    sélection) pendant qu'une génération tourne ferait enregistrer le
+    résultat sous le mauvais dossier -- ou le perdrait silencieusement si
+    plus aucun dossier n'était sélectionné à la fin. C'était le vrai bug
+    derrière « la génération s'interrompt quand je change d'écran » : le
+    thread continuait, mais son résultat n'atteignait plus jamais le bon
+    endroit."""
+
+    def __init__(self, id_, dossier_id, dossier_nom, feature, libelle, fonction_sauvegarde, fonction_affichage, widget_erreur):
+        self.id = id_
+        self.dossier_id = dossier_id
+        self.dossier_nom = dossier_nom
+        self.feature = feature
+        self.libelle = libelle
+        self.fonction_sauvegarde = fonction_sauvegarde
+        self.fonction_affichage = fonction_affichage
+        self.widget_erreur = widget_erreur
+        self.statut = "en_cours"  # "en_cours" | "terminee" | "erreur"
+        self.resultat = None
+        self.erreur = None
+        self.horodatage_debut = time.time()
+        self.horodatage_fin = None
+        self.lue = False  # passe à True une fois vue dans DialogueGenerations
+
+
+class DialogueGenerations(tk.Toplevel):
+    """Fenêtre listant toutes les générations suivies (en cours et
+    récentes), consultée d'un clic sur le badge 🔄 -- permet de retrouver
+    un résultat produit pendant qu'on travaillait ailleurs dans l'app,
+    sans jamais avoir interrompu le traitement lui-même (même idiome que
+    DialogueNotificationsVeille pour la veille juridique)."""
+
+    _LIBELLES_STATUT = {"en_cours": "⏳ En cours", "terminee": "✅ Terminée", "erreur": "⚠ Erreur"}
+
+    def __init__(self, parent, app, generations):
+        super().__init__(parent)
+        self.title("Générations")
+        self.geometry("560x440")
+        self.configure(bg=WHITE)
+        self.transient(parent)
+        self.grab_set()
+
+        tk.Label(
+            self, text="Générations en cours et récentes :", font=FONT_BASE, bg=WHITE,
+        ).pack(anchor="w", padx=16, pady=(16, 8))
+
+        canvas = tk.Canvas(self, bg=WHITE, highlightthickness=0)
+        scrollbar = tk.Scrollbar(self, orient="vertical", command=canvas.yview)
+        frame_liste = tk.Frame(canvas, bg=WHITE)
+        frame_liste.bind("<Configure>", lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
+        canvas.create_window((0, 0), window=frame_liste, anchor="nw", width=500)
+        canvas.configure(yscrollcommand=scrollbar.set)
+        canvas.pack(side="left", fill="both", expand=True, padx=(16, 0), pady=8)
+        scrollbar.pack(side="right", fill="y", pady=8)
+
+        for gen in sorted(generations, key=lambda g: g.horodatage_debut, reverse=True):
+            ligne = tk.Frame(frame_liste, bg=LIGHT_BG)
+            ligne.pack(fill="x", pady=4, padx=(0, 12))
+            duree = int((gen.horodatage_fin or time.time()) - gen.horodatage_debut)
+            prefixe = f"📁 {gen.dossier_nom} — " if gen.dossier_nom else ""
+            texte = f"{prefixe}{gen.libelle}\n{self._LIBELLES_STATUT.get(gen.statut, gen.statut)} ({duree}s)"
+            if gen.statut == "erreur" and gen.erreur:
+                texte += f"\n{gen.erreur[:150]}"
+            tk.Label(
+                ligne, text=texte, font=FONT_BASE, bg=LIGHT_BG, wraplength=340, justify="left", anchor="w",
+            ).pack(side="left", fill="x", expand=True, padx=8, pady=8)
+            if gen.statut == "terminee":
+                tk.Button(
+                    ligne, text="Ouvrir →", command=lambda g=gen: (self.destroy(), app._ouvrir_resultat_generation(g)),
+                    font=FONT_BTN, bg=GOLD, fg="white", relief="flat",
+                ).pack(side="right", padx=8)
+
+        tk.Button(self, text="Fermer", command=self.destroy, font=FONT_BTN).pack(pady=(0, 16))
+
+
 class DialogueImporterTexte(tk.Toplevel):
     """Fenêtre modale pour importer un texte juridique dans le corpus
     multi-source (OHADA, UE, droit sénégalais...)."""
@@ -474,6 +556,16 @@ class PlaidIAApp:
         self.dossier_actuel = None
         self.dossiers_map = {}
         self.boutons_actions = []
+        # Suivi des générations en arrière-plan (analyse, plan, plaidoirie...)
+        # -- voir _lancer_generation. `ecran_actuel` identifie la
+        # fonctionnalité actuellement affichée dans le panneau de sortie
+        # (ex. "analyser", "plan"...), posée par chaque _action_xxx qui
+        # affiche un résultat ; sert à décider si le résultat d'une
+        # génération qui se termine doit être rendu tout de suite ou
+        # seulement signalé par le badge 🔄.
+        self.generations = {}
+        self._generations_actives_par_cle = set()
+        self.ecran_actuel = None
         # Historique de la conversation "Poser une question" — persiste tant
         # que l'avocat ne démarre pas explicitement une nouvelle discussion
         # (comme sur Claude.ai), ou qu'il ne change pas de dossier.
@@ -537,6 +629,16 @@ class PlaidIAApp:
         )
         self.bouton_veille.pack(side="left", padx=(10, 0))
         self.notifications_veille = []  # liste de dicts {dossier_nom, reference, resume, source}
+
+        # Badge des générations en arrière-plan -- même idiome que le badge
+        # de veille juste au-dessus : toujours visible (discret au repos),
+        # doré et avec un compteur dès qu'une génération tourne ou vient de
+        # se terminer, quel que soit l'écran affiché au moment où ça arrive.
+        self.bouton_generations = tk.Button(
+            bandeau, text="🔄", command=self._afficher_generations, font=("Segoe UI", 11),
+            bg=NAVY, fg="#5578A0", activebackground=NAVY, activeforeground="#5578A0", relief="flat", bd=0, cursor="hand2",
+        )
+        self.bouton_generations.pack(side="left", padx=(10, 0))
 
         self.label_dossier_actif = tk.Label(bandeau, text="Aucun dossier sélectionné", font=FONT_BASE, fg="#C9D6E8", bg=NAVY)
         self.label_dossier_actif.pack(side="right", padx=24)
@@ -1023,6 +1125,159 @@ class PlaidIAApp:
         else:
             fonction_affichage(resultat)
 
+    # ---------- Générations en arrière-plan (ne s'interrompent jamais en changeant d'écran) ----------
+    #
+    # À la différence de _lancer_tache (au-dessus, pensé pour une action
+    # rapide et strictement liée à l'écran qui l'a déclenchée -- le chat, la
+    # commande en langage naturel), _lancer_generation est pour les
+    # traitements longs (analyse, plan, plaidoirie, simulateur...) :
+    #   - le dossier cible est figé au lancement (paramètre `dossier`),
+    #     jamais relu depuis self.dossier_actuel à la fin ;
+    #   - fonction_sauvegarde() est TOUJOURS appelée en cas de succès, quel
+    #     que soit l'écran affiché à ce moment-là -- le résultat ne se perd
+    #     donc jamais, contrairement à l'ancien code où l'enregistrement
+    #     vivait dans la fonction d'affichage et lisait self.dossier_actuel
+    #     en direct ;
+    #   - fonction_affichage() n'est appelée (et le panneau de sortie mis à
+    #     jour tout de suite) que si le dossier et l'écran affichés sont
+    #     encore ceux de cette génération ; sinon, seul le badge 🔄 change,
+    #     sans rien perturber de ce que l'utilisateur fait ailleurs ;
+    #   - plusieurs générations peuvent tourner en parallèle (même dossier
+    #     ou dossiers différents), chacune dans son propre thread, sans état
+    #     partagé entre elles (contrairement à self.boutons_actions /
+    #     self._animation_en_cours, qui sont globaux et à usage unique).
+
+    def _cle_generation(self, dossier_id, feature):
+        return (dossier_id, feature)
+
+    def _lancer_generation(self, dossier, feature, libelle, fonction_tache, fonction_sauvegarde, fonction_affichage=None, widget_erreur=None):
+        """Lance fonction_tache() dans un thread séparé pour `dossier`
+        (dict complet, comme self.dossier_actuel) et `feature` (ex.
+        "analyser", "plan"...). `dossier` peut être None pour les actions
+        qui ne sont pas liées à un dossier précis (ex. consulter la
+        jurisprudence sur une situation décrite librement) -- dans ce cas,
+        aucune protection anti double-lancement n'est appliquée (rien ne
+        permet de distinguer deux demandes différentes sans dossier), et
+        fonction_sauvegarde reçoit dossier_id=None.
+
+        Refuse silencieusement (avec un message) de relancer une génération
+        identique déjà en cours pour le même dossier."""
+        cle = self._cle_generation(dossier["id"], feature) if dossier is not None else None
+        if cle is not None and cle in self._generations_actives_par_cle:
+            messagebox.showinfo(
+                "Génération déjà en cours",
+                f"« {libelle} » est déjà en cours pour ce dossier — inutile de la relancer, "
+                "le badge 🔄 en haut vous préviendra dès qu'elle sera prête.",
+            )
+            return
+
+        gen = Generation(
+            uuid.uuid4().hex,
+            dossier["id"] if dossier is not None else None,
+            dossier["nom"] if dossier is not None else None,
+            feature, libelle, fonction_sauvegarde, fonction_affichage, widget_erreur,
+        )
+        self.generations[gen.id] = gen
+        if cle is not None:
+            self._generations_actives_par_cle.add(cle)
+        self._rafraichir_badge_generations()
+
+        def travail():
+            try:
+                resultat = fonction_tache()
+                self.root.after(0, lambda: self._generation_terminee(gen.id, resultat, None))
+            except Exception as e:
+                # Voir la même remarque dans _lancer_tache ci-dessus : `e`
+                # doit être recopiée pour survivre jusqu'à l'exécution du
+                # lambda, plus tard, sur le thread principal.
+                err = e
+                self.root.after(0, lambda err=err: self._generation_terminee(gen.id, None, err))
+
+        threading.Thread(target=travail, daemon=True).start()
+
+    def _generation_terminee(self, generation_id, resultat, erreur):
+        gen = self.generations.get(generation_id)
+        if gen is None:
+            return  # garde-fou défensif, ne devrait pas arriver
+        if gen.dossier_id is not None:
+            self._generations_actives_par_cle.discard(self._cle_generation(gen.dossier_id, gen.feature))
+        gen.horodatage_fin = time.time()
+
+        if erreur is not None:
+            gen.statut = "erreur"
+            gen.erreur = str(erreur)
+        else:
+            gen.resultat = resultat
+            if gen.fonction_sauvegarde is not None:
+                try:
+                    gen.fonction_sauvegarde(gen.dossier_id, resultat)
+                    gen.statut = "terminee"
+                except Exception as e:
+                    # La génération a réussi mais l'enregistrement en base a
+                    # échoué : jamais silencieux (contrairement à l'ancien
+                    # `except Exception: pass`) -- le résultat reste en
+                    # mémoire (gen.resultat) et l'échec est visible dans le
+                    # panneau des générations (badge 🔄 -> DialogueGenerations).
+                    gen.statut = "erreur"
+                    gen.erreur = f"Résultat généré mais non enregistré : {e}"
+            else:
+                gen.statut = "terminee"
+
+        self._rafraichir_badge_generations()
+
+        if gen.dossier_id is None:
+            dossier_correspond = True  # génération non liée à un dossier -- pas de vérification à faire
+        else:
+            dossier_correspond = self.dossier_actuel is not None and self.dossier_actuel["id"] == gen.dossier_id
+        ecran_correspond = dossier_correspond and self.ecran_actuel == gen.feature
+        if not ecran_correspond:
+            return  # le badge suffit -- rien à changer sur l'écran affiché
+        if gen.statut == "terminee" and gen.fonction_affichage is not None:
+            gen.fonction_affichage(resultat)
+        elif gen.statut == "erreur":
+            self._afficher(f"⚠ Erreur : {gen.erreur}", "attention", widget=gen.widget_erreur)
+
+    def _rafraichir_badge_generations(self):
+        en_cours = [g for g in self.generations.values() if g.statut == "en_cours"]
+        non_lues = [g for g in self.generations.values() if g.statut in ("terminee", "erreur") and not g.lue]
+        if en_cours:
+            self.bouton_generations.config(text=f"🔄 {len(en_cours)}", fg=GOLD, activeforeground=GOLD)
+        elif non_lues:
+            self.bouton_generations.config(text=f"✅ {len(non_lues)}", fg=GOLD, activeforeground=GOLD)
+        else:
+            self.bouton_generations.config(text="🔄", fg="#5578A0", activeforeground="#5578A0")
+
+    def _afficher_generations(self):
+        if not self.generations:
+            messagebox.showinfo(
+                "Générations",
+                "Aucune génération en cours ni récente. Lancez une analyse, un plan, une plaidoirie... "
+                "et ce badge permet de la suivre même en changeant d'écran entre-temps.",
+            )
+            return
+        DialogueGenerations(self.root, self, list(self.generations.values()))
+        for g in self.generations.values():
+            g.lue = True
+        self._rafraichir_badge_generations()
+
+    def _ouvrir_resultat_generation(self, gen):
+        """Bascule sur le dossier et l'écran d'une génération terminée pour
+        en afficher le résultat -- appelé depuis le bouton « Ouvrir » de
+        DialogueGenerations. Ne fait rien si le dossier a entre-temps été
+        supprimé (self.dossiers_map ne le contient plus) ; ne touche pas à
+        la sélection de dossier pour une génération qui n'en avait pas
+        (dossier_nom est alors None)."""
+        if gen.statut != "terminee":
+            return
+        if gen.dossier_nom is not None and gen.dossier_nom in self.dossiers_map:
+            self.dossier_var.set(gen.dossier_nom)
+            self._selectionner_dossier(None)
+        self._afficher_vue_sortie()
+        self._effacer_sortie()
+        self.ecran_actuel = gen.feature
+        if gen.fonction_affichage is not None:
+            gen.fonction_affichage(gen.resultat)
+
     def _contexte_dossier(self):
         d = self.dossier_actuel
         parts = []
@@ -1111,12 +1366,21 @@ class PlaidIAApp:
         if not dialogue.resultat:
             return
         texte = dialogue.resultat
+        dossier = self.dossier_actuel  # figé ici -- voir Generation, jamais relu plus tard
+
         self._afficher_vue_sortie()
         self._effacer_sortie()
-        self._afficher("Analyse en cours...\n")
+        self._afficher(
+            "Analyse en cours...\nVous pouvez changer de dossier ou d'écran : le badge 🔄 en haut "
+            "vous préviendra dès que ce sera prêt.\n"
+        )
+        self.ecran_actuel = "analyser"
 
         def tache():
             return analyse.analyser_conclusions(texte)
+
+        def sauvegarder(dossier_id, result):
+            db.save_analyse(dossier_id, result.get("arguments", []), result.get("points_attention", []))
 
         def afficher(result):
             self._effacer_sortie()
@@ -1142,17 +1406,15 @@ class PlaidIAApp:
                 self._afficher("Points d'attention :", "attention")
                 for p in result["points_attention"]:
                     self._afficher(f"  - {p}")
-            try:
-                db.save_analyse(self.dossier_actuel["id"], result.get("arguments", []), result.get("points_attention", []))
-            except Exception:
-                pass
 
-        self._lancer_tache(tache, afficher)
+        self._lancer_generation(dossier, "analyser", "Analyse des conclusions adverses", tache, sauvegarder, afficher, widget_erreur=self.sortie)
 
     def _action_resumer(self):
+        dossier = self.dossier_actuel
         self._afficher_vue_sortie()
         self._effacer_sortie()
         self._afficher("Génération du résumé en cours...\n")
+        self.ecran_actuel = "resumer"
         contexte = self._contexte_dossier()
 
         def tache():
@@ -1173,15 +1435,17 @@ class PlaidIAApp:
                 for e in result["elements_manquants"]:
                     self._afficher(f"  - {e}")
 
-        self._lancer_tache(tache, afficher)
+        self._lancer_generation(dossier, "resumer", "Résumé du dossier", tache, None, afficher)
 
     def _action_plan(self, duree_preremplie=None):
         duree = duree_preremplie or simpledialog.askinteger("Plan de plaidoirie", "Temps de parole imparti (en minutes) :", minvalue=1, maxvalue=180)
         if not duree:
             return
+        dossier = self.dossier_actuel
         self._afficher_vue_sortie()
         self._effacer_sortie()
         self._afficher("Génération du plan en cours...\n")
+        self.ecran_actuel = "plan"
         contexte = self._contexte_dossier()
 
         def tache():
@@ -1203,12 +1467,14 @@ class PlaidIAApp:
                 for p in result["points_attention"]:
                     self._afficher(f"  - {p}")
 
-        self._lancer_tache(tache, afficher)
+        self._lancer_generation(dossier, "plan", "Plan de plaidoirie", tache, None, afficher)
 
     def _action_simulateur(self):
+        dossier = self.dossier_actuel
         self._afficher_vue_sortie()
         self._effacer_sortie()
         self._afficher("Génération des questions probables en cours...\n")
+        self.ecran_actuel = "simulateur"
         contexte = self._contexte_dossier()
 
         def tache():
@@ -1225,7 +1491,7 @@ class PlaidIAApp:
                 self._afficher("Point le plus faible du dossier :", "attention")
                 self._afficher(f"  {result['point_le_plus_faible']}")
 
-        self._lancer_tache(tache, afficher)
+        self._lancer_generation(dossier, "simulateur", "Simulateur d'objections", tache, None, afficher)
 
     def _action_note(self):
         dialogue = DialogueTexteLong(self.root, "Prendre une note", "Saisissez votre note, quelle qu'en soit la forme ; l'agent se chargera de la structurer :")
@@ -1233,12 +1499,22 @@ class PlaidIAApp:
         if not dialogue.resultat:
             return
         note_brute = dialogue.resultat
+        dossier = self.dossier_actuel
         self._afficher_vue_sortie()
         self._effacer_sortie()
         self._afficher("Structuration de la note en cours...\n")
+        self.ecran_actuel = "note"
 
         def tache():
             return analyse.traiter_notes(note_brute)
+
+        def sauvegarder(dossier_id, result):
+            db.ajouter_note(
+                dossier_id, note_brute,
+                note_structuree=result.get("note_structuree", ""),
+                actions=result.get("actions_a_faire", []),
+                points=result.get("points_a_retenir", []),
+            )
 
         def afficher(result):
             self._effacer_sortie()
@@ -1253,22 +1529,18 @@ class PlaidIAApp:
                 self._afficher("Points à retenir :")
                 for p in result["points_a_retenir"]:
                     self._afficher(f"  • {p}")
-            db.ajouter_note(
-                self.dossier_actuel["id"], note_brute,
-                note_structuree=result.get("note_structuree", ""),
-                actions=result.get("actions_a_faire", []),
-                points=result.get("points_a_retenir", []),
-            )
 
-        self._lancer_tache(tache, afficher)
+        self._lancer_generation(dossier, "note", "Note structurée", tache, sauvegarder, afficher)
 
     def _action_rapport_complet(self):
         duree = simpledialog.askinteger("Rapport complet", "Temps de parole pour le plan de plaidoirie, en minutes :", minvalue=1, maxvalue=180)
+        dossier = self.dossier_actuel
         self._afficher_vue_sortie()
         self._effacer_sortie()
         self._afficher("Génération du plan et du simulateur en parallèle...\n")
+        self.ecran_actuel = "rapport_complet"
         contexte = self._contexte_dossier()
-        analyses_existantes = db.get_analyses_for_dossier(self.dossier_actuel["id"])
+        analyses_existantes = db.get_analyses_for_dossier(dossier["id"])
         analyse_result = None
         if analyses_existantes:
             derniere = analyses_existantes[0]
@@ -1303,7 +1575,7 @@ class PlaidIAApp:
                 self._afficher(f"{i}. [{obj.get('origine', '?')}] {obj.get('question', '')}")
                 self._afficher(f"   Piste : {obj.get('piste_reponse', '')}")
 
-        self._lancer_tache(tache, afficher)
+        self._lancer_generation(dossier, "rapport_complet", "Rapport complet (plan + simulateur)", tache, None, afficher)
 
     def _action_analyser_style(self):
         dialogue = DialogueTexteLong(self.root, "Analyse stylistique", "Veuillez transmettre le texte des conclusions adverses à analyser :")
@@ -1311,9 +1583,12 @@ class PlaidIAApp:
         if not dialogue.resultat:
             return
         texte = dialogue.resultat
+        # besoin_dossier=False (voir self.categories) : pas de dossier figé,
+        # cette analyse porte sur un texte collé, indépendamment de tout dossier.
         self._afficher_vue_sortie()
         self._effacer_sortie()
         self._afficher("Analyse stylistique en cours...\n")
+        self.ecran_actuel = "analyser_style"
 
         def tache():
             return analyse.analyser_style_adverse(texte)
@@ -1340,7 +1615,7 @@ class PlaidIAApp:
                 self._afficher(f"\n💡 Synthèse stratégique :\n{result['synthese_strategique']}", "titre")
             self._afficher("\n⚡ Outil de réflexion stratégique, pas une preuve juridique.", "attention")
 
-        self._lancer_tache(tache, afficher)
+        self._lancer_generation(None, "analyser_style", "Analyse stylistique", tache, None, afficher)
 
     # ---------- La Chemise ----------
     def _action_historique_dossier(self):
@@ -1497,10 +1772,14 @@ class PlaidIAApp:
 
         source_active = getattr(self, "source_juridique_active", "Légifrance (France)")
 
+        # besoin_dossier=False : une consultation de jurisprudence porte sur
+        # une situation décrite librement, jamais sur un dossier en
+        # particulier -- pas de dossier à figer ici.
         self._afficher_vue_sortie()
         self._effacer_sortie()
         self._afficher(f"Juridiction active : {source_active}\n", "titre")
         self._afficher("Compréhension de la situation en cours...\n")
+        self.ecran_actuel = "consulter_jurisprudence"
 
         def tache():
             import recherche_juridique as rj
@@ -1535,7 +1814,7 @@ class PlaidIAApp:
                 self._afficher(f"Domaine identifié : {notions['domaine']}\n")
             self._afficher(resultat["reponse"])
 
-        self._lancer_tache(tache, afficher, widget_erreur=self.sortie)
+        self._lancer_generation(None, "consulter_jurisprudence", f"Jurisprudence : « {question[:40]} »", tache, None, afficher, widget_erreur=self.sortie)
 
     def _action_collecter_jurisprudence(self):
         query = simpledialog.askstring("Collecter de la jurisprudence", "Mots-clés de recherche (ex. « licenciement faute grave ») :")
@@ -1547,25 +1826,30 @@ class PlaidIAApp:
         self.root.wait_window(dialogue)
         domaine = dialogue.resultat or ""
 
+        # besoin_dossier=False : la collecte alimente la file d'attente
+        # commune de jurisprudence (db.add_jurisprudence), pas un dossier.
         self._afficher_vue_sortie()
         self._effacer_sortie()
         self._afficher(f"Recherche Judilibre : « {query} »...\n")
+        self.ecran_actuel = "collecter_jurisprudence"
 
         def tache():
             import judilibre
             return judilibre.collecter_jurisprudence(query=query, domaine=domaine, max_results=10)
+
+        def sauvegarder(dossier_id, collectees):
+            for c in collectees:
+                db.add_jurisprudence(reference=c["reference"], resume=c["resume"], domaine=c["domaine"], source=c["source"], validee=False)
 
         def afficher(collectees):
             self._effacer_sortie()
             if not collectees:
                 self._afficher("Aucun résultat.")
                 return
-            for c in collectees:
-                db.add_jurisprudence(reference=c["reference"], resume=c["resume"], domaine=c["domaine"], source=c["source"], validee=False)
             self._afficher(f"✅ {len(collectees)} décision(s) collectée(s), en attente de validation.", "titre")
             self._afficher("Utilisez « Gérer la jurisprudence » pour les relire et les valider avant qu'elles ne soient utilisables.")
 
-        self._lancer_tache(tache, afficher)
+        self._lancer_generation(None, "collecter_jurisprudence", f"Collecte Judilibre : « {query[:40]} »", tache, sauvegarder, afficher)
 
     def _action_gerer_jurisprudence(self):
         en_attente = db.get_jurisprudence_en_attente()
@@ -1635,9 +1919,11 @@ class PlaidIAApp:
             self._afficher("")
 
     def _action_note_client(self):
+        dossier = self.dossier_actuel
         self._afficher_vue_sortie()
         self._effacer_sortie()
         self._afficher("Rédaction de la note client en cours...\n")
+        self.ecran_actuel = "note_client"
         contexte = self._contexte_dossier()
 
         def tache():
@@ -1648,12 +1934,14 @@ class PlaidIAApp:
             self._afficher("=== NOTE CLIENT (langage simple) ===\n", "titre")
             self._afficher(texte)
 
-        self._lancer_tache(tache, afficher)
+        self._lancer_generation(dossier, "note_client", "Note client", tache, None, afficher)
 
     def _action_chronologie(self):
+        dossier = self.dossier_actuel
         self._afficher_vue_sortie()
         self._effacer_sortie()
         self._afficher("Construction de la chronologie en cours...\n")
+        self.ecran_actuel = "chronologie"
         contexte = self._contexte_dossier()
 
         def tache():
@@ -1669,7 +1957,7 @@ class PlaidIAApp:
                 for e in result["elements_manquants"]:
                     self._afficher(f"  - {e}")
 
-        self._lancer_tache(tache, afficher)
+        self._lancer_generation(dossier, "chronologie", "Chronologie de l'affaire", tache, None, afficher)
 
     def _action_extraction_document(self):
         dialogue = DialogueTexteLong(self.root, "Extraction d'éléments clés", "Veuillez transmettre le texte du document :")
@@ -1677,9 +1965,11 @@ class PlaidIAApp:
         if not dialogue.resultat:
             return
         texte = dialogue.resultat
+        # besoin_dossier=False : extraction sur un texte collé, indépendante de tout dossier.
         self._afficher_vue_sortie()
         self._effacer_sortie()
         self._afficher("Extraction en cours...\n")
+        self.ecran_actuel = "extraction_document"
 
         def tache():
             return analyse.extraire_elements_cles(texte)
@@ -1698,7 +1988,7 @@ class PlaidIAApp:
                     self._afficher("  (aucun élément identifié)")
                 self._afficher("")
 
-        self._lancer_tache(tache, afficher)
+        self._lancer_generation(None, "extraction_document", "Extraction d'éléments clés", tache, None, afficher)
 
     def _action_classement_document(self):
         dialogue = DialogueTexteLong(self.root, "Classement automatique", "Veuillez transmettre le texte du document :")
@@ -1706,9 +1996,11 @@ class PlaidIAApp:
         if not dialogue.resultat:
             return
         texte = dialogue.resultat
+        # besoin_dossier=False : classement d'un texte collé, indépendant de tout dossier.
         self._afficher_vue_sortie()
         self._effacer_sortie()
         self._afficher("Classement en cours...\n")
+        self.ecran_actuel = "classement_document"
 
         def tache():
             return analyse.classifier_document(texte)
@@ -1719,7 +2011,7 @@ class PlaidIAApp:
             self._afficher(f"   Confiance : {result.get('confiance', 'Faible')}")
             self._afficher(f"   Justification : {result.get('justification', '')}")
 
-        self._lancer_tache(tache, afficher)
+        self._lancer_generation(None, "classement_document", "Classement automatique", tache, None, afficher)
 
     def _action_analyser_requisitoire(self):
         dialogue = DialogueTexteLong(self.root, "Analyser un réquisitoire", "Veuillez transmettre le texte du réquisitoire :")
@@ -1727,9 +2019,11 @@ class PlaidIAApp:
         if not dialogue.resultat:
             return
         texte = dialogue.resultat
+        # besoin_dossier=False : analyse d'un texte collé, indépendante de tout dossier.
         self._afficher_vue_sortie()
         self._effacer_sortie()
         self._afficher("Analyse du réquisitoire en cours...\n")
+        self.ecran_actuel = "analyser_requisitoire"
 
         def tache():
             return analyse.analyser_requisitoire(texte)
@@ -1755,7 +2049,7 @@ class PlaidIAApp:
                 for p in result["points_attention"]:
                     self._afficher(f"  - {p}")
 
-        self._lancer_tache(tache, afficher)
+        self._lancer_generation(None, "analyser_requisitoire", "Analyse du réquisitoire", tache, None, afficher)
 
     def _action_rapport_instruction(self):
         dialogue = DialogueTexteLong(self.root, "Rapport d'instruction", "Veuillez transmettre le texte du rapport d'instruction :")
@@ -1763,9 +2057,11 @@ class PlaidIAApp:
         if not dialogue.resultat:
             return
         texte = dialogue.resultat
+        # besoin_dossier=False : analyse d'un texte collé, indépendante de tout dossier.
         self._afficher_vue_sortie()
         self._effacer_sortie()
         self._afficher("Analyse du rapport d'instruction en cours...\n")
+        self.ecran_actuel = "rapport_instruction"
 
         def tache():
             return analyse.analyser_rapport_instruction(texte)
@@ -1791,7 +2087,7 @@ class PlaidIAApp:
                 for p in result["points_attention"]:
                     self._afficher(f"  - {p}")
 
-        self._lancer_tache(tache, afficher)
+        self._lancer_generation(None, "rapport_instruction", "Rapport d'instruction", tache, None, afficher)
 
     def _action_rechercher_transversal(self):
         terme = simpledialog.askstring("Recherche transversale", "Terme à rechercher dans toutes les affaires :")
@@ -1816,9 +2112,11 @@ class PlaidIAApp:
         if not dialogue.resultat:
             return
         notes = dialogue.resultat
+        # besoin_dossier=False : rédaction à partir de notes libres, indépendante de tout dossier.
         self._afficher_vue_sortie()
         self._effacer_sortie()
         self._afficher("Rédaction de la première version du PV en cours...\n")
+        self.ecran_actuel = "pv_audience"
 
         def tache():
             return analyse.rediger_pv(notes)
@@ -1828,12 +2126,14 @@ class PlaidIAApp:
             self._afficher("=== PREMIÈRE VERSION DU PV — à relire et compléter ===\n", "titre")
             self._afficher(pv)
 
-        self._lancer_tache(tache, afficher)
+        self._lancer_generation(None, "pv_audience", "Procès-verbal d'audience", tache, None, afficher)
 
     def _action_verification_procedurale(self):
+        dossier = self.dossier_actuel
         self._afficher_vue_sortie()
         self._effacer_sortie()
         self._afficher("Vérification procédurale en cours...\n")
+        self.ecran_actuel = "verification_procedurale"
         contexte = self._contexte_dossier()
 
         def tache():
@@ -1858,7 +2158,7 @@ class PlaidIAApp:
             if not any([result.get("echeances_identifiees"), result.get("actes_potentiellement_manquants"), result.get("points_attention")]):
                 self._afficher("Aucune échéance ni anomalie identifiée dans le contenu disponible.")
 
-        self._lancer_tache(tache, afficher)
+        self._lancer_generation(dossier, "verification_procedurale", "Vérification procédurale", tache, None, afficher)
 
     def _action_controle_coherence(self):
         documents = []
@@ -1885,9 +2185,11 @@ class PlaidIAApp:
         if len(documents) < 2:
             return
 
+        # besoin_dossier=False : comparaison de textes collés, indépendante de tout dossier.
         self._afficher_vue_sortie()
         self._effacer_sortie()
         self._afficher(f"Comparaison de {len(documents)} documents en cours...\n")
+        self.ecran_actuel = "controle_coherence"
 
         def tache():
             return analyse.controler_coherence(documents)
@@ -1910,7 +2212,7 @@ class PlaidIAApp:
             if result.get("limites_analyse"):
                 self._afficher(f"\n⚡ Limites de cette analyse : {result['limites_analyse']}", "attention")
 
-        self._lancer_tache(tache, afficher)
+        self._lancer_generation(None, "controle_coherence", "Contrôle de cohérence entre documents", tache, None, afficher)
 
     def _construire_panneau_intelligence_vide(self):
         """(Re)construit le panneau « Intelligence juridique » à droite du
