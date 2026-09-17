@@ -641,6 +641,7 @@
     "accueil": "Accueil",
     "parametresPage": "Paramètres",
     "chat": "Échanger avec l'agent juridique",
+    "conversations": "Historique des conversations",
     "arsenal": {
       "analyser": "Analyser des conclusions adverses",
       "resumer": "Résumer ce dossier",
@@ -850,6 +851,22 @@
     "envoyer": "Envoyer",
     "collerTexteLongTitre2": "Coller un texte long",
     "collerTexteLongConsigne": "Collez ici le texte à analyser (réquisitoire, conclusions, jugement…) — il sera inséré dans la zone de saisie, à vous de compléter et d'envoyer."
+  },
+  "conversationsPage": {
+    "titre": "Historique des conversations",
+    "rechercherPlaceholder": "Rechercher par titre…",
+    "rechercherAria": "Rechercher une conversation par titre",
+    "filtrerParDossier": "Filtrer par dossier",
+    "tousLesDossiers": "Tous les dossiers",
+    "sansDossier": "Sans dossier",
+    "aucuneConversationTitre": "Aucune conversation pour l'instant",
+    "aucuneConversationDescription": "Les conversations que vous enregistrez depuis le Chat apparaîtront ici.",
+    "aucunResultatTitre": "Aucune conversation ne correspond",
+    "aucunResultatDescription": "Essayez un autre terme, ou changez le filtre par dossier.",
+    "supprimer": "Supprimer",
+    "confirmer": "Confirmer ?",
+    "oui": "Oui",
+    "echecSuppression": "La suppression a échoué."
   },
   "connexion": {
     "emailRequis": "L'adresse e-mail est requise.",

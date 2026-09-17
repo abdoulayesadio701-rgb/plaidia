@@ -641,6 +641,7 @@
     "accueil": "Home",
     "parametresPage": "Settings",
     "chat": "Chat with the legal assistant",
+    "conversations": "Conversation history",
     "arsenal": {
       "analyser": "Analyse opposing submissions",
       "resumer": "Summarise this case",
@@ -850,6 +851,22 @@
     "envoyer": "Send",
     "collerTexteLongTitre2": "Paste a long text",
     "collerTexteLongConsigne": "Paste the text to analyze here (brief, submissions, judgment...) - it will be inserted into the input box for you to complete and send."
+  },
+  "conversationsPage": {
+    "titre": "Conversation history",
+    "rechercherPlaceholder": "Search by title…",
+    "rechercherAria": "Search a conversation by title",
+    "filtrerParDossier": "Filter by case",
+    "tousLesDossiers": "All cases",
+    "sansDossier": "No case",
+    "aucuneConversationTitre": "No conversations yet",
+    "aucuneConversationDescription": "Conversations you save from the Chat will appear here.",
+    "aucunResultatTitre": "No conversation matches",
+    "aucunResultatDescription": "Try another term, or change the case filter.",
+    "supprimer": "Delete",
+    "confirmer": "Confirm?",
+    "oui": "Yes",
+    "echecSuppression": "Deletion failed."
   },
   "connexion": {
     "emailRequis": "Email address is required.",

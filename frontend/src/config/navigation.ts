@@ -44,7 +44,10 @@ export const NAVIGATION: Record<Espace, NavSection[]> = {
     {
       title: "Poser une question",
       titleKey: "nav.sections.poserQuestion",
-      items: [{ path: "/chat", label: "Échanger avec l'agent juridique", requiresDossier: false }],
+      items: [
+        { path: "/chat", label: "Échanger avec l'agent juridique", requiresDossier: false },
+        { path: "/conversations", label: "Historique des conversations", requiresDossier: false },
+      ],
     },
     {
       title: "L'Arsenal",

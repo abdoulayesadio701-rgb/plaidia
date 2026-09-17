@@ -18,6 +18,7 @@ import ConnexionPage from "@/pages/ConnexionPage";
 import NotFoundPage from "@/pages/NotFoundPage";
 import Styleguide from "@/pages/Styleguide";
 import ChatPage from "@/pages/ChatPage";
+import ConversationsPage from "@/pages/ConversationsPage";
 import AnalyserConclusionsPage from "@/pages/arsenal/AnalyserConclusionsPage";
 import ResumerDossierPage from "@/pages/arsenal/ResumerDossierPage";
 import PlanPlaidoiriePage from "@/pages/arsenal/PlanPlaidoiriePage";
@@ -51,6 +52,7 @@ import { allNavItems, navKey } from "@/config/navigation";
 // "activer" la vraie page pour ce chemin.
 const PAGES_IMPLEMENTEES: Record<string, ReactElement> = {
   "/chat": <ChatPage />,
+  "/conversations": <ConversationsPage />,
   "/arsenal/analyser": <AnalyserConclusionsPage />,
   "/arsenal/resumer": <ResumerDossierPage />,
   "/arsenal/plan": <PlanPlaidoiriePage />,
