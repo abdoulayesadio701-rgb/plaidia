@@ -130,6 +130,19 @@ CREATE TABLE IF NOT EXISTS documents_generes (
     FOREIGN KEY (dossier_id) REFERENCES dossiers(id) ON DELETE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS generations (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    type TEXT NOT NULL,            -- "analyser" | "plan" | "simulateur" | ... (feature -- voir gui.py::PlaidIAApp._lancer_generation)
+    dossier_id INTEGER,            -- NULL pour les fonctionnalités indépendantes d'un dossier (besoin_dossier=False)
+    libelle TEXT NOT NULL,         -- résumé lisible affiché dans l'historique (ex. "Plan de plaidoirie")
+    contenu_json TEXT,             -- résultat complet en JSON -- NULL tant que statut='en_cours'
+    statut TEXT NOT NULL DEFAULT 'en_cours',  -- "en_cours" | "terminee" | "erreur" -- jamais d'autre valeur, jamais réécrit hors de ce cycle
+    erreur TEXT,                   -- message d'erreur si statut='erreur', sinon NULL
+    date_creation TEXT NOT NULL,   -- lancement de la génération
+    date_fin TEXT,                 -- fin (succès ou échec) -- NULL tant que statut='en_cours'
+    FOREIGN KEY (dossier_id) REFERENCES dossiers(id) ON DELETE SET NULL
+);
+
 CREATE TABLE IF NOT EXISTS elements_epingles (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     type TEXT NOT NULL,            -- "dossier" | "analyse" (voir app/schemas/epingles.py pour la liste à jour)
@@ -204,6 +217,7 @@ def _migrer_colonnes_manquantes(conn):
 
 
 TABLES = (
+    "generations",
     "documents_generes",
     "versions_document",
     "elements_epingles",
@@ -1061,6 +1075,116 @@ def deja_epingle(type_element: str, reference_id: int):
     ).fetchone()
     conn.close()
     return row
+
+
+# --- Générations (historique persistant de tout contenu généré) --------
+#
+# Distinct de `documents_generes` : ce dernier suit le statut ÉDITORIAL
+# d'un document (Brouillon -> ... -> Final, avec verrouillage à Final --
+# voir changer_statut_document), utilisé par le backend web. `generations`
+# suit le statut TECHNIQUE du traitement IA lui-même (en_cours -> terminee
+# | erreur), pour gui.py::PlaidIAApp._lancer_generation -- un journal
+# append-only de tout ce qui a été généré, y compris les fonctionnalités
+# qui n'écrivent dans aucune autre table (résumé, chronologie...). Jamais
+# de suppression ni d'expiration automatique : supprimer_generation()
+# n'est appelée que depuis un bouton « Supprimer » confirmé par
+# l'utilisateur (voir gui.py::DialogueGenerations).
+
+def creer_generation(dossier_id, type_generation: str, libelle: str) -> int:
+    """Enregistre le lancement d'une génération, statut 'en_cours', avant
+    même de savoir si elle réussira -- ainsi, même un arrêt brutal de l'app
+    en cours de traitement laisse une trace en base plutôt qu'aucune (voir
+    marquer_generations_en_cours_comme_interrompues, appelée au prochain
+    démarrage)."""
+    conn = get_connection()
+    cur = conn.execute(
+        "INSERT INTO generations (type, dossier_id, libelle, statut, date_creation) VALUES (?, ?, ?, 'en_cours', ?)",
+        (type_generation, dossier_id, libelle, datetime.now().isoformat(timespec="seconds")),
+    )
+    conn.commit()
+    generation_id = cur.lastrowid
+    conn.close()
+    return generation_id
+
+
+def terminer_generation(generation_id: int, contenu) -> None:
+    conn = get_connection()
+    conn.execute(
+        "UPDATE generations SET statut = 'terminee', contenu_json = ?, date_fin = ? WHERE id = ?",
+        (json.dumps(contenu, ensure_ascii=False), datetime.now().isoformat(timespec="seconds"), generation_id),
+    )
+    conn.commit()
+    conn.close()
+
+
+def echouer_generation(generation_id: int, erreur: str) -> None:
+    conn = get_connection()
+    conn.execute(
+        "UPDATE generations SET statut = 'erreur', erreur = ?, date_fin = ? WHERE id = ?",
+        (str(erreur), datetime.now().isoformat(timespec="seconds"), generation_id),
+    )
+    conn.commit()
+    conn.close()
+
+
+def _generation_depuis_row(row) -> dict:
+    d = dict(row)
+    d["contenu"] = json.loads(d["contenu_json"]) if d["contenu_json"] else None
+    del d["contenu_json"]
+    return d
+
+
+def list_generations(dossier_id=None) -> list:
+    """Historique complet, le plus récent d'abord. Sans filtre, renvoie
+    TOUTES les générations (y compris celles sans dossier) -- c'est la
+    source de l'écran « Générations » (voir gui.py::DialogueGenerations),
+    qui doit rester consultable après redémarrage de l'app."""
+    conn = get_connection()
+    if dossier_id is not None:
+        rows = conn.execute(
+            "SELECT * FROM generations WHERE dossier_id = ? ORDER BY date_creation DESC", (dossier_id,)
+        ).fetchall()
+    else:
+        rows = conn.execute("SELECT * FROM generations ORDER BY date_creation DESC").fetchall()
+    conn.close()
+    return [_generation_depuis_row(r) for r in rows]
+
+
+def get_generation(generation_id: int):
+    conn = get_connection()
+    row = conn.execute("SELECT * FROM generations WHERE id = ?", (generation_id,)).fetchone()
+    conn.close()
+    return _generation_depuis_row(row) if row else None
+
+
+def supprimer_generation(generation_id: int) -> None:
+    """Suppression DÉFINITIVE et IRRÉVERSIBLE d'une entrée d'historique --
+    à n'appeler que depuis une action explicite de l'utilisateur (bouton
+    « Supprimer » avec confirmation). Jamais appelée automatiquement :
+    aucune expiration, aucune purge périodique, aucune limite de nombre
+    conservé en base."""
+    conn = get_connection()
+    conn.execute("DELETE FROM generations WHERE id = ?", (generation_id,))
+    conn.commit()
+    conn.close()
+
+
+def marquer_generations_en_cours_comme_interrompues() -> None:
+    """Appelée une seule fois, au démarrage de l'app (voir gui.py::main).
+    Une génération encore à statut='en_cours' en base ne peut être que le
+    reliquat d'un arrêt brutal (fermeture, crash) lors d'un lancement
+    précédent : aucun thread ne peut légitimement y travailler encore
+    puisque le processus vient de démarrer. La marquer 'erreur' reflète la
+    réalité sans rien supprimer ni écraser -- contenu_json était déjà NULL
+    pour une génération jamais allée à son terme."""
+    conn = get_connection()
+    conn.execute(
+        "UPDATE generations SET statut = 'erreur', erreur = 'Application fermée pendant le traitement.', date_fin = ? "
+        "WHERE statut = 'en_cours'",
+        (datetime.now().isoformat(timespec="seconds"),),
+    )
+    conn.commit()
+    conn.close()
 
 
 if __name__ == "__main__":

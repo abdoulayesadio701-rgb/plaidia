@@ -13,6 +13,7 @@ import sys
 import threading
 import time
 import uuid
+from datetime import datetime
 import tkinter as tk
 from tkinter import ttk, scrolledtext, messagebox, simpledialog
 
@@ -411,7 +412,8 @@ class Generation:
     endroit."""
 
     def __init__(self, id_, dossier_id, dossier_nom, feature, libelle, fonction_sauvegarde, fonction_affichage, widget_erreur):
-        self.id = id_
+        self.id = id_  # identifiant en mémoire (uuid), valable pour la durée de la session
+        self.db_id = None  # id de la ligne dans db.generations -- voir _lancer_generation ; None tant que non encore posé
         self.dossier_id = dossier_id
         self.dossier_nom = dossier_nom
         self.feature = feature
@@ -419,12 +421,43 @@ class Generation:
         self.fonction_sauvegarde = fonction_sauvegarde
         self.fonction_affichage = fonction_affichage
         self.widget_erreur = widget_erreur
-        self.statut = "en_cours"  # "en_cours" | "terminee" | "erreur"
+        self.statut = "en_cours"  # "en_cours" | "terminee" | "erreur" -- reflète UNIQUEMENT le traitement IA lui-même
         self.resultat = None
         self.erreur = None
+        self.avertissement = None  # non None si le contenu a bien été généré (statut="terminee") mais pas enregistré dans le dossier
         self.horodatage_debut = time.time()
         self.horodatage_fin = None
         self.lue = False  # passe à True une fois vue dans DialogueGenerations
+
+
+class EntreeHistorique:
+    """Vue en lecture seule d'une ligne de db.generations, pour affichage
+    dans DialogueGenerations -- même attributs que Generation pour que la
+    fenêtre puisse traiter les deux de façon identique (voir
+    PlaidIAApp._entrees_historique_generations, qui fusionne les deux
+    sources : la session en cours et l'historique persistant).
+
+    Contrairement à Generation, `fonction_affichage` est toujours None :
+    le rendu soigné d'origine n'existe qu'en mémoire, le temps de la
+    session qui a lancé la génération -- une entrée retrouvée après
+    redémarrage de l'app s'ouvre donc avec un rendu générique du contenu
+    JSON stocké, honnête plutôt que reconstitué."""
+
+    def __init__(self, row, dossier_nom):
+        self.db_id = row["id"]
+        self.dossier_id = row["dossier_id"]
+        self.dossier_nom = dossier_nom
+        self.feature = row["type"]
+        self.libelle = row["libelle"]
+        self.statut = row["statut"]
+        self.resultat = row["contenu"]
+        self.erreur = row["erreur"]
+        self.avertissement = None
+        self.horodatage_debut = datetime.fromisoformat(row["date_creation"]).timestamp()
+        self.horodatage_fin = datetime.fromisoformat(row["date_fin"]).timestamp() if row["date_fin"] else None
+        self.fonction_affichage = None
+        self.widget_erreur = None
+        self.lue = True  # l'historique persisté n'alimente pas le compteur "non lu", propre à la session en cours
 
 
 class DialogueGenerations(tk.Toplevel):
@@ -465,16 +498,42 @@ class DialogueGenerations(tk.Toplevel):
             texte = f"{prefixe}{gen.libelle}\n{self._LIBELLES_STATUT.get(gen.statut, gen.statut)} ({duree}s)"
             if gen.statut == "erreur" and gen.erreur:
                 texte += f"\n{gen.erreur[:150]}"
+            if getattr(gen, "avertissement", None):
+                texte += f"\n⚠ {gen.avertissement[:150]}"
             tk.Label(
-                ligne, text=texte, font=FONT_BASE, bg=LIGHT_BG, wraplength=340, justify="left", anchor="w",
+                ligne, text=texte, font=FONT_BASE, bg=LIGHT_BG, wraplength=300, justify="left", anchor="w",
             ).pack(side="left", fill="x", expand=True, padx=8, pady=8)
+
+            zone_boutons = tk.Frame(ligne, bg=LIGHT_BG)
+            zone_boutons.pack(side="right", padx=8)
             if gen.statut == "terminee":
                 tk.Button(
-                    ligne, text="Ouvrir →", command=lambda g=gen: (self.destroy(), app._ouvrir_resultat_generation(g)),
+                    zone_boutons, text="Ouvrir →", command=lambda g=gen: (self.destroy(), app._ouvrir_resultat_generation(g)),
                     font=FONT_BTN, bg=GOLD, fg="white", relief="flat",
-                ).pack(side="right", padx=8)
+                ).pack(side="top", pady=2, fill="x")
+            if gen.statut in ("terminee", "erreur"):
+                tk.Button(
+                    zone_boutons, text="Supprimer", command=lambda g=gen, l=ligne: self._supprimer(app, g, l),
+                    font=FONT_BTN, bg=WHITE, fg="#B91C1C", relief="flat",
+                ).pack(side="top", pady=2, fill="x")
 
         tk.Button(self, text="Fermer", command=self.destroy, font=FONT_BTN).pack(pady=(0, 16))
+
+    def _supprimer(self, app, gen, ligne):
+        """Suppression DÉFINITIVE d'une entrée d'historique -- toujours
+        confirmée explicitement, jamais automatique (voir
+        db.supprimer_generation). Ne touche qu'à cette ligne, la fenêtre
+        reste ouverte sur le reste de l'historique."""
+        confirme = messagebox.askyesno(
+            "Suppression définitive",
+            f"Supprimer définitivement « {gen.libelle} » de l'historique des générations ?\n\n"
+            "Cette action est irréversible.",
+            icon="warning",
+        )
+        if not confirme:
+            return
+        app._supprimer_generation(gen)
+        ligne.destroy()
 
 
 class DialogueImporterTexte(tk.Toplevel):
@@ -1177,6 +1236,11 @@ class PlaidIAApp:
             dossier["nom"] if dossier is not None else None,
             feature, libelle, fonction_sauvegarde, fonction_affichage, widget_erreur,
         )
+        # Écrit tout de suite en base (statut 'en_cours') -- avant même de
+        # savoir si la génération va réussir -- pour que l'historique
+        # persistant (db.generations) survive à un arrêt brutal de l'app,
+        # pas seulement à une navigation entre écrans (voir Generation.db_id).
+        gen.db_id = db.creer_generation(gen.dossier_id, feature, libelle)
         self.generations[gen.id] = gen
         if cle is not None:
             self._generations_actives_par_cle.add(cle)
@@ -1204,24 +1268,29 @@ class PlaidIAApp:
         gen.horodatage_fin = time.time()
 
         if erreur is not None:
+            # Le traitement IA lui-même a échoué -- rien n'a été généré, il
+            # n'y a donc rien à perdre : seul db.generations.statut='erreur'
+            # est écrit (contenu_json reste NULL).
             gen.statut = "erreur"
             gen.erreur = str(erreur)
+            db.echouer_generation(gen.db_id, gen.erreur)
         else:
+            # Le contenu existe : il est acquis dans l'historique persistant
+            # AVANT toute tentative d'enregistrement dans une table annexe
+            # (analyses, notes...) -- si celle-ci échoue plus bas, le
+            # contenu n'est donc jamais perdu, seulement absent de cette
+            # table-là (voir gen.avertissement, distinct de gen.erreur).
             gen.resultat = resultat
+            gen.statut = "terminee"
+            db.terminer_generation(gen.db_id, resultat)
             if gen.fonction_sauvegarde is not None:
                 try:
                     gen.fonction_sauvegarde(gen.dossier_id, resultat)
-                    gen.statut = "terminee"
                 except Exception as e:
-                    # La génération a réussi mais l'enregistrement en base a
-                    # échoué : jamais silencieux (contrairement à l'ancien
-                    # `except Exception: pass`) -- le résultat reste en
-                    # mémoire (gen.resultat) et l'échec est visible dans le
-                    # panneau des générations (badge 🔄 -> DialogueGenerations).
-                    gen.statut = "erreur"
-                    gen.erreur = f"Résultat généré mais non enregistré : {e}"
-            else:
-                gen.statut = "terminee"
+                    # Jamais silencieux (contrairement à l'ancien `except
+                    # Exception: pass`) : signalé sans dégrader le statut
+                    # global de la génération, qui a réussi.
+                    gen.avertissement = f"Généré et conservé dans l'historique, mais pas enregistré dans le dossier : {e}"
 
         self._rafraichir_badge_generations()
 
@@ -1234,6 +1303,8 @@ class PlaidIAApp:
             return  # le badge suffit -- rien à changer sur l'écran affiché
         if gen.statut == "terminee" and gen.fonction_affichage is not None:
             gen.fonction_affichage(resultat)
+            if gen.avertissement:
+                self._afficher(f"⚠ {gen.avertissement}", "attention", widget=gen.widget_erreur)
         elif gen.statut == "erreur":
             self._afficher(f"⚠ Erreur : {gen.erreur}", "attention", widget=gen.widget_erreur)
 
@@ -1247,18 +1318,52 @@ class PlaidIAApp:
         else:
             self.bouton_generations.config(text="🔄", fg="#5578A0", activeforeground="#5578A0")
 
+    def _nom_dossier(self, dossier_id):
+        """Nom actuel d'un dossier à partir de son id, ou None (dossier
+        supprimé depuis, ou génération sans dossier) -- self.dossiers_map
+        est indexé par nom, d'où la recherche inverse."""
+        if dossier_id is None:
+            return None
+        return next((nom for nom, d in self.dossiers_map.items() if d["id"] == dossier_id), None)
+
+    def _entrees_historique_generations(self):
+        """Fusionne les générations de la session en cours (self.generations,
+        qui savent réafficher leur résultat avec le rendu soigné d'origine)
+        et l'historique persistant en base (db.generations, qui survit à un
+        redémarrage de l'app) -- une seule ligne par génération, dédupliquée
+        par db_id ; la version en mémoire est préférée quand les deux
+        existent, c'est elle qui sait effectivement réafficher le résultat."""
+        par_db_id = {}
+        for row in db.list_generations():
+            par_db_id[row["id"]] = EntreeHistorique(row, self._nom_dossier(row["dossier_id"]))
+        for gen in self.generations.values():
+            if gen.db_id is not None:
+                par_db_id[gen.db_id] = gen
+        return sorted(par_db_id.values(), key=lambda g: g.horodatage_debut, reverse=True)
+
     def _afficher_generations(self):
-        if not self.generations:
+        entrees = self._entrees_historique_generations()
+        if not entrees:
             messagebox.showinfo(
                 "Générations",
-                "Aucune génération en cours ni récente. Lancez une analyse, un plan, une plaidoirie... "
-                "et ce badge permet de la suivre même en changeant d'écran entre-temps.",
+                "Aucune génération en cours ni récente. Lancez une analyse, un plan, une plaidoirie... : "
+                "ce badge, et l'historique qu'il ouvre, permettent de la retrouver même après avoir "
+                "redémarré l'application.",
             )
             return
-        DialogueGenerations(self.root, self, list(self.generations.values()))
+        DialogueGenerations(self.root, self, entrees)
         for g in self.generations.values():
             g.lue = True
         self._rafraichir_badge_generations()
+
+    def _afficher_contenu_generique(self, contenu):
+        """Rendu générique (JSON structuré -> texte lisible), utilisé quand
+        le rendu soigné d'origine n'existe plus (résultat retrouvé dans
+        l'historique persistant après redémarrage -- voir EntreeHistorique) :
+        honnête plutôt que de fabriquer un faux rendu spécifique à la
+        fonctionnalité."""
+        import json as _json
+        self._afficher(_json.dumps(contenu, ensure_ascii=False, indent=2))
 
     def _ouvrir_resultat_generation(self, gen):
         """Bascule sur le dossier et l'écran d'une génération terminée pour
@@ -1277,6 +1382,20 @@ class PlaidIAApp:
         self.ecran_actuel = gen.feature
         if gen.fonction_affichage is not None:
             gen.fonction_affichage(gen.resultat)
+        else:
+            self._afficher(f"=== {gen.libelle} (historique) ===\n", "titre")
+            self._afficher_contenu_generique(gen.resultat)
+
+    def _supprimer_generation(self, gen):
+        """Suppression DÉFINITIVE d'une entrée d'historique -- appelée
+        uniquement depuis le bouton « Supprimer » de DialogueGenerations,
+        déjà confirmé à ce stade. Jamais appelée automatiquement (pas
+        d'expiration, pas de purge) -- voir db.supprimer_generation."""
+        db.supprimer_generation(gen.db_id)
+        en_memoire = next((g for g in self.generations.values() if g.db_id == gen.db_id), None)
+        if en_memoire is not None:
+            del self.generations[en_memoire.id]
+        self._rafraichir_badge_generations()
 
     def _contexte_dossier(self):
         d = self.dossier_actuel
@@ -2498,6 +2617,11 @@ class PlaidIAApp:
 
 def main():
     db.init_db()
+    # Toute génération restée 'en_cours' en base ne peut venir que d'un
+    # arrêt brutal de l'app lors d'un lancement précédent -- voir
+    # db.marquer_generations_en_cours_comme_interrompues (aucun thread ne
+    # peut légitimement y travailler encore, le processus vient de démarrer).
+    db.marquer_generations_en_cours_comme_interrompues()
     root = tk.Tk()
     app = PlaidIAApp(root)
     root.mainloop()
