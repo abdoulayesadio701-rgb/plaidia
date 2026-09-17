@@ -188,6 +188,24 @@ def test_resumer_dossier_utilise_le_type_tache_resume(monkeypatch):
     assert appels == [legacy_analyse.TypeTache.RESUME]
 
 
+def test_resumer_dossier_reserve_assez_de_budget_pour_ne_pas_tronquer(monkeypatch):
+    """Non-regression : max_tokens=2200 (avant ce correctif) coupait la
+    réponse en plein milieu d'une chaîne JSON sur un dossier un peu fourni
+    (RESUME_SYSTEM_PROMPT demande explicitement un résumé "aussi développé
+    que nécessaire"), ce que json.loads() ne pouvait plus parser -- voir
+    resumer_dossier(). Verrouille un budget large plutôt qu'une valeur
+    exacte, pour ne pas casser ce test au moindre futur ajustement fin."""
+    budgets = []
+
+    def _espion(type_tache, system, messages, max_tokens):
+        budgets.append(max_tokens)
+        return '{"resume_court": "x", "points_cles": [], "elements_manquants": []}'
+
+    monkeypatch.setattr(legacy_analyse, "_appeler_modele", _espion)
+    legacy_analyse.resumer_dossier("contenu du dossier")
+    assert budgets[0] >= 3000
+
+
 # --- Fonctions migrées : structuration (chronologie, PV, réquisitoire, ------
 # --- rapport d'instruction, notes) -- extension demandée explicitement -----
 

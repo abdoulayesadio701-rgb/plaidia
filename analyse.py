@@ -857,12 +857,19 @@ def resumer_dossier(contexte_dossier: str) -> dict:
     """Produit un résumé synthétique d'un dossier, utile après plusieurs
     imports de documents pour retrouver rapidement l'essentiel. Routée vers
     DeepSeek (chantier "optimisation des coûts API") -- tâche de résumé,
-    jamais d'analyse d'arguments ni de génération de plaidoirie."""
+    jamais d'analyse d'arguments ni de génération de plaidoirie.
+
+    max_tokens=4096 (plutôt que 2200 avant ce correctif) : RESUME_SYSTEM_PROMPT
+    demande explicitement un résumé "aussi développé que nécessaire" et une
+    liste points_cles "autant que nécessaire" -- un budget trop serré coupe
+    la réponse du modèle en plein milieu d'une chaîne JSON sur un dossier un
+    peu fourni, ce que json.loads() ne peut plus parser ensuite (ValueError
+    "non-JSON" remontée telle quelle au front, voir main.py::value_error_handler)."""
     raw = _appeler_modele(
         TypeTache.RESUME,
         RESUME_SYSTEM_PROMPT,
         [{"role": "user", "content": f"Contenu du dossier :\n{contexte_dossier}"}],
-        2200,
+        4096,
     )
     raw = raw.replace("```json", "").replace("```", "").strip()
 
