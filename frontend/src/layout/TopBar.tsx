@@ -21,6 +21,7 @@ export default function TopBar() {
 
   const juridictionActive = useAppStore((s) => s.juridictionActive);
   const definirJuridictionActive = useAppStore((s) => s.definirJuridictionActive);
+  const ouvrirSidebarMobile = useAppStore((s) => s.ouvrirSidebarMobile);
   // Chargée une fois au montage de AppLayout (et rafraîchie après toute
   // validation dans Le Grimoire) -- voir useAppStore::chargerSourcesJuridictions.
   const sources = useAppStore((s) => s.sourcesJuridictions);
@@ -33,6 +34,18 @@ export default function TopBar() {
   return (
     <>
       <header className="flex flex-wrap items-center gap-4 border-b border-gold-600/15 bg-surface/80 px-4 py-3 backdrop-blur-sm">
+        {/* Ouvre le tiroir sidebar sous 768px -- voir Sidebar.tsx. Sans effet
+            visuel ≥768px (bouton caché) où la sidebar garde son comportement
+            desktop habituel. */}
+        <button
+          onClick={ouvrirSidebarMobile}
+          className="shrink-0 rounded-md p-1.5 text-warmgray transition-colors hover:bg-surface-2 hover:text-ivory md:hidden"
+          aria-label={t("sidebar.ouvrirMobileAria")}
+        >
+          <svg viewBox="0 0 20 20" width="20" height="20" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" aria-hidden="true">
+            <path d="M3 6h14M3 10h14M3 14h14" />
+          </svg>
+        </button>
         <Logo />
 
         <DossierSelector onDemanderCreation={ouvrirCreation} />

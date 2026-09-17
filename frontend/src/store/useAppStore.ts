@@ -71,6 +71,15 @@ interface AppState {
   basculerSidebar: () => void;
   definirSidebarRepliee: (repliee: boolean) => void;
 
+  // --- Barre latérale, tiroir mobile (< 768px, voir Sidebar.tsx) -------
+  // Distinct de sidebarReplie (repli en rail d'icônes, desktop uniquement) :
+  // sous 768px la sidebar est un tiroir superposé au contenu (overlay),
+  // caché par défaut, ouvert via le bouton hamburger de TopBar.
+  sidebarMobileOuverte: boolean;
+  ouvrirSidebarMobile: () => void;
+  fermerSidebarMobile: () => void;
+  basculerSidebarMobile: () => void;
+
   // --- Recherche globale (voir AUDIT_TASKBAR.md, étape 3) ---------------
   // État centralisé pour que le bouton de TaskBar ET le raccourci clavier
   // Ctrl/Cmd+K (voir AppLayout) contrôlent la même modale, montée une
@@ -230,6 +239,11 @@ export const useAppStore = create<AppState>((set, get) => ({
   sidebarReplie: false,
   basculerSidebar: () => set((s) => ({ sidebarReplie: !s.sidebarReplie })),
   definirSidebarRepliee: (repliee) => set({ sidebarReplie: repliee }),
+
+  sidebarMobileOuverte: false,
+  ouvrirSidebarMobile: () => set({ sidebarMobileOuverte: true }),
+  fermerSidebarMobile: () => set({ sidebarMobileOuverte: false }),
+  basculerSidebarMobile: () => set((s) => ({ sidebarMobileOuverte: !s.sidebarMobileOuverte })),
 
   rechercheGlobaleOuverte: false,
   ouvrirRechercheGlobale: () => set({ rechercheGlobaleOuverte: true }),

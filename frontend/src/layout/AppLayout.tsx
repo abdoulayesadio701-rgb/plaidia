@@ -25,7 +25,6 @@ export default function AppLayout() {
   const chargerCompteursAttente = useAppStore((s) => s.chargerCompteursAttente);
   const chargerConfiguration = useAppStore((s) => s.chargerConfiguration);
   const chargerEpingles = useAppStore((s) => s.chargerEpingles);
-  const definirSidebarRepliee = useAppStore((s) => s.definirSidebarRepliee);
   const rechercheGlobaleOuverte = useAppStore((s) => s.rechercheGlobaleOuverte);
   const ouvrirRechercheGlobale = useAppStore((s) => s.ouvrirRechercheGlobale);
   const fermerRechercheGlobale = useAppStore((s) => s.fermerRechercheGlobale);
@@ -53,13 +52,10 @@ export default function AppLayout() {
     void chargerCompteursAttente();
     void chargerConfiguration();
     void chargerEpingles();
-    // Repli par défaut sur petit écran (< 768px) : une barre latérale de
-    // 288px fixe ne laisserait presque rien au contenu sur un téléphone --
-    // un simple réglage initial, pas un comportement forcé (l'avocat peut
-    // toujours la redéplier via le bouton « » »).
-    if (typeof window !== "undefined" && window.innerWidth < 768) {
-      definirSidebarRepliee(true);
-    }
+    // Sous 768px, la sidebar est un tiroir caché par défaut (voir
+    // Sidebar.tsx, useAppStore.sidebarMobileOuverte) -- plus besoin de
+    // repli en rail d'icônes au montage comme avant, le tiroir superposé
+    // remplace entièrement ce pis-aller.
     // Chargement initial uniquement -- ces actions restent disponibles
     // individuellement pour un rafraîchissement manuel depuis les pages.
     // eslint-disable-next-line react-hooks/exhaustive-deps

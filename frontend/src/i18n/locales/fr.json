@@ -620,6 +620,8 @@
     "replier": "Replier",
     "deplierAria": "Déplier la barre latérale",
     "replierAria": "Replier la barre latérale",
+    "ouvrirMobileAria": "Ouvrir le menu de navigation",
+    "fermerMobileAria": "Fermer le menu de navigation",
     "dossierRequis": "Sélectionnez ou créez un dossier pour activer cette action",
     "signature": "Peser, jamais trancher."
   },

@@ -620,6 +620,8 @@
     "replier": "Collapse",
     "deplierAria": "Expand the sidebar",
     "replierAria": "Collapse the sidebar",
+    "ouvrirMobileAria": "Open the navigation menu",
+    "fermerMobileAria": "Close the navigation menu",
     "dossierRequis": "Select or create a case to enable this action",
     "signature": "Weigh, never decide."
   },
