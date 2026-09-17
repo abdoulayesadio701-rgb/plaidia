@@ -12,6 +12,8 @@ export * as intention from "./intention";
 export * as epingles from "./epingles";
 export * as versions from "./versions";
 export * as config from "./config";
+export * as generations from "./generations";
+export * as veille from "./veille";
 
 export { ApiError, downloadBlob } from "./http";
 export { obtenirClePersonnelle, definirClePersonnelle } from "./cleApiPersonnelle";

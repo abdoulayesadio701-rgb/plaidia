@@ -12,11 +12,13 @@ import {
   config as configApi,
   dossiers as dossiersApi,
   epingles as epinglesApi,
+  generations as generationsApi,
   jurisprudence as jurisprudenceApi,
+  veille as veilleApi,
   definirClePersonnelle as ecrireClePersonnelle,
   obtenirClePersonnelle,
 } from "@/api";
-import type { Dossier, ElementEpingle, MessageChat, TypeEpingle } from "@/api";
+import type { Dossier, ElementEpingle, Generation, MessageChat, NotificationsVeille, TypeEpingle } from "@/api";
 import type { Espace } from "@/config/navigation";
 
 export type ToastType = "info" | "success" | "error";
@@ -113,6 +115,20 @@ interface AppState {
   chargerEpingles: () => Promise<void>;
   epinglerElement: (type: TypeEpingle, referenceId: number, libelle: string, dossierId?: number | null) => Promise<void>;
   desepinglerElement: (pinId: number) => Promise<void>;
+
+  // --- Générations en arrière-plan (portage de gui.py::_lancer_generation) --
+  // Rafraîchies périodiquement par AppLayout (setInterval), pas seulement
+  // au montage : une génération lancée depuis une page doit continuer à
+  // être suivie même après avoir navigué ailleurs.
+  generations: Generation[];
+  chargerGenerations: () => Promise<void>;
+  supprimerGenerationLocale: (id: number) => Promise<void>;
+
+  // --- Veille (jurisprudence + lois, portage de gui.py::_boucle_veille) --
+  notificationsVeille: NotificationsVeille;
+  chargerNotificationsVeille: () => Promise<void>;
+  acquitterAlerteJurisprudence: (id: number) => Promise<void>;
+  acquitterAlerteLoi: (id: number) => Promise<void>;
 }
 
 const JURIDICTION_PAR_DEFAUT = "Légifrance (France)";
@@ -313,6 +329,62 @@ export const useAppStore = create<AppState>((set, get) => ({
       get().pousserToast("error", e instanceof Error ? e.message : "Impossible de désépingler cet élément.");
     }
   },
+
+  generations: [],
+
+  chargerGenerations: async () => {
+    try {
+      const liste = await generationsApi.listerGenerations();
+      set({ generations: liste });
+    } catch {
+      // Le badge garde simplement sa dernière valeur connue -- jamais
+      // bloquant, une panne réseau passagère ne doit pas casser l'app.
+    }
+  },
+
+  supprimerGenerationLocale: async (id) => {
+    const avant = get().generations;
+    set({ generations: avant.filter((g) => g.id !== id) }); // optimiste
+    try {
+      await generationsApi.supprimerGeneration(id);
+    } catch (e) {
+      set({ generations: avant });
+      get().pousserToast("error", e instanceof Error ? e.message : "Impossible de supprimer cette génération.");
+    }
+  },
+
+  notificationsVeille: { jurisprudence: [], lois: [], rappel_ohada: null },
+
+  chargerNotificationsVeille: async () => {
+    try {
+      const donnees = await veilleApi.notifications();
+      set({ notificationsVeille: donnees });
+    } catch {
+      // Idem : garde la dernière valeur connue plutôt que de casser le badge.
+    }
+  },
+
+  acquitterAlerteJurisprudence: async (id) => {
+    const avant = get().notificationsVeille;
+    set({ notificationsVeille: { ...avant, jurisprudence: avant.jurisprudence.filter((a) => a.id !== id) } });
+    try {
+      await veilleApi.acquitterJurisprudence(id);
+    } catch (e) {
+      set({ notificationsVeille: avant });
+      get().pousserToast("error", e instanceof Error ? e.message : "Impossible d'acquitter cette alerte.");
+    }
+  },
+
+  acquitterAlerteLoi: async (id) => {
+    const avant = get().notificationsVeille;
+    set({ notificationsVeille: { ...avant, lois: avant.lois.filter((a) => a.id !== id) } });
+    try {
+      await veilleApi.acquitterLoi(id);
+    } catch (e) {
+      set({ notificationsVeille: avant });
+      get().pousserToast("error", e instanceof Error ? e.message : "Impossible d'acquitter cette alerte.");
+    }
+  },
 }));
 
 /** L'id du pin existant pour cet élément, ou null -- pour que PinButton
@@ -324,4 +396,10 @@ export function useIdEpingle(type: TypeEpingle, referenceId: number): number | n
 /** Le dossier actif complet (ou null), dérivé de dossierActifId + dossiers. */
 export function useDossierActif(): Dossier | null {
   return useAppStore((s) => s.dossiers.find((d) => d.id === s.dossierActifId) ?? null);
+}
+
+/** Alertes actives "article de loi modifié" pour un dossier précis --
+ * pour le signal de la fiche dossier (voir gui.py::bouton_alerte_dossier). */
+export function useAlertesArticlesDossier(dossierId: number | null | undefined) {
+  return useAppStore((s) => (dossierId == null ? [] : s.notificationsVeille.lois.filter((a) => a.dossier_id === dossierId)));
 }

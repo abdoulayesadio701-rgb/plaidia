@@ -18,6 +18,15 @@ import DemoBanner from "./DemoBanner";
 import ToastContainer from "@/components/ToastContainer";
 import RechercheGlobaleModal from "@/components/RechercheGlobaleModal";
 
+// Intervalle de rafraîchissement des générations en arrière-plan et des
+// notifications de veille -- 5s pour les générations (un badge qui met
+// une minute à refléter une génération terminée pendant qu'on regarde
+// activement l'écran serait frustrant), 60s pour la veille (portée par
+// une boucle serveur horaire de toute façon, voir backend/app/veille.py
+// -- inutile de la solliciter aussi souvent que les générations).
+const INTERVALLE_GENERATIONS_MS = 5000;
+const INTERVALLE_VEILLE_MS = 60000;
+
 export default function AppLayout() {
   const chargerDossiers = useAppStore((s) => s.chargerDossiers);
   const chargerJuridictionActive = useAppStore((s) => s.chargerJuridictionActive);
@@ -25,6 +34,8 @@ export default function AppLayout() {
   const chargerCompteursAttente = useAppStore((s) => s.chargerCompteursAttente);
   const chargerConfiguration = useAppStore((s) => s.chargerConfiguration);
   const chargerEpingles = useAppStore((s) => s.chargerEpingles);
+  const chargerGenerations = useAppStore((s) => s.chargerGenerations);
+  const chargerNotificationsVeille = useAppStore((s) => s.chargerNotificationsVeille);
   const rechercheGlobaleOuverte = useAppStore((s) => s.rechercheGlobaleOuverte);
   const ouvrirRechercheGlobale = useAppStore((s) => s.ouvrirRechercheGlobale);
   const fermerRechercheGlobale = useAppStore((s) => s.fermerRechercheGlobale);
@@ -52,12 +63,30 @@ export default function AppLayout() {
     void chargerCompteursAttente();
     void chargerConfiguration();
     void chargerEpingles();
+    void chargerGenerations();
+    void chargerNotificationsVeille();
     // Sous 768px, la sidebar est un tiroir caché par défaut (voir
     // Sidebar.tsx, useAppStore.sidebarMobileOuverte) -- plus besoin de
     // repli en rail d'icônes au montage comme avant, le tiroir superposé
     // remplace entièrement ce pis-aller.
     // Chargement initial uniquement -- ces actions restent disponibles
     // individuellement pour un rafraîchissement manuel depuis les pages.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Rafraîchissement périodique -- une génération lancée depuis une page
+  // doit continuer à être suivie (badge, historique) même après avoir
+  // navigué ailleurs, exactement comme le thread d'arrière-plan de
+  // gui.py::_lancer_generation survit à un changement d'écran. Monté une
+  // seule fois ici (AppLayout, jamais démonté tant que l'app tourne),
+  // pas dans chaque page qui pourrait déclencher une génération.
+  useEffect(() => {
+    const idGenerations = window.setInterval(() => void chargerGenerations(), INTERVALLE_GENERATIONS_MS);
+    const idVeille = window.setInterval(() => void chargerNotificationsVeille(), INTERVALLE_VEILLE_MS);
+    return () => {
+      window.clearInterval(idGenerations);
+      window.clearInterval(idVeille);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

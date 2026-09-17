@@ -10,7 +10,7 @@ import { useTranslation } from "react-i18next";
 import { analyse as analyseApi, dossiers as dossiersApi } from "@/api";
 import type { StatutDocument } from "@/api";
 import { chat as chatApi } from "@/api";
-import { useAppStore, useDossierActif } from "@/store/useAppStore";
+import { useAlertesArticlesDossier, useAppStore, useDossierActif } from "@/store/useAppStore";
 import { useAsync } from "@/hooks/useAsync";
 import { Link } from "react-router-dom";
 import ArgumentCard from "@/components/ArgumentCard";
@@ -29,10 +29,17 @@ function formaterDate(iso: string, langue: string): string {
   }
 }
 
+const CODES_LIBELLES: Record<string, string> = {
+  CP: "Code pénal", CCIV: "Code civil", CPC: "Code de procédure civile",
+  CPP: "Code de procédure pénale", CTRAV: "Code du travail", CCOM: "Code de commerce",
+};
+
 export default function HistoriqueDossierPage() {
   const { t, i18n } = useTranslation();
   const dossierActif = useDossierActif();
   const pousserToast = useAppStore((s) => s.pousserToast);
+  const alertesArticles = useAlertesArticlesDossier(dossierActif?.id);
+  const acquitterAlerteLoi = useAppStore((s) => s.acquitterAlerteLoi);
   const [statuts, setStatuts] = useState<Record<number, StatutDocument>>({});
   const [statutEnCours, setStatutEnCours] = useState<number | null>(null);
 
@@ -94,6 +101,41 @@ export default function HistoriqueDossierPage() {
           {t("historiqueDossier.ouvrirChat")}
         </Link>
       </div>
+
+      {alertesArticles.length > 0 && (
+        <div className="card space-y-3 border-risk-high/40 bg-risk-high/5 p-5">
+          <p className="text-sm font-medium text-risk-high">
+            ⚠️ {t("historiqueDossier.alerteArticlesModifies", { count: alertesArticles.length })}
+          </p>
+          <ul className="space-y-2">
+            {alertesArticles.map((a) => (
+              <li key={a.id} className="flex flex-wrap items-center justify-between gap-2 text-sm">
+                <span className="text-ivory">
+                  {t("historiqueDossier.articleModifie", {
+                    numero: a.numero,
+                    code: CODES_LIBELLES[a.code] ?? a.code,
+                    ancien: a.ancien_etat ?? "?",
+                    nouvel: a.nouvel_etat ?? "?",
+                  })}
+                </span>
+                <span className="flex items-center gap-2">
+                  {a.lien_source && (
+                    <a href={a.lien_source} target="_blank" rel="noreferrer" className="text-xs text-amethyst-400 hover:underline">
+                      {t("historiqueDossier.voirAJour")}
+                    </a>
+                  )}
+                  <button
+                    onClick={() => void acquitterAlerteLoi(a.id)}
+                    className="rounded-md px-2 py-1 text-xs text-muted hover:text-ivory"
+                  >
+                    {t("historiqueDossier.vuIgnorer")}
+                  </button>
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       <div className="card space-y-4 p-6">
         <div className="flex flex-wrap items-center gap-3">

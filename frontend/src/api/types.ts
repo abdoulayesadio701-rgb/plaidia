@@ -463,3 +463,61 @@ export interface Intention {
   reformulation: string;
   duree_minutes?: number | null;
 }
+
+// ---------------------------------------------------------------------
+// Générations en arrière-plan (backend/app/schemas/generations.py) --
+// portage web de gui.py::PlaidIAApp._lancer_generation.
+// ---------------------------------------------------------------------
+
+export type StatutGeneration = "en_cours" | "terminee" | "erreur";
+
+export interface GenerationLancee {
+  id: number;
+  statut: StatutGeneration;
+}
+
+export interface Generation {
+  id: number;
+  type: string;
+  dossier_id?: number | null;
+  libelle: string;
+  contenu?: Record<string, unknown> | null;
+  statut: StatutGeneration;
+  erreur?: string | null;
+  date_creation: string;
+  date_fin?: string | null;
+}
+
+// ---------------------------------------------------------------------
+// Veille (backend/app/schemas/veille.py) -- portage web de
+// gui.py::DialogueNotificationsVeille / DialogueAlertesArticles.
+// ---------------------------------------------------------------------
+
+export interface AlerteJurisprudence {
+  id: number;
+  dossier_id: number;
+  reference: string;
+  resume?: string | null;
+  source?: string | null;
+  date_detection: string;
+  statut: "active" | "acquittee" | string;
+}
+
+export interface AlerteArticle {
+  id: number;
+  dossier_id: number;
+  code: string;
+  numero: string;
+  ancien_etat?: string | null;
+  nouvel_etat?: string | null;
+  date_modification?: string | null;
+  lien_source?: string | null;
+  date_detection: string;
+  statut: "active" | "acquittee" | string;
+}
+
+export interface NotificationsVeille {
+  jurisprudence: AlerteJurisprudence[];
+  lois: AlerteArticle[];
+  rappel_ohada?: string | null;
+}

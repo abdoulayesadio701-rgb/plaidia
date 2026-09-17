@@ -16,14 +16,20 @@ import { useTranslation } from "react-i18next";
 import { useAppStore } from "@/store/useAppStore";
 import RecentsPanel from "./RecentsPanel";
 import EpinglesPanel from "./EpinglesPanel";
+import GenerationsPanel from "./GenerationsPanel";
+import NotificationsPanel from "./NotificationsPanel";
 
-type PanneauOuvert = "recents" | "epingles" | null;
+type PanneauOuvert = "recents" | "epingles" | "generations" | "notifications" | null;
 
 export default function TaskBar() {
   const { t } = useTranslation();
   const [panneauOuvert, setPanneauOuvert] = useState<PanneauOuvert>(null);
   const nombreEpingles = useAppStore((s) => s.epingles.length);
   const ouvrirRechercheGlobale = useAppStore((s) => s.ouvrirRechercheGlobale);
+  const generationsEnCours = useAppStore((s) => s.generations.filter((g) => g.statut === "en_cours").length);
+  const notifications = useAppStore((s) => s.notificationsVeille);
+  const nombreNotifications =
+    notifications.jurisprudence.length + notifications.lois.length + (notifications.rappel_ohada ? 1 : 0);
 
   const RACCOURCIS = [
     { path: "/app", icone: "🏠", label: t("taskBar.accueil"), fin: true },
@@ -91,6 +97,34 @@ export default function TaskBar() {
             🕘 {t("taskBar.recents")}
           </button>
           {panneauOuvert === "recents" && <RecentsPanel onFermer={() => setPanneauOuvert(null)} />}
+        </div>
+
+        <div className="relative">
+          <button
+            onClick={() => basculer("generations")}
+            className={`whitespace-nowrap rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
+              panneauOuvert === "generations" ? "bg-amethyst-400/15 text-amethyst-400" : "text-warmgray hover:bg-surface-2 hover:text-ivory"
+            }`}
+            aria-haspopup="true"
+            aria-expanded={panneauOuvert === "generations"}
+          >
+            🔄 {t("taskBar.generations")}{generationsEnCours > 0 && ` (${generationsEnCours})`}
+          </button>
+          {panneauOuvert === "generations" && <GenerationsPanel onFermer={() => setPanneauOuvert(null)} />}
+        </div>
+
+        <div className="relative">
+          <button
+            onClick={() => basculer("notifications")}
+            className={`whitespace-nowrap rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
+              panneauOuvert === "notifications" ? "bg-amethyst-400/15 text-amethyst-400" : "text-warmgray hover:bg-surface-2 hover:text-ivory"
+            }`}
+            aria-haspopup="true"
+            aria-expanded={panneauOuvert === "notifications"}
+          >
+            🔔 {t("taskBar.notifications")}{nombreNotifications > 0 && ` (${nombreNotifications})`}
+          </button>
+          {panneauOuvert === "notifications" && <NotificationsPanel onFermer={() => setPanneauOuvert(null)} />}
         </div>
       </div>
     </div>

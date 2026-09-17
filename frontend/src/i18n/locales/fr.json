@@ -7,6 +7,7 @@
     "chargement": "Chargement…",
     "reessayer": "Réessayer",
     "confirmer": "Confirmer",
+    "supprimer": "Supprimer",
     "notes": "Notes",
     "erreurStatut": "Erreur {{status}}",
     "serveurIndisponible": "Impossible de joindre le serveur. Vérifiez que le backend est lancé (voir backend/README.md)."
@@ -221,6 +222,10 @@
     "emptyTitre": "Aucun dossier sélectionné",
     "emptyDescription": "Sélectionnez ou créez un dossier pour consulter sa fiche et son historique.",
     "ouvrirChat": "Ouvrir le chat de ce dossier",
+    "alerteArticlesModifies": "{{count}} article(s) référencé(s) dans ce dossier ont été modifiés depuis leur dernière citation. Rien n'a été changé automatiquement dans vos analyses ou plans -- à vous de vérifier et, si besoin, de relancer une génération.",
+    "articleModifie": "Article {{numero}} du {{code}} ({{ancien}} → {{nouvel}})",
+    "voirAJour": "🔗 Voir à jour",
+    "vuIgnorer": "Vu, ignorer",
     "parties": "Parties",
     "partiesNonRenseignees": "Non renseignées.",
     "faits": "Faits",
@@ -606,7 +611,9 @@
     "rechercheGlobale": "Recherche globale (Ctrl/Cmd+K)",
     "recherche": "Recherche",
     "epingles": "Épinglés",
-    "recents": "Récents"
+    "recents": "Récents",
+    "generations": "Générations",
+    "notifications": "Notifications"
   },
   "topBar": {
     "nouveauDossier": "＋ Nouveau dossier",
@@ -726,6 +733,24 @@
     "vider": "Vider",
     "sansDossier": "Sans dossier",
     "vide": "Aucune page consultée pour l'instant."
+  },
+  "generationsPanel": {
+    "titre": "Générations en cours et récentes",
+    "sansDossier": "Sans dossier",
+    "supprimer": "Supprimer",
+    "supprimerAria": "Supprimer {{libelle}}",
+    "confirmerTitre": "Supprimer cette génération ?",
+    "confirmerDescription": "« {{libelle}} » sera définitivement supprimée de l'historique. Cette action est irréversible.",
+    "vide": "Aucune génération en cours ni récente. Lancez une analyse, un plan… et suivez son avancement ici, même en changeant de page."
+  },
+  "notificationsPanel": {
+    "titre": "Veille juridique",
+    "source": "🔗 Source",
+    "voirAJour": "🔗 Voir à jour",
+    "vu": "Vu",
+    "marquerVerifie": "Marquer vérifié",
+    "articleModifie": "Article {{numero}} du {{code}} modifié",
+    "vide": "Aucune nouveauté pour l'instant."
   },
   "pagePlaceholder": {
     "bientotDisponible": "Bientôt disponible",

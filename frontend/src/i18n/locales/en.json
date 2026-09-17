@@ -7,6 +7,7 @@
     "chargement": "Loading…",
     "reessayer": "Retry",
     "confirmer": "Confirm",
+    "supprimer": "Delete",
     "notes": "Notes",
     "erreurStatut": "Error {{status}}",
     "serveurIndisponible": "Unable to reach the server. Check that the backend is running (see backend/README.md)."
@@ -221,6 +222,10 @@
     "emptyTitre": "No case selected",
     "emptyDescription": "Select or create a case to view its record and history.",
     "ouvrirChat": "Open this case's chat",
+    "alerteArticlesModifies": "{{count}} article(s) referenced in this case have changed since they were last cited. Nothing was changed automatically in your analyses or plans -- it's up to you to check and, if needed, re-run a generation.",
+    "articleModifie": "Article {{numero}} of the {{code}} ({{ancien}} → {{nouvel}})",
+    "voirAJour": "🔗 View current version",
+    "vuIgnorer": "Seen, dismiss",
     "parties": "Parties",
     "partiesNonRenseignees": "Not provided.",
     "faits": "Facts",
@@ -606,7 +611,9 @@
     "rechercheGlobale": "Global search (Ctrl/Cmd+K)",
     "recherche": "Search",
     "epingles": "Pinned",
-    "recents": "Recent"
+    "recents": "Recent",
+    "generations": "Generations",
+    "notifications": "Notifications"
   },
   "topBar": {
     "nouveauDossier": "＋ New case",
@@ -726,6 +733,24 @@
     "vider": "Clear",
     "sansDossier": "No case",
     "vide": "No page viewed yet."
+  },
+  "generationsPanel": {
+    "titre": "Current and recent generations",
+    "sansDossier": "No case",
+    "supprimer": "Delete",
+    "supprimerAria": "Delete {{libelle}}",
+    "confirmerTitre": "Delete this generation?",
+    "confirmerDescription": "“{{libelle}}” will be permanently removed from the history. This action is irreversible.",
+    "vide": "No generation running or recent. Launch an analysis, a plan… and track its progress here, even while navigating elsewhere."
+  },
+  "notificationsPanel": {
+    "titre": "Legal watch",
+    "source": "🔗 Source",
+    "voirAJour": "🔗 View current version",
+    "vu": "Seen",
+    "marquerVerifie": "Mark verified",
+    "articleModifie": "Article {{numero}} of the {{code}} changed",
+    "vide": "Nothing new for now."
   },
   "pagePlaceholder": {
     "bientotDisponible": "Coming soon",
