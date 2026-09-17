@@ -60,6 +60,38 @@ def test_analyser_conclusions_sans_dossier_fonctionne_aussi(client: TestClient):
     assert len(r.json()["arguments"]) == 3
 
 
+def _evenements_sse(texte: str) -> dict[str, dict]:
+    """Reconstitue {nom_evenement: data} à partir d'un flux SSE complet --
+    un seul évènement de chaque nom attendu ici, contrairement à
+    /api/chat/stream qui répète "delta" (voir test_chat_stream_...)."""
+    evenements = {}
+    for bloc in texte.split("\n\n"):
+        if bloc.startswith("event: "):
+            nom, _, reste = bloc.partition("\n")
+            nom = nom.removeprefix("event: ")
+            data = json.loads(reste.split("data:", 1)[1])
+            evenements[nom] = data
+    return evenements
+
+
+def test_analyser_conclusions_stream_fonctionne_en_mode_demo(client: TestClient, dossier_demo_id: int):
+    """Avant ce test, /conclusions/stream renvoyait une 400 en mode démo --
+    ce qui cassait le clic "Analyser des conclusions adverses" depuis
+    l'Arsenal pour un visiteur du dossier de démonstration. Le flux SSE
+    doit désormais servir la même réponse cannée que /conclusions (voir le
+    commentaire de analyser_conclusions_stream)."""
+    r = client.post(
+        "/api/analyse/conclusions/stream",
+        json={"texte": "peu importe le contenu envoyé", "dossier_id": dossier_demo_id},
+    )
+    assert r.status_code == 200
+    assert "text/event-stream" in r.headers["content-type"]
+    evenements = _evenements_sse(r.text)
+    assert "principal" in evenements
+    assert len(evenements["principal"]["arguments"]) == 3
+    assert "done" in evenements
+
+
 def test_analyser_conclusions_cannees_en_anglais_si_x_langue_en(client: TestClient):
     """Comme le chat (voir test_chat_stream_demo_repond_en_anglais_si_x_langue_en),
     les autres actions cannées doivent elles aussi respecter X-Langue --
@@ -85,6 +117,27 @@ def test_plan_de_plaidoirie_canne_en_anglais_si_x_langue_en(client: TestClient, 
     r = client.post("/api/analyse/plan", json={"dossier_id": dossier_demo_id, "temps_minutes": 15}, headers={"x-langue": "en"})
     assert r.status_code == 200
     assert "notice" in r.json()["accroche"].lower() or "tribunal" in r.json()["accroche"].lower()
+
+
+def test_plan_de_plaidoirie_stream_fonctionne_en_mode_demo(client: TestClient, dossier_demo_id: int):
+    """Même correction que test_analyser_conclusions_stream_fonctionne_en_mode_demo,
+    pour /plan/stream. Le plan démo reste persisté comme un vrai document
+    généré (voir /api/analyse/plan non-stream), donc récupérable ensuite
+    via GET /api/documents-generes/{id}."""
+    r = client.post(
+        "/api/analyse/plan/stream",
+        json={"dossier_id": dossier_demo_id, "temps_minutes": 15},
+    )
+    assert r.status_code == 200
+    assert "text/event-stream" in r.headers["content-type"]
+    evenements = _evenements_sse(r.text)
+    assert evenements["principal"]["accroche"]
+    document_id = evenements["document"]["document_id"]
+    assert document_id
+
+    r2 = client.get(f"/api/documents-generes/{document_id}")
+    assert r2.status_code == 200
+    assert r2.json()["feature"] == "plan"
 
 
 def test_simulateur_objections_canne(client: TestClient, dossier_demo_id: int):

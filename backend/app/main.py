@@ -44,15 +44,34 @@ from app.security_guard import DemandeRefusee  # noqa: E402
 def _ensemencer_dossier_demo():
     """Ajoute le dossier fictif de démonstration s'il n'existe pas déjà --
     idempotent et jamais destructeur, contrairement à
-    db.reinitialiser_donnees_demo() (voir demo.DEMO_RESET_DB)."""
-    deja_present = any(d["nom"] == demo_data.NOM_DOSSIER_DEMO for d in db.list_dossiers())
-    if not deja_present:
-        db.create_dossier(
+    db.reinitialiser_donnees_demo() (voir demo.DEMO_RESET_DB).
+
+    Ensemence aussi une analyse de conclusions déjà générée (toujours en
+    français, comme DOSSIER_DEMO lui-même -- voir l'en-tête de demo_data.py)
+    pour qu'un visiteur cliquant "Essayer la démo" tombe directement sur un
+    dossier avec au moins un résultat visible, sans devoir lancer lui-même
+    une analyse. Les autres actions (plan, simulateur...) restent
+    déclenchées à la demande : seule l'analyse de conclusions a besoin
+    d'être pré-générée puisque c'est elle qui alimente l'historique visible
+    en arrivant sur la fiche du dossier (voir HistoriqueDossierPage.tsx)."""
+    dossier_existant = next((d for d in db.list_dossiers() if d["nom"] == demo_data.NOM_DOSSIER_DEMO), None)
+    if dossier_existant is None:
+        dossier_id = db.create_dossier(
             nom=demo_data.DOSSIER_DEMO["nom"],
             domaine=demo_data.DOSSIER_DEMO["domaine"],
             parties=demo_data.DOSSIER_DEMO["parties"],
             faits=demo_data.DOSSIER_DEMO["faits"],
             numero_dossier=demo_data.DOSSIER_DEMO["numero_dossier"],
+        )
+    else:
+        dossier_id = dossier_existant["id"]
+
+    if not db.get_analyses_for_dossier(dossier_id):
+        db.save_analyse(
+            dossier_id,
+            demo_data.CONCLUSIONS_DEMO_FR["arguments"],
+            demo_data.CONCLUSIONS_DEMO_FR["points_attention"],
+            langue="fr",
         )
 
 

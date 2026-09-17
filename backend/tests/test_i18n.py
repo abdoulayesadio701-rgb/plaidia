@@ -209,9 +209,10 @@ def test_chat_actions_action_invalide_en_anglais_si_x_langue_en():
 
 def test_etape_pipeline_sse_en_anglais_si_x_langue_en(client: TestClient):
     """EtapePipelineIndicator.tsx affiche ce libellé en direct pendant la
-    génération -- voir routers/analyse.py, évènement SSE "etape". Mode démo
-    non couvert par /conclusions/stream (voir la 400 dédiée) : on vérifie
-    directement l'appel qui prépare la traduction du libellé."""
+    génération -- voir routers/analyse.py, évènement SSE "etape". Ces deux
+    libellés ne sont émis que hors mode démo (voir test_demo_mode.py pour
+    la couverture du flux SSE en mode démo, qui ne passe plus par cette
+    étape) : on vérifie ici directement l'appel qui prépare la traduction."""
     from app.deps import libelle
     import analyse as legacy_analyse_local
 

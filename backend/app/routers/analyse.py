@@ -134,11 +134,36 @@ def analyser_conclusions_stream(payload: ConclusionsIn):
     évènement séparé ("verification"). Même logique métier que /conclusions,
     pas dupliquée : cet endpoint orchestre, il ne réanalyse rien.
 
-    Non disponible en mode démo (rien à streamer, la réponse préenregistrée
-    est déjà instantanée) -- utiliser /conclusions dans ce cas."""
+    En mode démo, la réponse préenregistrée est déjà instantanée -- pas de
+    vraies étapes à streamer, mais le flux SSE reste servi avec les mêmes
+    évènements ("principal" puis "document" puis "done") pour que le front
+    n'ait rien à distinguer entre une génération réelle et une réponse
+    démo (voir l'en-tête de demo_data.py). Sans quoi un visiteur cliquant
+    "Analyser des conclusions adverses" depuis le dossier de démonstration
+    obtiendrait une erreur au lieu du résultat cliqué en Arsenal."""
     dossier = get_dossier_or_404(payload.dossier_id) if payload.dossier_id is not None else None
     if demo.mode_demo_effectif():
-        raise HTTPException(status_code=400, detail=libelle("streaming_indisponible_demo", endpoint="/api/analyse/conclusions"))
+        def event_stream_demo():
+            resultat = demo_data.conclusions_demo()
+            sections = structurer_sortie_strategique(
+                resultat, dossier or {"id": 0, "nom": "", "faits": "", "parties": ""}, "conclusions"
+            )
+            yield sse_event("principal", {
+                "arguments": sections["arguments"],
+                "points_attention": sections["points_attention"],
+                "diagnostic": sections["diagnostic"],
+                "strategie": sections["strategie"],
+                "statut": "Brouillon",
+            })
+            # Jamais persistée en mode démo, comme /conclusions (voir plus haut).
+            yield sse_event("document", {"analyse_id": None})
+            yield sse_event("done", {})
+
+        return StreamingResponse(
+            event_stream_demo(),
+            media_type="text/event-stream",
+            headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+        )
 
     def event_stream():
         trace: list[quality_pipeline.EtapeTrace] = []
@@ -259,10 +284,28 @@ def generer_plan_stream(payload: PlanIn):
     """Variante en streaming SSE de POST /plan (chantier "temps de
     traitement des générations", §2a) -- même principe que
     /conclusions/stream : le plan est émis dès qu'il est prêt, la
-    vérification arrive ensuite dans un évènement séparé."""
+    vérification arrive ensuite dans un évènement séparé.
+
+    En mode démo, sert la réponse préenregistrée via les mêmes évènements
+    SSE ("principal" puis "document" puis "done") plutôt que de refuser le
+    streaming -- voir le commentaire équivalent sur /conclusions/stream."""
     dossier = get_dossier_or_404(payload.dossier_id)
     if demo.mode_demo_effectif():
-        raise HTTPException(status_code=400, detail=libelle("streaming_indisponible_demo", endpoint="/api/analyse/plan"))
+        def event_stream_demo():
+            resultat = structurer_sortie_strategique(demo_data.plan_demo(), dossier, "plan")
+            yield sse_event("principal", {**resultat, "statut": "Brouillon"})
+            document = db.creer_document_genere(
+                payload.dossier_id, "plan", f"Plan de plaidoirie — {dossier['nom']}", {"temps_minutes": payload.temps_minutes},
+                resultat, langue=legacy_analyse.langue_requete(),
+            )
+            yield sse_event("document", {"document_id": document["id"], "statut": document["statut"]})
+            yield sse_event("done", {})
+
+        return StreamingResponse(
+            event_stream_demo(),
+            media_type="text/event-stream",
+            headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+        )
 
     def event_stream():
         trace: list[quality_pipeline.EtapeTrace] = []
