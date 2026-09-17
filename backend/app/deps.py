@@ -57,8 +57,8 @@ _LIBELLES = {
         "en": "No usable argument identified on this front for this case.",
     },
     "moyens_improbables_titre": {
-        "fr": "Moyens improbables (non écartés -- à l'avocat seul de décider de les soulever)",
-        "en": "Long-shot arguments (not discarded -- it is for the lawyer alone to decide whether to raise them)",
+        "fr": "Moyens improbables (non écartés — à l'avocat seul de décider de les soulever)",
+        "en": "Long-shot arguments (not discarded — it is for the lawyer alone to decide whether to raise them)",
     },
     "reponses_arguments_adverses_titre": {"fr": "Réponses aux arguments adverses", "en": "Responses to the adverse arguments"},
     "probabilite_succes": {"fr": "probabilité de succès", "en": "likelihood of success"},
@@ -107,8 +107,8 @@ _LIBELLES = {
         "en": "The imported text could not be read back after insertion.",
     },
     "streaming_indisponible_demo": {
-        "fr": "Le streaming n'est pas disponible en mode démo -- utilisez {endpoint}.",
-        "en": "Streaming is not available in demo mode -- use {endpoint} instead.",
+        "fr": "Le streaming n'est pas disponible en mode démo — utilisez {endpoint}.",
+        "en": "Streaming is not available in demo mode — use {endpoint} instead.",
     },
     "demande_refusee_generique": {"fr": "Cette demande ne peut pas être traitée.", "en": "This request cannot be processed."},
     "cle_api_requise": {
