@@ -814,16 +814,17 @@ class PlaidIAApp:
         self.label_dossier_actif.pack(side="right", padx=(4, 24))
 
         # Signal d'alerte "article de loi modifié" pour le dossier actif --
-        # voir veille_lois.py. Masqué tant qu'aucune alerte active n'existe
-        # pour ce dossier précis (jamais affiché par défaut, contrairement
-        # aux badges 🔔/🔄 qui restent visibles en discret) ; recalculé à
-        # chaque changement de dossier (voir _selectionner_dossier).
+        # voir veille_lois.py. Même principe que les badges 🔔/🔄 : toujours
+        # visible, en discret (gris) par défaut, seul le texte se colore et
+        # affiche un nombre quand une alerte active existe -- jamais masqué/
+        # réaffiché par pack/pack_forget, pour que sa position reste stable
+        # dans le bandeau. Recalculé à chaque changement de dossier (voir
+        # _selectionner_dossier).
         self.bouton_alerte_dossier = tk.Button(
-            bandeau, text="⚠️ Loi modifiée", command=self._afficher_alertes_articles_dossier, font=("Segoe UI", 9, "bold"),
-            bg="#B45309", fg="white", activebackground="#92400E", activeforeground="white", relief="flat", cursor="hand2",
+            bandeau, text="⚠️", command=self._afficher_alertes_articles_dossier, font=("Segoe UI", 9, "bold"),
+            bg=NAVY, fg="#5578A0", activebackground=NAVY, activeforeground="#5578A0", relief="flat", bd=0, cursor="hand2",
         )
-        # Volontairement pas de .pack() ici -- affiché/masqué par
-        # _rafraichir_alerte_articles_dossier selon l'état du dossier actif.
+        self.bouton_alerte_dossier.pack(side="right", padx=(0, 8))
 
         # Barre de commande en langage naturel — la vraie signature de l'outil :
         # parler à l'agent plutôt que naviguer dans des menus.
@@ -1306,18 +1307,18 @@ class PlaidIAApp:
         self.bouton_veille.config(text="🔔", fg="#5578A0", activeforeground="#5578A0")
 
     def _rafraichir_alerte_articles_dossier(self):
-        """(Ré)affiche ou masque le signal « ⚠️ Loi modifiée » du bandeau
-        selon l'existence d'alertes actives pour le dossier actif -- voir
-        veille_lois.py. Recalculé à chaque changement de dossier."""
-        if self.dossier_actuel is None:
-            self.bouton_alerte_dossier.pack_forget()
-            return
-        alertes = db.get_alertes_actives_dossier(self.dossier_actuel["id"])
+        """Met à jour le signal « ⚠️ » du bandeau selon l'existence
+        d'alertes actives pour le dossier actif -- voir veille_lois.py.
+        Toujours visible (comme 🔔/🔄) : seuls le texte et la couleur
+        changent, jamais pack/pack_forget. Recalculé à chaque changement
+        de dossier (voir _selectionner_dossier)."""
+        alertes = db.get_alertes_actives_dossier(self.dossier_actuel["id"]) if self.dossier_actuel else []
         if alertes:
-            self.bouton_alerte_dossier.config(text=f"⚠️ {len(alertes)} loi(s) modifiée(s)")
-            self.bouton_alerte_dossier.pack(side="right", padx=(0, 8))
+            self.bouton_alerte_dossier.config(
+                text=f"⚠️ {len(alertes)}", fg="#F59E0B", activeforeground="#F59E0B",
+            )
         else:
-            self.bouton_alerte_dossier.pack_forget()
+            self.bouton_alerte_dossier.config(text="⚠️", fg="#5578A0", activeforeground="#5578A0")
 
     def _afficher_alertes_articles_dossier(self):
         if self.dossier_actuel is None:
@@ -2137,7 +2138,7 @@ class PlaidIAApp:
         self.dossier_var.set("")
         self._rafraichir_dossiers()
         self.label_dossier_actif.config(text="Aucun dossier sélectionné")
-        self.bouton_alerte_dossier.pack_forget()
+        self._rafraichir_alerte_articles_dossier()
         for b in self.boutons_actions:
             b.config(state="disabled")
         self._afficher_vue_sortie()
