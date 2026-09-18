@@ -8,6 +8,7 @@ export * as jurisprudence from "./jurisprudence";
 export * as notes from "./notes";
 export * as greffier from "./greffier";
 export * as entrainement from "./entrainement";
+export * as bordereau from "./bordereau";
 export * as chat from "./chat";
 export * as intention from "./intention";
 export * as epingles from "./epingles";

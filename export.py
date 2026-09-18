@@ -574,6 +574,48 @@ def exporter_texte_libre_word(titre: str, texte: str, note_bas_page: str = "") -
     return str(path)
 
 
+def exporter_bordereau_word(titre: str, sous_titre: str, pieces: list[dict]) -> str:
+    """Bordereau de pièces en tableau (N° / Intitulé / Date / Produite par),
+    sans page de garde : c'est un document à annexer tel quel aux conclusions.
+    `pieces` : [{numero, intitule, date, produite_par, observation}], déjà
+    ordonné par l'appelant."""
+    try:
+        from docx import Document
+        from docx.shared import Pt
+    except ImportError:
+        raise ImportError("python-docx n'est pas installé. Lancez : pip install python-docx")
+
+    EXPORTS_DIR.mkdir(exist_ok=True)
+    doc = Document()
+    doc.add_heading(titre, level=1)
+    if sous_titre:
+        doc.add_paragraph(sous_titre)
+    doc.add_paragraph()
+
+    table = doc.add_table(rows=1, cols=4)
+    table.style = "Table Grid"
+    for cellule, entete in zip(table.rows[0].cells, ("N°", "Intitulé de la pièce", "Date", "Produite par")):
+        cellule.text = ""
+        cellule.paragraphs[0].add_run(entete).bold = True
+    for piece in pieces:
+        intitule = piece["intitule"] + (f"\n{piece['observation']}" if piece.get("observation") else "")
+        ligne = table.add_row().cells
+        ligne[0].text = str(piece["numero"])
+        ligne[1].text = intitule
+        ligne[2].text = piece.get("date") or ""
+        ligne[3].text = piece.get("produite_par") or ""
+
+    doc.add_paragraph()
+    pied = doc.add_paragraph()
+    run = pied.add_run(f"{_l('genere_le')} {datetime.now().strftime('%d/%m/%Y à %H:%M')}")
+    run.italic = True
+    run.font.size = Pt(9)
+
+    path = EXPORTS_DIR / _nom_fichier(titre, "docx")
+    doc.save(str(path))
+    return str(path)
+
+
 def exporter_csv(titre: str, en_tetes: list[str], lignes: list[list[str]]) -> str:
     """Export générique d'un tableau en CSV — pour les résultats
     naturellement tabulaires (ex. chronologie) où un tableur est plus

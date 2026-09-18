@@ -38,7 +38,7 @@ from slowapi.util import get_remote_address  # noqa: E402
 from app import demo, demo_data  # noqa: E402
 from app.deps import libelle  # noqa: E402
 from app import veille  # noqa: E402
-from app.routers import analyse, chat, documents, dossiers, entrainement, epingles, generations, greffier, intention, jurisprudence, notes, versions, veille as veille_router  # noqa: E402
+from app.routers import analyse, bordereau, chat, documents, dossiers, entrainement, epingles, generations, greffier, intention, jurisprudence, notes, versions, veille as veille_router  # noqa: E402
 from app.security_guard import DemandeRefusee  # noqa: E402
 
 
@@ -249,6 +249,7 @@ app.include_router(jurisprudence.router)
 app.include_router(notes.router)
 app.include_router(greffier.router)
 app.include_router(entrainement.router)
+app.include_router(bordereau.router)
 app.include_router(chat.router)
 app.include_router(intention.router)
 app.include_router(epingles.router)

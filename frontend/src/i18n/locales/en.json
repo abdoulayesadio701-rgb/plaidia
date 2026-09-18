@@ -251,6 +251,7 @@
       "plan": "Plea plan",
       "simulateur": "Objection simulator",
       "entrainement": "Timed practice",
+      "bordereau": "Exhibit list",
       "resume": "Case summary",
       "chronologie": "Timeline",
       "verification_procedurale": "Procedural check",
@@ -469,6 +470,29 @@
     "synthesePile": "You kept exactly to the planned time on the sections covered.",
     "aRaccourcir": "Sections to shorten: {{liste}}",
     "nonTraitees": "Sections not covered (practice stopped earlier): {{liste}}"
+  },
+  "bordereau": {
+    "emptyTitre": "No case selected",
+    "emptyDescription": "Select or create a case to keep its exhibit list.",
+    "titre": "Exhibit list",
+    "sousTitre": "Numbered list of the case's exhibits, to be annexed to the submissions. List order sets the number: reordering or removing an exhibit renumbers automatically.",
+    "videTitre": "No exhibit",
+    "videDescription": "Add an exhibit, or reuse the name of a document already imported into the case.",
+    "numero": "No.",
+    "intitule": "Exhibit title",
+    "date": "Date",
+    "produitePar": "Produced by",
+    "observation": "Note (optional)",
+    "ajouter": "Add an exhibit",
+    "depuisImport": "Add from an imported document…",
+    "monter": "Move this exhibit up",
+    "descendre": "Move this exhibit down",
+    "retirer": "Remove",
+    "numeroEnDouble": "Two exhibits have the same number: fix before saving.",
+    "nonEnregistre": "Unsaved changes",
+    "enregistrer": "Save",
+    "enregistre": "Exhibit list saved",
+    "erreurEnregistrement": "Could not save the exhibit list."
   },
   "verifProcedurale": {
     "emptyTitre": "No case selected",
@@ -736,7 +760,8 @@
     "chemise": {
       "historique": "History of this case",
       "dossiers": "Browse my cases",
-      "preparer": "Prepare this case"
+      "preparer": "Prepare this case",
+      "bordereau": "Exhibit list"
     },
     "grimoire": {
       "jurisprudence": "Consult case law",
@@ -754,6 +779,7 @@
       "chronologie": "Automatic timeline of this case",
       "verification-procedurale": "Procedural check",
       "delais": "Procedural deadline tracking",
+      "bordereau": "Exhibit list",
       "extraction": "Extract key elements from a document",
       "classement": "Automatic document classification",
       "coherence": "Consistency check between documents",

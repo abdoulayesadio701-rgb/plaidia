@@ -156,6 +156,19 @@ export interface PlanResultat {
   statut?: StatutDocument;
 }
 
+export interface PieceBordereau {
+  numero: number;
+  intitule: string;
+  date: string;
+  produite_par: string;
+  observation: string;
+}
+
+export interface Bordereau {
+  pieces: PieceBordereau[];
+  document_id: number | null;
+}
+
 export interface SectionMesuree {
   point: string;
   alloue_secondes: number;

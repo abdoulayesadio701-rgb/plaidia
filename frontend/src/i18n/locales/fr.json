@@ -251,6 +251,7 @@
       "plan": "Plan de plaidoirie",
       "simulateur": "Simulateur d'objections",
       "entrainement": "Entraînement chronométré",
+      "bordereau": "Bordereau de pièces",
       "resume": "Résumé de dossier",
       "chronologie": "Chronologie",
       "verification_procedurale": "Vérification procédurale",
@@ -469,6 +470,29 @@
     "synthesePile": "Vous avez tenu exactement le temps prévu sur les sections traitées.",
     "aRaccourcir": "Sections à raccourcir : {{liste}}",
     "nonTraitees": "Sections non traitées (entraînement arrêté avant) : {{liste}}"
+  },
+  "bordereau": {
+    "emptyTitre": "Aucun dossier sélectionné",
+    "emptyDescription": "Sélectionnez ou créez un dossier pour tenir son bordereau de pièces.",
+    "titre": "Bordereau de pièces",
+    "sousTitre": "Liste numérotée des pièces du dossier, à annexer aux conclusions. L'ordre de la liste fait le numéro : réordonner ou retirer une pièce renumérote automatiquement.",
+    "videTitre": "Aucune pièce",
+    "videDescription": "Ajoutez une pièce, ou reprenez le nom d'un document déjà importé dans le dossier.",
+    "numero": "N°",
+    "intitule": "Intitulé de la pièce",
+    "date": "Date",
+    "produitePar": "Produite par",
+    "observation": "Observation (optionnel)",
+    "ajouter": "Ajouter une pièce",
+    "depuisImport": "Ajouter depuis un document importé…",
+    "monter": "Monter cette pièce",
+    "descendre": "Descendre cette pièce",
+    "retirer": "Retirer",
+    "numeroEnDouble": "Deux pièces portent le même numéro : corrigez avant d'enregistrer.",
+    "nonEnregistre": "Modifications non enregistrées",
+    "enregistrer": "Enregistrer",
+    "enregistre": "Bordereau enregistré",
+    "erreurEnregistrement": "Impossible d'enregistrer le bordereau."
   },
   "verifProcedurale": {
     "emptyTitre": "Aucun dossier sélectionné",
@@ -736,7 +760,8 @@
     "chemise": {
       "historique": "Historique de ce dossier",
       "dossiers": "Parcourir mes dossiers",
-      "preparer": "Préparer ce dossier"
+      "preparer": "Préparer ce dossier",
+      "bordereau": "Bordereau de pièces"
     },
     "grimoire": {
       "jurisprudence": "Consulter la jurisprudence",
@@ -754,6 +779,7 @@
       "chronologie": "Chronologie automatique de cette affaire",
       "verification-procedurale": "Vérification procédurale",
       "delais": "Suivi des délais de procédure",
+      "bordereau": "Bordereau de pièces",
       "extraction": "Extraction d'éléments clés d'un document",
       "classement": "Classement automatique d'un document",
       "coherence": "Contrôle de cohérence entre documents",

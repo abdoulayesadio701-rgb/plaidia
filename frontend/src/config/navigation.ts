@@ -70,6 +70,7 @@ export const NAVIGATION: Record<Espace, NavSection[]> = {
         { path: "/chemise/historique", label: "Historique de ce dossier", requiresDossier: true },
         { path: "/chemise/dossiers", label: "Parcourir mes dossiers", requiresDossier: false },
         { path: "/chemise/preparer", label: "Préparer ce dossier", requiresDossier: true },
+        { path: "/chemise/bordereau", label: "Bordereau de pièces", requiresDossier: true },
       ],
     },
     {
@@ -101,6 +102,7 @@ export const NAVIGATION: Record<Espace, NavSection[]> = {
         { path: "/greffier/chronologie", label: "Chronologie automatique de cette affaire", requiresDossier: true },
         { path: "/greffier/verification-procedurale", label: "Vérification procédurale", requiresDossier: true },
         { path: "/greffier/delais", label: "Suivi des délais de procédure", requiresDossier: true },
+        { path: "/greffier/bordereau", label: "Bordereau de pièces", requiresDossier: true },
       ],
     },
     {
