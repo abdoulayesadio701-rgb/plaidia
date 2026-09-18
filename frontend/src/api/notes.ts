@@ -3,7 +3,7 @@
  */
 
 import { apiRequest, apiRequestBlob } from "./http";
-import type { Note } from "./types";
+import type { Note, NoteClientResultat } from "./types";
 
 export function creerNote(dossierId: number, noteBrute: string): Promise<Note> {
   return apiRequest<Note>("/api/notes/", { method: "POST", body: { dossier_id: dossierId, note_brute: noteBrute } });
@@ -21,8 +21,8 @@ export function exporterNotes(dossierId: number): Promise<{ blob: Blob; filename
   return apiRequestBlob(`/api/notes/dossier/${dossierId}/export`);
 }
 
-export function redigerNoteClient(dossierId: number): Promise<{ texte: string }> {
-  return apiRequest<{ texte: string }>("/api/notes/note-client", { method: "POST", body: { dossier_id: dossierId } });
+export function redigerNoteClient(dossierId: number): Promise<NoteClientResultat> {
+  return apiRequest<NoteClientResultat>("/api/notes/note-client", { method: "POST", body: { dossier_id: dossierId } });
 }
 
 export function exporterNoteClient(dossierId: number, texte: string): Promise<{ blob: Blob; filename?: string }> {

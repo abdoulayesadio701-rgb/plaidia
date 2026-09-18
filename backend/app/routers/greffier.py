@@ -50,14 +50,24 @@ router = APIRouter(prefix="/api/greffier", tags=["greffier"])
 def chronologie(payload: ChronologieIn):
     """Route vers DeepSeek (voir analyse.TypeTache.STRUCTURATION) -- garde-fou
     d'entrée ajouté ici en même temps que le changement de fournisseur : il
-    manquait déjà sous Claude sur cette route."""
+    manquait déjà sous Claude sur cette route.
+
+    Persistée dans documents_generes (feature="chronologie"), même
+    mécanisme que /plan et /simulateur -- y compris en mode démo -- pour
+    qu'elle survive à une navigation ou un refresh (voir ChronologiePage
+    côté front)."""
     dossier = get_dossier_or_404(payload.dossier_id)
     if demo.mode_demo_effectif():
-        return demo_data.chronologie_demo()
-    demo.exiger_cle_api_deepseek()
-    contexte = construire_contexte_dossier(dossier)
-    executer_garde_fou(contexte)
-    return legacy_analyse.construire_chronologie(contexte)
+        resultat = demo_data.chronologie_demo()
+    else:
+        demo.exiger_cle_api_deepseek()
+        contexte = construire_contexte_dossier(dossier)
+        executer_garde_fou(contexte)
+        resultat = legacy_analyse.construire_chronologie(contexte)
+    document = db.creer_document_genere(
+        payload.dossier_id, "chronologie", f"Chronologie — {dossier['nom']}", {}, resultat,
+    )
+    return ChronologieOut(**resultat, document_id=document["id"], statut=document["statut"])
 
 
 @router.post("/chronologie/export")
@@ -219,10 +229,17 @@ def exporter_pv_audience(payload: PvAudienceExportIn):
 
 @router.post("/verification-procedurale", response_model=VerificationProceduraleOut)
 def verification_procedurale(payload: VerificationProceduraleIn):
+    """Persistée dans documents_generes (feature="verification_procedurale"),
+    même mécanisme que /plan et /simulateur -- pour qu'elle survive à une
+    navigation ou un refresh (voir VerificationProceduralePage côté front)."""
     dossier = get_dossier_or_404(payload.dossier_id)
     demo.exiger_cle_api()
     contexte = construire_contexte_dossier(dossier)
-    return legacy_analyse.verifier_procedure(contexte)
+    resultat = legacy_analyse.verifier_procedure(contexte)
+    document = db.creer_document_genere(
+        payload.dossier_id, "verification_procedurale", f"Vérification procédurale — {dossier['nom']}", {}, resultat,
+    )
+    return VerificationProceduraleOut(**resultat, document_id=document["id"], statut=document["statut"])
 
 
 @router.post("/verification-procedurale/export")

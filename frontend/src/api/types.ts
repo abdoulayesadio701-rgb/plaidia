@@ -293,6 +293,8 @@ export interface ChronologieResultat {
   periode_couverte: string;
   evenements: Evenement[];
   elements_manquants: string[];
+  document_id?: number | null;
+  statut?: StatutDocument;
 }
 
 export interface ExtractionResultat {
@@ -338,6 +340,14 @@ export interface VerificationProceduraleResultat {
   echeances_identifiees: Echeance[];
   actes_potentiellement_manquants: string[];
   points_attention: string[];
+  document_id?: number | null;
+  statut?: StatutDocument;
+}
+
+export interface NoteClientResultat {
+  texte: string;
+  document_id?: number | null;
+  statut?: StatutDocument;
 }
 
 export interface PvAudienceResultat {

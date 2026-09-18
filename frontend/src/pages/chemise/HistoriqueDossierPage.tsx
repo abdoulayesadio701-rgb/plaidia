@@ -35,6 +35,18 @@ const CODES_LIBELLES: Record<string, string> = {
   CPP: "Code de procédure pénale", CTRAV: "Code du travail", CCOM: "Code de commerce",
 };
 
+// Chemin de la page Arsenal/Greffier/Carnet qui affiche ce type de document
+// généré -- tenu à jour à chaque nouvelle fonctionnalité persistée (voir
+// db.creer_document_genere). Défaut (feature inconnue) : grimoire/jurisprudence.
+const CHEMIN_PAR_FEATURE = {
+  plan: "arsenal/plan",
+  simulateur: "arsenal/simulateur",
+  resume: "arsenal/resumer",
+  chronologie: "greffier/chronologie",
+  verification_procedurale: "greffier/verification-procedurale",
+  note_client: "carnet/note-client",
+} as const;
+
 export default function HistoriqueDossierPage() {
   const { t, i18n } = useTranslation();
   const dossierActif = useDossierActif();
@@ -203,13 +215,7 @@ export default function HistoriqueDossierPage() {
           <div className="space-y-2">
             {documentsGeneres.map((document) => {
               const chemin =
-                document.feature === "plan"
-                  ? "arsenal/plan"
-                  : document.feature === "simulateur"
-                    ? "arsenal/simulateur"
-                    : document.feature === "resume"
-                      ? "arsenal/resumer"
-                      : "grimoire/jurisprudence";
+                CHEMIN_PAR_FEATURE[document.feature as keyof typeof CHEMIN_PAR_FEATURE] ?? "grimoire/jurisprudence";
               return (
                 <Link
                   key={document.id}

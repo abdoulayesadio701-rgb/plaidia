@@ -1,5 +1,7 @@
 """Schémas Pydantic pour le router /api/greffier."""
 
+from typing import Optional
+
 from pydantic import BaseModel, Field
 
 from app.demo import MAX_TEXTE_CARACTERES
@@ -18,6 +20,8 @@ class ChronologieOut(BaseModel):
     periode_couverte: str = "non déterminée"
     evenements: list[EvenementOut] = []
     elements_manquants: list[str] = []
+    document_id: Optional[int] = None
+    statut: str = "Brouillon"
 
 
 class ExportChronologieIn(BaseModel):
@@ -115,6 +119,8 @@ class VerificationProceduraleOut(BaseModel):
     echeances_identifiees: list[EcheanceOut] = []
     actes_potentiellement_manquants: list[str] = []
     points_attention: list[str] = []
+    document_id: Optional[int] = None
+    statut: str = "Brouillon"
 
 
 class ExportVerificationProceduraleIn(BaseModel):

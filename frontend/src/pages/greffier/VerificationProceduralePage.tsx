@@ -12,12 +12,15 @@
  * d'attention (plus doux, en doré -- même convention que PlanTimeline).
  */
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { greffier as greffierApi, downloadBlob } from "@/api";
+import { analyse as analyseApi, greffier as greffierApi, downloadBlob } from "@/api";
+import type { VerificationProceduraleResultat } from "@/api";
 import { useAppStore, useDossierActif } from "@/store/useAppStore";
 import { useLazyAction } from "@/hooks/useLazyAction";
+import { useDernierDocumentGenere } from "@/hooks/useDernierDocumentGenere";
 import Button from "@/components/Button";
+import ConfirmerModal from "@/components/ConfirmerModal";
 import EmptyState from "@/components/EmptyState";
 import ErrorState from "@/components/ErrorState";
 import { SkeletonList } from "@/components/Skeleton";
@@ -38,7 +41,20 @@ export default function VerificationProceduralePage() {
   const dossierActif = useDossierActif();
   const pousserToast = useAppStore((s) => s.pousserToast);
   const [exportEnCours, setExportEnCours] = useState(false);
-  const { data, loading, error, executer, definirDonnees } = useLazyAction(() => greffierApi.verificationProcedurale(dossierActif!.id));
+  const [suppressionEnCours, setSuppressionEnCours] = useState(false);
+  const [confirmationSuppression, setConfirmationSuppression] = useState(false);
+  const { data, loading, error, executer, definirDonnees, reinitialiser } = useLazyAction(() => greffierApi.verificationProcedurale(dossierActif!.id));
+  // Recharge automatiquement, au montage, la dernière vérification déjà
+  // persistée pour ce dossier -- une simple lecture, jamais un nouvel
+  // appel IA -- pour qu'elle reste visible après une navigation ou un
+  // refresh complet.
+  const { document: dernierDocument, loading: dernierDocumentLoading } = useDernierDocumentGenere(dossierActif?.id, "verification_procedurale");
+
+  useEffect(() => {
+    if (!dernierDocument || data) return;
+    definirDonnees({ ...(dernierDocument.contenu as unknown as VerificationProceduraleResultat), document_id: dernierDocument.id, statut: dernierDocument.statut });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dernierDocument]);
 
   const exporter = async () => {
     if (!dossierActif || !data) return;
@@ -50,6 +66,21 @@ export default function VerificationProceduralePage() {
       pousserToast("error", e instanceof Error ? e.message : t("arsenal.echecExport"));
     } finally {
       setExportEnCours(false);
+    }
+  };
+
+  const supprimer = async () => {
+    if (!data?.document_id) return;
+    setSuppressionEnCours(true);
+    try {
+      await analyseApi.supprimerDocumentGenere(data.document_id);
+      reinitialiser();
+      setConfirmationSuppression(false);
+      pousserToast("success", t("arsenal.resultatSupprime"));
+    } catch (e) {
+      pousserToast("error", e instanceof Error ? e.message : t("arsenal.erreurSuppression"));
+    } finally {
+      setSuppressionEnCours(false);
     }
   };
 
@@ -67,9 +98,14 @@ export default function VerificationProceduralePage() {
         </div>
         <div className="flex flex-wrap gap-2">
           {data && (
-            <Button variant="secondary" loading={exportEnCours} onClick={() => void exporter()}>
-              ⬇ {t("arsenal.exporterWord")}
-            </Button>
+            <>
+              <Button variant="secondary" loading={exportEnCours} onClick={() => void exporter()}>
+                ⬇ {t("arsenal.exporterWord")}
+              </Button>
+              {data.document_id && (
+                <Button variant="ghost" onClick={() => setConfirmationSuppression(true)}>🗑 {t("commun.supprimer")}</Button>
+              )}
+            </>
           )}
           <Button variant="primary" loading={loading} onClick={() => void executer()}>
             {data ? `↻ ${t("verifProcedurale.relancer")}` : t("verifProcedurale.verifier")}
@@ -77,11 +113,11 @@ export default function VerificationProceduralePage() {
         </div>
       </div>
 
-      {loading && <SkeletonList count={2} />}
+      {(loading || dernierDocumentLoading) && <SkeletonList count={2} />}
 
-      {!loading && error && <ErrorState message={error} onRetry={() => void executer()} />}
+      {!loading && !dernierDocumentLoading && error && <ErrorState message={error} onRetry={() => void executer()} />}
 
-      {!loading && !error && data && (
+      {!loading && !dernierDocumentLoading && !error && data && (
         <div className="space-y-6">
           <div>
             <p className="mb-3 font-serif text-h3 font-semibold text-gold-500">{t("verifProcedurale.echeancesIdentifiees")}</p>
@@ -140,10 +176,21 @@ export default function VerificationProceduralePage() {
         </div>
       )}
 
-      {!loading && !error && !data && (
+      {!loading && !dernierDocumentLoading && !error && !data && (
         <EmptyState
           titre={t("verifProcedurale.pretTitre")}
           description={t("verifProcedurale.pretDescription")}
+        />
+      )}
+
+      {confirmationSuppression && (
+        <ConfirmerModal
+          titre={t("arsenal.confirmerSuppressionTitre")}
+          description={t("arsenal.confirmerSuppressionDescription")}
+          texteBouton={t("commun.supprimer")}
+          enCours={suppressionEnCours}
+          onFermer={() => setConfirmationSuppression(false)}
+          onConfirmer={supprimer}
         />
       )}
     </div>

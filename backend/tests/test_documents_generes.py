@@ -108,3 +108,70 @@ def test_consultation_est_rattachee_au_dossier(monkeypatch, client: TestClient, 
     assert response.status_code == 200
     assert response.json()["document_id"] is not None
     assert response.json()["statut"] == "Brouillon"
+
+
+def test_chronologie_persistee_et_relue(client: TestClient, dossier_demo_id: int):
+    """La chronologie a une réponse préenregistrée en mode démo (voir
+    demo_data.chronologie_demo) -- persistée comme plan/simulateur, sans
+    avoir besoin de sortir du mode démo pour ce test."""
+    response = client.post("/api/greffier/chronologie", json={"dossier_id": dossier_demo_id})
+    assert response.status_code == 200
+    document_id = response.json()["document_id"]
+    assert document_id is not None
+    assert response.json()["statut"] == "Brouillon"
+
+    liste = client.get(f"/api/dossiers/{dossier_demo_id}/documents-generes", params={"feature": "chronologie"})
+    assert liste.status_code == 200
+    assert len(liste.json()) == 1
+    assert liste.json()[0]["id"] == document_id
+
+    suppression = client.delete(f"/api/documents-generes/{document_id}")
+    assert suppression.status_code == 204
+    liste_apres = client.get(f"/api/dossiers/{dossier_demo_id}/documents-generes", params={"feature": "chronologie"})
+    assert liste_apres.json() == []
+
+
+def test_note_client_persistee_et_relue(monkeypatch, client: TestClient, dossier_demo_id: int):
+    """Sans réponse préenregistrée en mode démo (voir notes.py::rediger_note_client) --
+    sort du mode démo via une clé personnelle factice, comme
+    test_consultation_est_rattachee_au_dossier ci-dessus."""
+    import analyse as legacy_analyse
+
+    monkeypatch.setattr(legacy_analyse, "rediger_note_client", lambda contexte: "Texte de note client de test.")
+    response = client.post(
+        "/api/notes/note-client",
+        json={"dossier_id": dossier_demo_id},
+        headers={"x-anthropic-api-key": "sk-ant-test"},
+    )
+    assert response.status_code == 200
+    document_id = response.json()["document_id"]
+    assert document_id is not None
+    assert response.json()["statut"] == "Brouillon"
+
+    liste = client.get(f"/api/dossiers/{dossier_demo_id}/documents-generes", params={"feature": "note_client"})
+    assert len(liste.json()) == 1
+    assert liste.json()[0]["id"] == document_id
+
+
+def test_verification_procedurale_persistee_et_relue(monkeypatch, client: TestClient, dossier_demo_id: int):
+    """Même principe que test_note_client_persistee_et_relue ci-dessus --
+    pas de réponse préenregistrée en mode démo pour cette fonctionnalité."""
+    import analyse as legacy_analyse
+
+    monkeypatch.setattr(
+        legacy_analyse,
+        "verifier_procedure",
+        lambda contexte: {"echeances_identifiees": [], "actes_potentiellement_manquants": [], "points_attention": ["point"]},
+    )
+    response = client.post(
+        "/api/greffier/verification-procedurale",
+        json={"dossier_id": dossier_demo_id},
+        headers={"x-anthropic-api-key": "sk-ant-test"},
+    )
+    assert response.status_code == 200
+    document_id = response.json()["document_id"]
+    assert document_id is not None
+
+    liste = client.get(f"/api/dossiers/{dossier_demo_id}/documents-generes", params={"feature": "verification_procedurale"})
+    assert len(liste.json()) == 1
+    assert liste.json()[0]["id"] == document_id

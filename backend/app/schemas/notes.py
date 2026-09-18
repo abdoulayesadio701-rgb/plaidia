@@ -27,6 +27,8 @@ class NoteClientIn(BaseModel):
 
 class NoteClientOut(BaseModel):
     texte: str
+    document_id: Optional[int] = None
+    statut: str = "Brouillon"
 
 
 class ExportNoteClientIn(BaseModel):

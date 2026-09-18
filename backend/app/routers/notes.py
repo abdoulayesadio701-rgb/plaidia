@@ -91,11 +91,17 @@ def exporter_notes(dossier_id: int):
 
 @router.post("/note-client", response_model=NoteClientOut)
 def rediger_note_client(payload: NoteClientIn):
+    """Persistée dans documents_generes (feature="note_client"), même
+    mécanisme que /plan et /simulateur -- pour que la note survive à une
+    navigation ou un refresh (voir NoteClientPage côté front)."""
     dossier = get_dossier_or_404(payload.dossier_id)
     demo.exiger_cle_api()
     contexte = construire_contexte_dossier(dossier)
     texte = legacy_analyse.rediger_note_client(contexte)
-    return NoteClientOut(texte=texte)
+    document = db.creer_document_genere(
+        payload.dossier_id, "note_client", f"Note client — {dossier['nom']}", {}, {"texte": texte},
+    )
+    return NoteClientOut(texte=texte, document_id=document["id"], statut=document["statut"])
 
 
 @router.post("/note-client/export")
