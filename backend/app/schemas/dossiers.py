@@ -66,6 +66,16 @@ class AnalyseHistoriqueOut(BaseModel):
     statut: str = "Brouillon"
 
 
+class EcheanceLegereOut(BaseModel):
+    libelle: str = ""
+    date_echeance: str
+
+
+class EcheancesDossierOut(BaseModel):
+    dossier_id: int
+    delais: list[EcheanceLegereOut] = []
+
+
 class ResultatRechercheContenuOut(BaseModel):
     source: str  # "document_genere" | "analyse" | "note"
     feature: str  # "plan" | "simulateur" | "resume" | "chronologie" | "verification_procedurale" | "note_client" | "delais" | "entrainement" | "bordereau" | "conclusions" | "notes"

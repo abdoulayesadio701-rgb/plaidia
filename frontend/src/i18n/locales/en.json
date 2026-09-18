@@ -201,6 +201,8 @@
     "epingle": "Pinned"
   },
   "dossiersPage": {
+    "echeanceDans_one": "Deadline in {{count}} day",
+    "echeanceDans_other": "Deadline in {{count}} days",
     "nonClasse": "Unclassified",
     "supprime": "Case « {{nom}} » deleted.",
     "echecSuppression": "Deletion failed.",
@@ -455,6 +457,15 @@
     "sectionSuivante": "Next section",
     "terminer": "Finish practice",
     "arreter": "Stop here",
+    "pause": "Pause",
+    "reprendre": "Resume",
+    "enPause": "Paused",
+    "historiqueTitre": "Your sessions",
+    "colDate": "Date",
+    "colProgres": "Compared with the previous session",
+    "plusProche": "{{duree}} closer to the planned time",
+    "plusLoin": "{{duree}} further from the planned time",
+    "identique": "Same difference",
     "colSection": "Section",
     "colAlloue": "Allotted",
     "colReel": "Actual",
@@ -492,7 +503,10 @@
     "nonEnregistre": "Unsaved changes",
     "enregistrer": "Save",
     "enregistre": "Exhibit list saved",
-    "erreurEnregistrement": "Could not save the exhibit list."
+    "erreurEnregistrement": "Could not save the exhibit list.",
+    "supprimerTout": "Delete the exhibit list",
+    "supprimerToutTitre": "Delete the whole exhibit list?",
+    "supprimerToutDescription": "All listed exhibits will be permanently deleted. Documents imported into the case are not affected."
   },
   "verifProcedurale": {
     "emptyTitre": "No case selected",
@@ -927,6 +941,33 @@
       "refutation2Angle": "Legal",
       "refutation2Piste": "[VERIF:find a ruling excluding serious misconduct in the case of a transport strike]"
     }
+  },
+  "requisitoire": {
+    "sousTitre": "Paste or import a closing submission (réquisitoire): the analysis extracts the charge retained, the facts relied on, aggravating and mitigating circumstances, the sentence sought and points of attention.",
+    "placeholder": "Paste the text of the réquisitoire here, or drop a Word or PDF file.",
+    "analyser": "Analyse the réquisitoire",
+    "pretTitre": "Ready to analyse",
+    "pretDescription": "Paste a réquisitoire then click « Analyse the réquisitoire ».",
+    "qualification": "Charge retained",
+    "nonPrecisee": "Not specified",
+    "peineRequise": "Sentence sought",
+    "faits": "Facts and evidence relied on",
+    "aggravantes": "Aggravating circumstances",
+    "attenuantes": "Mitigating circumstances",
+    "pointsAttention": "Points of attention"
+  },
+  "rapportInstruction": {
+    "sousTitre": "Paste or import an investigating judge's report: the analysis extracts the investigative steps taken, evidence for and against, measures ordered and the proposed outcome.",
+    "placeholder": "Paste the text of the investigation report here, or drop a Word or PDF file.",
+    "analyser": "Analyse the report",
+    "pretTitre": "Ready to analyse",
+    "pretDescription": "Paste an investigation report then click « Analyse the report ».",
+    "sensPropose": "Proposed outcome",
+    "actes": "Investigative steps",
+    "mesures": "Measures ordered",
+    "aCharge": "Evidence against",
+    "aDecharge": "Evidence in favour",
+    "pointsAttention": "Points of attention"
   },
   "dashboard": {
     "prochaineEcheance": "Next deadline",

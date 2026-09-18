@@ -7,15 +7,18 @@
  * documents_generes (feature="entrainement") et le rend exportable en Word.
  */
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { analyse as analyseApi, entrainement as entrainementApi, downloadBlob } from "@/api";
+import { analyse as analyseApi, dossiers as dossiersApi, entrainement as entrainementApi, downloadBlob } from "@/api";
 import type { BilanEntrainement, PlanResultat, PointPlan, SectionMesuree, StatutSectionEntrainement } from "@/api";
 import { useAppStore, useDossierActif } from "@/store/useAppStore";
+import { useAsync } from "@/hooks/useAsync";
 import { useLazyAction } from "@/hooks/useLazyAction";
 import { useDernierDocumentGenere } from "@/hooks/useDernierDocumentGenere";
 import { formaterChrono, formaterDuree } from "@/config/durees";
+import { demarrerChrono, mettreEnPause, reprendre, secondesEcoulees, type EtatChrono } from "./chronometre";
+import { resumerSeances } from "./seancesEntrainement";
 import Button from "@/components/Button";
 import ConfirmerModal from "@/components/ConfirmerModal";
 import EmptyState from "@/components/EmptyState";
@@ -43,7 +46,8 @@ function allouerSecondes(points: PointPlan[], tempsMinutes: number | undefined):
 }
 
 export default function EntrainementPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const locale = i18n.language === "en" ? "en-GB" : "fr-FR";
   const dossierActif = useDossierActif();
   const pousserToast = useAppStore((s) => s.pousserToast);
 
@@ -51,14 +55,22 @@ export default function EntrainementPage() {
   const [index, setIndex] = useState(0);
   const [mesures, setMesures] = useState<number[]>([]);
   const [maintenant, setMaintenant] = useState(() => Date.now());
-  const debutSection = useRef(0);
+  const [chrono, setChrono] = useState<EtatChrono>(() => demarrerChrono(Date.now()));
   const [sectionsMesurees, setSectionsMesurees] = useState<SectionMesuree[]>([]);
   const [exportEnCours, setExportEnCours] = useState(false);
   const [suppressionEnCours, setSuppressionEnCours] = useState(false);
   const [confirmationSuppression, setConfirmationSuppression] = useState(false);
 
   const { document: dernierPlan, loading: planLoading } = useDernierDocumentGenere(dossierActif?.id, "plan");
-  const { document: dernierBilan, loading: bilanLoading } = useDernierDocumentGenere(dossierActif?.id, "entrainement");
+  // Toutes les séances enregistrées (la plus récente en tête) : la dernière
+  // est affichée en bilan, l'ensemble sert à comparer les séances.
+  const { data: documentsSeances, loading: bilanLoading, reload: rechargerSeances } = useAsync(
+    () => dossiersApi.listerDocumentsGeneres(dossierActif!.id, "entrainement"),
+    [dossierActif?.id],
+    dossierActif !== null
+  );
+  const dernierBilan = documentsSeances && documentsSeances.length > 0 ? documentsSeances[0] : null;
+  const seances = useMemo(() => resumerSeances(documentsSeances ?? []), [documentsSeances]);
   const { data: bilan, loading: enregistrement, error, executer, definirDonnees, reinitialiser } = useLazyAction(
     (sections: SectionMesuree[]) => entrainementApi.enregistrerBilan(dossierActif!.id, sections)
   );
@@ -94,16 +106,18 @@ export default function EntrainementPage() {
     }));
     setSectionsMesurees(sections);
     setPhase("termine");
-    void executer(sections);
+    void executer(sections).then((resultat) => {
+      if (resultat) rechargerSeances();
+    });
   };
 
-  const ecouleActuel = () => Math.max(0, Math.round((Date.now() - debutSection.current) / 1000));
+  const ecouleActuel = () => secondesEcoulees(chrono, Date.now());
 
   const demarrer = () => {
     reinitialiser();
     setMesures([]);
     setIndex(0);
-    debutSection.current = Date.now();
+    setChrono(demarrerChrono(Date.now()));
     setMaintenant(Date.now());
     setPhase("en_cours");
   };
@@ -113,7 +127,7 @@ export default function EntrainementPage() {
     setMesures(nouvelles);
     if (index + 1 < points.length) {
       setIndex(index + 1);
-      debutSection.current = Date.now();
+      setChrono(demarrerChrono(Date.now()));
       setMaintenant(Date.now());
     } else {
       cloturer(nouvelles);
@@ -121,6 +135,8 @@ export default function EntrainementPage() {
   };
 
   const arreter = () => cloturer([...mesures, ecouleActuel()]);
+
+  const basculerPause = () => setChrono((etat) => (etat.pauseDepuis === null ? mettreEnPause(etat, Date.now()) : reprendre(etat, Date.now())));
 
   const exporter = async () => {
     if (!dossierActif || !bilan) return;
@@ -143,6 +159,7 @@ export default function EntrainementPage() {
       reinitialiser();
       setPhase("attente");
       setConfirmationSuppression(false);
+      rechargerSeances();
       pousserToast("success", t("arsenal.resultatSupprime"));
     } catch (e) {
       pousserToast("error", e instanceof Error ? e.message : t("arsenal.erreurSuppression"));
@@ -156,7 +173,8 @@ export default function EntrainementPage() {
   }
 
   const chargement = planLoading || bilanLoading;
-  const ecoule = phase === "en_cours" ? Math.max(0, Math.round((maintenant - debutSection.current) / 1000)) : 0;
+  const ecoule = phase === "en_cours" ? secondesEcoulees(chrono, maintenant) : 0;
+  const enPause = chrono.pauseDepuis !== null;
   const alloueCourant = alloues[index] ?? 0;
   const ratio = alloueCourant > 0 ? ecoule / alloueCourant : 0;
   const classeChrono = ratio > 1 ? "badge-risk-high" : ratio > 0.9 ? "badge-risk-medium" : "badge-risk-low";
@@ -219,7 +237,8 @@ export default function EntrainementPage() {
             <p className="text-micro font-medium uppercase tracking-wide text-amethyst-400">
               {t("entrainement.sectionNumero", { numero: index + 1, total: points.length })}
             </p>
-            <span className={`${classeChrono} font-mono text-lg`} aria-live="off">
+            <span className={`${enPause ? "badge border-muted/30 bg-surface-2 text-warmgray" : classeChrono} font-mono text-lg`} aria-live="off">
+              {enPause && `⏸ ${t("entrainement.enPause")} · `}
               {formaterChrono(ecoule)} / {formaterChrono(alloueCourant)}
             </span>
           </div>
@@ -232,7 +251,12 @@ export default function EntrainementPage() {
           )}
           {pointCourant.notes && <p className="whitespace-pre-wrap text-sm text-warmgray">{pointCourant.notes}</p>}
           <div className="flex flex-wrap justify-between gap-3">
-            <Button variant="ghost" onClick={arreter}>■ {t("entrainement.arreter")}</Button>
+            <div className="flex gap-2">
+              <Button variant="ghost" onClick={arreter}>■ {t("entrainement.arreter")}</Button>
+              <Button variant="secondary" onClick={basculerPause}>
+                {enPause ? `▶ ${t("entrainement.reprendre")}` : `⏸ ${t("entrainement.pause")}`}
+              </Button>
+            </div>
             <Button variant="primary" onClick={sectionSuivante}>
               {index + 1 < points.length ? `${t("entrainement.sectionSuivante")} →` : `${t("entrainement.terminer")} ✓`}
             </Button>
@@ -293,6 +317,48 @@ export default function EntrainementPage() {
                 {t("entrainement.nonTraitees", { liste: nonTraitees.map((s) => s.point).join(" ; ") })}
               </p>
             )}
+          </div>
+        </div>
+      )}
+
+      {seances.length >= 2 && phase !== "en_cours" && !enregistrement && (
+        <div className="space-y-2">
+          <h2 className="font-serif text-h4 font-semibold text-gold-500">{t("entrainement.historiqueTitre")}</h2>
+          <div className="overflow-x-auto rounded-md border border-gold-600/20">
+            <table className="w-full border-collapse text-sm">
+              <thead>
+                <tr className="border-b border-gold-600/20 bg-surface-2 text-left text-micro uppercase tracking-wide text-warmgray">
+                  <th className="px-4 py-3 font-medium">{t("entrainement.colDate")}</th>
+                  <th className="px-4 py-3 font-medium">{t("entrainement.colAlloue")}</th>
+                  <th className="px-4 py-3 font-medium">{t("entrainement.colReel")}</th>
+                  <th className="px-4 py-3 font-medium">{t("entrainement.colEcart")}</th>
+                  <th className="px-4 py-3 font-medium">{t("entrainement.colProgres")}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {seances.map((seance) => (
+                  <tr key={seance.id} className="border-b border-gold-600/10 last:border-0">
+                    <td className="whitespace-nowrap px-4 py-3 text-ivory">
+                      {new Date(seance.date).toLocaleString(locale, { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-3 font-mono text-warmgray">{formaterChrono(seance.alloueSecondes)}</td>
+                    <td className="whitespace-nowrap px-4 py-3 font-mono text-warmgray">{formaterChrono(seance.reelSecondes)}</td>
+                    <td className="whitespace-nowrap px-4 py-3 font-mono text-warmgray">{formaterDuree(seance.ecartSecondes)}</td>
+                    <td className="px-4 py-3 text-xs">
+                      {seance.progresSecondes === null ? (
+                        <span className="text-muted">—</span>
+                      ) : seance.progresSecondes > 0 ? (
+                        <span className="text-risk-low">▲ {t("entrainement.plusProche", { duree: formaterDuree(seance.progresSecondes) })}</span>
+                      ) : seance.progresSecondes < 0 ? (
+                        <span className="text-risk-high">▼ {t("entrainement.plusLoin", { duree: formaterDuree(-seance.progresSecondes) })}</span>
+                      ) : (
+                        <span className="text-muted">{t("entrainement.identique")}</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
       )}

@@ -13,11 +13,12 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { bordereau as bordereauApi, downloadBlob } from "@/api";
+import { analyse as analyseApi, bordereau as bordereauApi, downloadBlob } from "@/api";
 import type { PieceBordereau } from "@/api";
 import { useAppStore, useDossierActif } from "@/store/useAppStore";
 import { useAsync } from "@/hooks/useAsync";
 import Button from "@/components/Button";
+import ConfirmerModal from "@/components/ConfirmerModal";
 import EmptyState from "@/components/EmptyState";
 import ErrorState from "@/components/ErrorState";
 import { SkeletonList } from "@/components/Skeleton";
@@ -37,8 +38,11 @@ export default function BordereauPage() {
 
   const [pieces, setPieces] = useState<PieceBordereau[]>([]);
   const [enregistre, setEnregistre] = useState("[]");
+  const [documentId, setDocumentId] = useState<number | null>(null);
   const [enregistrementEnCours, setEnregistrementEnCours] = useState(false);
   const [exportEnCours, setExportEnCours] = useState(false);
+  const [confirmationSuppression, setConfirmationSuppression] = useState(false);
+  const [suppressionEnCours, setSuppressionEnCours] = useState(false);
 
   const { data, loading, error, reload } = useAsync(
     () => bordereauApi.lireBordereau(dossierActif!.id),
@@ -51,6 +55,7 @@ export default function BordereauPage() {
     if (!data) return;
     setPieces(data.pieces);
     setEnregistre(JSON.stringify(data.pieces));
+    setDocumentId(data.document_id);
   }, [data]);
 
   const modifie = JSON.stringify(pieces) !== enregistre;
@@ -89,11 +94,29 @@ export default function BordereauPage() {
       );
       setPieces(resultat.pieces);
       setEnregistre(JSON.stringify(resultat.pieces));
+      setDocumentId(resultat.document_id);
       pousserToast("success", t("bordereau.enregistre"));
     } catch (e) {
       pousserToast("error", e instanceof Error ? e.message : t("bordereau.erreurEnregistrement"));
     } finally {
       setEnregistrementEnCours(false);
+    }
+  };
+
+  const supprimerBordereau = async () => {
+    if (documentId === null) return;
+    setSuppressionEnCours(true);
+    try {
+      await analyseApi.supprimerDocumentGenere(documentId);
+      setConfirmationSuppression(false);
+      setPieces([]);
+      setEnregistre("[]");
+      setDocumentId(null);
+      pousserToast("success", t("arsenal.resultatSupprime"));
+    } catch (e) {
+      pousserToast("error", e instanceof Error ? e.message : t("arsenal.erreurSuppression"));
+    } finally {
+      setSuppressionEnCours(false);
     }
   };
 
@@ -127,6 +150,11 @@ export default function BordereauPage() {
           <Button variant="secondary" loading={exportEnCours} disabled={modifie || enregistre === "[]"} onClick={() => void exporter()}>
             ⬇ {t("arsenal.exporterWord")}
           </Button>
+          {documentId !== null && (
+            <Button variant="ghost" onClick={() => setConfirmationSuppression(true)}>
+              🗑 {t("bordereau.supprimerTout")}
+            </Button>
+          )}
           <Button
             variant="primary"
             loading={enregistrementEnCours}
@@ -265,6 +293,17 @@ export default function BordereauPage() {
             )}
           </div>
         </div>
+      )}
+
+      {confirmationSuppression && (
+        <ConfirmerModal
+          titre={t("bordereau.supprimerToutTitre")}
+          description={t("bordereau.supprimerToutDescription")}
+          texteBouton={t("commun.supprimer")}
+          enCours={suppressionEnCours}
+          onFermer={() => setConfirmationSuppression(false)}
+          onConfirmer={supprimerBordereau}
+        />
       )}
     </div>
   );

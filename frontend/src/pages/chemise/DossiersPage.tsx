@@ -12,7 +12,10 @@ import type { TFunction } from "i18next";
 import { dossiers as dossiersApi } from "@/api";
 import type { Dossier } from "@/api";
 import { useAppStore } from "@/store/useAppStore";
+import { useAsync } from "@/hooks/useAsync";
 import { useLazyAction } from "@/hooks/useLazyAction";
+import { SEUIL_ALERTE_JOURS, classeUrgence } from "@/config/echeances";
+import { evaluerEcheances } from "@/components/tableauDeBord/synthese";
 import Button from "@/components/Button";
 import EmptyState from "@/components/EmptyState";
 import ErrorState from "@/components/ErrorState";
@@ -62,6 +65,19 @@ export default function DossiersPage() {
     if (!dossiersCharges) void chargerDossiers();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Échéances de procédure : une seule lecture pour tous les dossiers. En cas
+  // d'échec la liste reste utilisable, simplement sans alertes.
+  const { data: echeancesDossiers } = useAsync(() => dossiersApi.echeancesDesDossiers(), [], true);
+  const alertesParDossier = useMemo(() => {
+    const alertes = new Map<number, { jours: number | null; depassees: number }>();
+    for (const e of echeancesDossiers ?? []) {
+      const { prochaine, depassees } = evaluerEcheances(e.delais);
+      const proche = prochaine !== null && prochaine.jours <= SEUIL_ALERTE_JOURS;
+      if (proche || depassees > 0) alertes.set(e.dossier_id, { jours: proche ? prochaine.jours : null, depassees });
+    }
+    return alertes;
+  }, [echeancesDossiers]);
 
   const enRecherche = terme.trim().length > 0;
 
@@ -183,6 +199,7 @@ export default function DossiersPage() {
                     <CarteDossier
                       key={d.id}
                       dossier={d}
+                      alerte={alertesParDossier.get(d.id)}
                       onOuvrir={() => ouvrirDossier(d.id)}
                       onModifierDomaine={() => setDossierAModifier(d)}
                       onSupprimer={() => setDossierASupprimer(d)}
@@ -219,6 +236,7 @@ export default function DossiersPage() {
 
 interface CarteDossierProps {
   dossier: Dossier;
+  alerte?: { jours: number | null; depassees: number };
   onOuvrir: () => void;
   onModifierDomaine: () => void;
   onSupprimer: () => void;
@@ -226,7 +244,7 @@ interface CarteDossierProps {
   langue: string;
 }
 
-function CarteDossier({ dossier, onOuvrir, onModifierDomaine, onSupprimer, t, langue }: CarteDossierProps) {
+function CarteDossier({ dossier, alerte, onOuvrir, onModifierDomaine, onSupprimer, t, langue }: CarteDossierProps) {
   return (
     <div
       className="card-interactive space-y-3 p-5"
@@ -245,6 +263,18 @@ function CarteDossier({ dossier, onOuvrir, onModifierDomaine, onSupprimer, t, la
         <span className="badge shrink-0 border-gold-600/30 bg-surface-2 text-warmgray">{t(`dossierStatut.${dossier.statut}`, dossier.statut)}</span>
       </div>
       {dossier.numero_dossier && <p className="text-xs text-muted">{t("dossiersPage.reference")} {dossier.numero_dossier}</p>}
+      {alerte && (
+        <div className="flex flex-wrap items-center gap-2">
+          {alerte.jours !== null && (
+            <span className={classeUrgence(alerte.jours)}>
+              ⏱ {alerte.jours === 0 ? t("dashboard.aujourdhui") : t("dossiersPage.echeanceDans", { count: alerte.jours })}
+            </span>
+          )}
+          {alerte.depassees > 0 && (
+            <span className="badge-risk-high">⚠ {t("dashboard.echeancesDepassees", { count: alerte.depassees })}</span>
+          )}
+        </div>
+      )}
       <div className="flex items-center justify-between gap-3 pt-1">
         <span className="text-xs text-warmgray">{formaterDate(dossier.date_creation, langue)}</span>
         <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>

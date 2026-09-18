@@ -58,3 +58,58 @@ def test_export_verification_procedurale_word(client: TestClient, dossier_demo_i
     assert r.status_code == 200
     assert r.headers["content-type"] == "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
     assert len(r.content) > 0
+
+
+def _texte_docx(contenu: bytes) -> str:
+    import io
+
+    from docx import Document
+
+    return "\n".join(p.text for p in Document(io.BytesIO(contenu)).paragraphs)
+
+
+def test_export_requisitoire_word(client: TestClient):
+    r = client.post(
+        "/api/greffier/requisitoire/export",
+        json={
+            "qualification_retenue": "Vol aggravé",
+            "faits_et_elements_invoques": ["Effraction constatée"],
+            "circonstances_aggravantes": ["Récidive"],
+            "circonstances_attenuantes": [],
+            "peine_requise": "2 ans dont 1 avec sursis",
+            "points_attention": ["Qualification à vérifier"],
+        },
+    )
+    assert r.status_code == 200
+    assert r.headers["content-type"] == "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    texte = _texte_docx(r.content)
+    assert "Vol aggravé" in texte
+    assert "2 ans dont 1 avec sursis" in texte
+    assert "- Récidive" in texte
+    assert "— Rien détecté" in texte  # circonstances atténuantes vides
+
+
+def test_export_rapport_instruction_word(client: TestClient):
+    r = client.post(
+        "/api/greffier/rapport-instruction/export",
+        json={
+            "actes_instruction": ["Audition du témoin X"],
+            "elements_a_charge": ["Empreintes relevées"],
+            "elements_a_decharge": ["Alibi allégué"],
+            "mesures_ordonnees": ["Expertise ADN"],
+            "sens_propose": "Renvoi devant le tribunal correctionnel",
+            "points_attention": [],
+        },
+    )
+    assert r.status_code == 200
+    texte = _texte_docx(r.content)
+    assert "Renvoi devant le tribunal correctionnel" in texte
+    assert "- Empreintes relevées" in texte
+    assert "- Alibi allégué" in texte
+    assert "- Expertise ADN" in texte
+
+
+def test_export_requisitoire_corps_vide_valeurs_par_defaut(client: TestClient):
+    r = client.post("/api/greffier/requisitoire/export", json={})
+    assert r.status_code == 200
+    assert "non précisée" in _texte_docx(r.content)

@@ -106,3 +106,15 @@ confirmation, aucune erreur JS.
 
 **Implémentée (version calcul déterministe) et testée — 2026-09-18.**
 Alerte « délai sous 7 jours » sur la liste des dossiers : non faite (V2).
+
+## Mise à jour (2026-09-18, suite)
+
+- **Alerte sur la liste des dossiers : faite.** `GET /api/dossiers/echeances`
+  (dernier calcul de délais de chaque dossier, `db.derniers_delais_par_dossier`) ;
+  la carte d'un dossier affiche « Échéance dans N jours » quand l'échéance est à
+  7 jours ou moins (`SEUIL_ALERTE_JOURS`, `config/echeances.ts`) et « N échéances
+  dépassées ». Toujours calculé, jamais généré par IA.
+- **Détection du point de départ par IA : toujours non faite**, volontairement
+  (une date limite doit rester vérifiable ; dépend d'une clé API, sans repli démo).
+- **Catalogue des 8 délais : à faire relire par un juriste** (non vérifié sur
+  Légifrance).

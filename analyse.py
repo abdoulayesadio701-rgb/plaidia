@@ -1820,6 +1820,11 @@ Actions disponibles (utilise EXACTEMENT ce code) :
 - "note" : prendre une note de travail
 - "notes_consulter" : consulter les notes déjà prises
 - "note_client" : rédiger une note pour le client en langage simple
+- "chronologie" : construire la chronologie des événements du dossier
+- "verification" : vérifier la procédure (échéances, actes manquants)
+- "delais" : suivre ou calculer les délais de procédure (appel, opposition, pourvoi...)
+- "entrainement" : s'entraîner à plaider, répétition chronométrée du plan de plaidoirie
+- "bordereau" : tenir le bordereau de pièces du dossier
 - "export" : exporter les faits bruts du dossier
 - "domaine" : modifier le domaine du dossier
 - "menu" : afficher le menu numéroté (si la demande est ambiguë, vide, ou hors sujet)

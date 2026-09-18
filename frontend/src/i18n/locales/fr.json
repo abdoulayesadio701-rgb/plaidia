@@ -201,6 +201,8 @@
     "epingle": "Épinglé"
   },
   "dossiersPage": {
+    "echeanceDans_one": "Échéance dans {{count}} jour",
+    "echeanceDans_other": "Échéance dans {{count}} jours",
     "nonClasse": "Non classé",
     "supprime": "Dossier « {{nom}} » supprimé.",
     "echecSuppression": "La suppression a échoué.",
@@ -455,6 +457,15 @@
     "sectionSuivante": "Section suivante",
     "terminer": "Terminer l'entraînement",
     "arreter": "Arrêter ici",
+    "pause": "Pause",
+    "reprendre": "Reprendre",
+    "enPause": "En pause",
+    "historiqueTitre": "Vos séances",
+    "colDate": "Date",
+    "colProgres": "Par rapport à la séance précédente",
+    "plusProche": "{{duree}} plus proche du temps prévu",
+    "plusLoin": "{{duree}} plus éloignée du temps prévu",
+    "identique": "Écart identique",
     "colSection": "Section",
     "colAlloue": "Alloué",
     "colReel": "Réel",
@@ -492,7 +503,10 @@
     "nonEnregistre": "Modifications non enregistrées",
     "enregistrer": "Enregistrer",
     "enregistre": "Bordereau enregistré",
-    "erreurEnregistrement": "Impossible d'enregistrer le bordereau."
+    "erreurEnregistrement": "Impossible d'enregistrer le bordereau.",
+    "supprimerTout": "Supprimer le bordereau",
+    "supprimerToutTitre": "Supprimer tout le bordereau ?",
+    "supprimerToutDescription": "Toutes les pièces listées seront supprimées définitivement. Les documents importés dans le dossier ne sont pas touchés."
   },
   "verifProcedurale": {
     "emptyTitre": "Aucun dossier sélectionné",
@@ -927,6 +941,33 @@
       "refutation2Angle": "Juridique",
       "refutation2Piste": "[VERIF:rechercher un arrêt excluant la faute grave en cas de grève des transports]"
     }
+  },
+  "requisitoire": {
+    "sousTitre": "Collez ou importez un réquisitoire : l'analyse en dégage la qualification retenue, les faits invoqués, les circonstances aggravantes et atténuantes, la peine requise et les points d'attention.",
+    "placeholder": "Collez ici le texte du réquisitoire, ou déposez un fichier Word ou PDF.",
+    "analyser": "Analyser le réquisitoire",
+    "pretTitre": "Prêt à analyser",
+    "pretDescription": "Collez un réquisitoire puis cliquez sur « Analyser le réquisitoire ».",
+    "qualification": "Qualification retenue",
+    "nonPrecisee": "Non précisée",
+    "peineRequise": "Peine requise",
+    "faits": "Faits et éléments invoqués",
+    "aggravantes": "Circonstances aggravantes",
+    "attenuantes": "Circonstances atténuantes",
+    "pointsAttention": "Points d'attention"
+  },
+  "rapportInstruction": {
+    "sousTitre": "Collez ou importez un rapport d'instruction : l'analyse en dégage les actes accomplis, les éléments à charge et à décharge, les mesures ordonnées et le sens proposé.",
+    "placeholder": "Collez ici le texte du rapport d'instruction, ou déposez un fichier Word ou PDF.",
+    "analyser": "Analyser le rapport",
+    "pretTitre": "Prêt à analyser",
+    "pretDescription": "Collez un rapport d'instruction puis cliquez sur « Analyser le rapport ».",
+    "sensPropose": "Sens proposé",
+    "actes": "Actes d'instruction",
+    "mesures": "Mesures ordonnées",
+    "aCharge": "Éléments à charge",
+    "aDecharge": "Éléments à décharge",
+    "pointsAttention": "Points d'attention"
   },
   "dashboard": {
     "prochaineEcheance": "Prochaine échéance",

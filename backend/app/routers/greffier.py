@@ -31,6 +31,8 @@ from app.schemas.greffier import (
     ExportCoherenceIn,
     ExportDelaisIn,
     ExportExtractionIn,
+    ExportRapportInstructionIn,
+    ExportRequisitoireIn,
     ExportVerificationProceduraleIn,
     ExtractionIn,
     ExtractionOut,
@@ -383,3 +385,55 @@ def rapport_instruction(payload: RapportInstructionIn):
             if c["statut_deterministe"] != "VERIFIE":
                 print(f"[greffier] citation non vérifiée dans un rapport d'instruction DeepSeek : {c}", flush=True)
     return resultat
+
+
+def _lignes_liste(titre: str, elements: list[str]) -> list[str]:
+    lignes = [titre]
+    if not elements:
+        lignes.append("— Rien détecté")
+    lignes.extend(f"- {e}" for e in elements)
+    lignes.append("")
+    return lignes
+
+
+def _reponse_word(chemin: str) -> FileResponse:
+    return FileResponse(
+        chemin,
+        filename=os.path.basename(chemin),
+        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    )
+
+
+@router.post("/requisitoire/export")
+def exporter_requisitoire(payload: ExportRequisitoireIn):
+    """Export Word générique, sans dossier requis -- même principe que
+    /extraction/export."""
+    lignes = ["QUALIFICATION RETENUE", payload.qualification_retenue or "— Non précisée", ""]
+    lignes += ["PEINE REQUISE", payload.peine_requise, ""]
+    lignes += _lignes_liste("FAITS ET ÉLÉMENTS INVOQUÉS", payload.faits_et_elements_invoques)
+    lignes += _lignes_liste("CIRCONSTANCES AGGRAVANTES", payload.circonstances_aggravantes)
+    lignes += _lignes_liste("CIRCONSTANCES ATTÉNUANTES", payload.circonstances_attenuantes)
+    lignes += _lignes_liste("POINTS D'ATTENTION", payload.points_attention)
+    chemin = legacy_export.exporter_texte_libre_word(
+        "Analyse d'un réquisitoire",
+        "\n".join(lignes),
+        note_bas_page="Analyse automatisée à vérifier manuellement -- ne remplace pas le contrôle d'un professionnel du droit.",
+    )
+    return _reponse_word(chemin)
+
+
+@router.post("/rapport-instruction/export")
+def exporter_rapport_instruction(payload: ExportRapportInstructionIn):
+    """Export Word générique, sans dossier requis."""
+    lignes = ["SENS PROPOSÉ", payload.sens_propose, ""]
+    lignes += _lignes_liste("ACTES D'INSTRUCTION", payload.actes_instruction)
+    lignes += _lignes_liste("MESURES ORDONNÉES", payload.mesures_ordonnees)
+    lignes += _lignes_liste("ÉLÉMENTS À CHARGE", payload.elements_a_charge)
+    lignes += _lignes_liste("ÉLÉMENTS À DÉCHARGE", payload.elements_a_decharge)
+    lignes += _lignes_liste("POINTS D'ATTENTION", payload.points_attention)
+    chemin = legacy_export.exporter_texte_libre_word(
+        "Analyse d'un rapport d'instruction",
+        "\n".join(lignes),
+        note_bas_page="Analyse automatisée à vérifier manuellement -- ne remplace pas le contrôle d'un professionnel du droit.",
+    )
+    return _reponse_word(chemin)

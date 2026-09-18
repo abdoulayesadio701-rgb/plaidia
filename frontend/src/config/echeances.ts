@@ -7,6 +7,9 @@
 
 const MS_PAR_JOUR = 86_400_000;
 
+/** Une échéance à ce nombre de jours ou moins est signalée sur la liste des dossiers. */
+export const SEUIL_ALERTE_JOURS = 7;
+
 export function versDateLocale(iso: string): Date {
   const [annee, mois, jour] = iso.split("-").map(Number);
   return new Date(annee, mois - 1, jour);

@@ -189,6 +189,10 @@ class RequisitoireOut(BaseModel):
     points_attention: list[str] = []
 
 
+class ExportRequisitoireIn(RequisitoireOut):
+    """Reprend tel quel le résultat affiché (RequisitoireOut)."""
+
+
 class RapportInstructionIn(BaseModel):
     texte: str = Field(..., min_length=1, max_length=MAX_TEXTE_CARACTERES, description="Texte du rapport d'instruction")
 
@@ -200,3 +204,7 @@ class RapportInstructionOut(BaseModel):
     mesures_ordonnees: list[str] = []
     sens_propose: str = "non précisé"
     points_attention: list[str] = []
+
+
+class ExportRapportInstructionIn(RapportInstructionOut):
+    """Reprend tel quel le résultat affiché (RapportInstructionOut)."""

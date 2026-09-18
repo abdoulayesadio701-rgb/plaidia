@@ -15,9 +15,31 @@ import type { BilanEntrainement, DelaiCalcule, DocumentGenere } from "@/api";
 const FEATURES_AVEC_CARTE = new Set(["delais", "bordereau", "entrainement"]);
 const NOMBRE_RECENTS = 5;
 
-export interface EcheanceProche {
-  delai: DelaiCalcule;
+/** Le strict nécessaire d'un délai pour évaluer son échéance. */
+export interface EcheanceSimple {
+  libelle: string;
+  date_echeance: string;
+}
+
+export interface EcheanceProche<T extends EcheanceSimple = DelaiCalcule> {
+  delai: T;
   jours: number;
+}
+
+/** Prochaine échéance non dépassée (une échéance à la date du jour compte
+ * pour 0 jour) et nombre d'échéances déjà dépassées. */
+export function evaluerEcheances<T extends EcheanceSimple>(
+  delais: T[],
+  maintenant: Date = new Date()
+): { prochaine: EcheanceProche<T> | null; depassees: number } {
+  let prochaine: EcheanceProche<T> | null = null;
+  let depassees = 0;
+  for (const delai of delais) {
+    const jours = joursRestants(delai.date_echeance, maintenant);
+    if (jours < 0) depassees += 1;
+    else if (prochaine === null || jours < prochaine.jours) prochaine = { delai, jours };
+  }
+  return { prochaine, depassees };
 }
 
 export interface SyntheseDossier {
@@ -39,18 +61,9 @@ function dernierDeFeature(documents: DocumentGenere[], feature: string): Documen
 }
 
 export function synthetiser(documents: DocumentGenere[], maintenant: Date = new Date()): SyntheseDossier {
-  let prochaineEcheance: EcheanceProche | null = null;
-  let echeancesDepassees = 0;
   const docDelais = dernierDeFeature(documents, "delais");
   const delais = docDelais && Array.isArray(docDelais.contenu.delais) ? (docDelais.contenu.delais as DelaiCalcule[]) : [];
-  for (const delai of delais) {
-    const jours = joursRestants(delai.date_echeance, maintenant);
-    if (jours < 0) {
-      echeancesDepassees += 1;
-    } else if (prochaineEcheance === null || jours < prochaineEcheance.jours) {
-      prochaineEcheance = { delai, jours };
-    }
-  }
+  const { prochaine: prochaineEcheance, depassees: echeancesDepassees } = evaluerEcheances(delais, maintenant);
 
   const docBordereau = dernierDeFeature(documents, "bordereau");
   const nombrePieces =

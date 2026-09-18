@@ -38,6 +38,8 @@ import NoteClientPage from "@/pages/carnet/NoteClientPage";
 import TraduirePage from "@/pages/carnet/TraduirePage";
 import ChronologiePage from "@/pages/greffier/ChronologiePage";
 import DelaisPage from "@/pages/greffier/DelaisPage";
+import RequisitoirePage from "@/pages/greffier/RequisitoirePage";
+import RapportInstructionPage from "@/pages/greffier/RapportInstructionPage";
 import BordereauPage from "@/pages/chemise/BordereauPage";
 import EntrainementPage from "@/pages/arsenal/EntrainementPage";
 import ExtractionPage from "@/pages/greffier/ExtractionPage";
@@ -76,6 +78,8 @@ const PAGES_IMPLEMENTEES: Record<string, ReactElement> = {
   "/carnet/traduire": <TraduirePage />,
   "/greffier/chronologie": <ChronologiePage />,
   "/greffier/delais": <DelaisPage />,
+  "/greffier/requisitoire": <RequisitoirePage />,
+  "/greffier/rapport-instruction": <RapportInstructionPage />,
   "/chemise/bordereau": <BordereauPage />,
   "/greffier/bordereau": <BordereauPage />,
   "/greffier/extraction": <ExtractionPage />,

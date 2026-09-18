@@ -8,7 +8,7 @@ sans réseau -- analyser_conclusions() (l'appel LLM réel par moyen) est
 mocké, comme le reste des agents de analyse.py dans cette suite (voir
 test_quality_pipeline.py)."""
 
-import time
+import threading
 
 import analyse as legacy_analyse
 
@@ -72,10 +72,14 @@ def test_analyser_conclusions_par_moyens_reste_sequentiel_si_un_seul_moyen(monke
 
 def test_analyser_conclusions_par_moyens_lance_un_appel_parallele_par_moyen(monkeypatch):
     appels = []
+    # Preuve de parallélisation sans dépendre de la vitesse de la machine :
+    # chaque appel attend l'autre à ce verrou (2 parties). Exécutés l'un après
+    # l'autre, le premier attendrait en vain et lèverait BrokenBarrierError.
+    verrou = threading.Barrier(2, timeout=5)
 
     def _espion_lent(texte, *a, **k):
         appels.append(texte)
-        time.sleep(0.15)
+        verrou.wait()
         risque = "Élevé" if "PREMIER" in texte else "Faible"
         return {"arguments": [{"resume": texte[:20], "risque": risque}], "points_attention": [f"point de {texte[:10]}"]}
 
@@ -86,12 +90,9 @@ def test_analyser_conclusions_par_moyens_lance_un_appel_parallele_par_moyen(monk
         "PREMIER MOYEN : argumentation développée sur plusieurs lignes concernant la nullité du contrat invoquée ici.\n\n"
         "SECOND MOYEN : argumentation développée sur plusieurs lignes concernant le quantum du préjudice réclamé ici."
     )
-    t0 = time.monotonic()
     resultat = legacy_analyse.analyser_conclusions_par_moyens(texte)
-    duree = time.monotonic() - t0
 
-    assert len(appels) == 2  # un appel par moyen détecté
-    assert duree < 0.28  # bien moins que 0.3s (0.15 + 0.15 séquentiel) -- preuve de la parallélisation
+    assert len(appels) == 2  # un appel par moyen détecté, simultanés (voir le verrou ci-dessus)
     # Les arguments fusionnés sont triés du risque le plus élevé au plus faible.
     assert [a["risque"] for a in resultat["arguments"]] == ["Élevé", "Faible"]
     assert len(resultat["points_attention"]) == 2

@@ -133,16 +133,55 @@ interface AppState {
 
 const JURIDICTION_PAR_DEFAUT = "Légifrance (France)";
 
+// Le dossier actif et l'espace choisi survivent à un rechargement (F5) :
+// on ne garde que l'identifiant / le nom de l'espace, jamais le dossier
+// complet (relu depuis le serveur par chargerDossiers).
+const CLE_DOSSIER_ACTIF = "plaidia:dossier-actif";
+const CLE_ESPACE_ACTIF = "plaidia:espace-actif";
+
+function lireStockage(cle: string): string | null {
+  try {
+    return localStorage.getItem(cle);
+  } catch {
+    return null;
+  }
+}
+
+function ecrireStockage(cle: string, valeur: string | null): void {
+  try {
+    if (valeur === null) localStorage.removeItem(cle);
+    else localStorage.setItem(cle, valeur);
+  } catch {
+    // Stockage indisponible (navigation privée) : la sélection ne survivra
+    // pas au rechargement, l'application reste utilisable.
+  }
+}
+
+function lireDossierActifPersiste(): number | null {
+  const brut = lireStockage(CLE_DOSSIER_ACTIF);
+  const id = brut === null ? NaN : Number(brut);
+  return Number.isInteger(id) && id > 0 ? id : null;
+}
+
+function lireEspacePersiste(): Espace {
+  return lireStockage(CLE_ESPACE_ACTIF) === "greffier" ? "greffier" : "avocat";
+}
+
 export const useAppStore = create<AppState>((set, get) => ({
   dossiers: [],
-  dossierActifId: null,
+  dossierActifId: lireDossierActifPersiste(),
   dossiersCharges: false,
   dossiersErreur: null,
 
   chargerDossiers: async () => {
     try {
       const liste = await dossiersApi.listerDossiers();
-      set({ dossiers: liste, dossiersCharges: true, dossiersErreur: null });
+      // Dossier mémorisé devenu introuvable (supprimé, base de démo
+      // réinitialisée) : on oublie la sélection au lieu de la garder fantôme.
+      const idActif = get().dossierActifId;
+      const idValide = idActif !== null && liste.some((d) => d.id === idActif) ? idActif : null;
+      if (idValide !== idActif) ecrireStockage(CLE_DOSSIER_ACTIF, null);
+      set({ dossiers: liste, dossierActifId: idValide, dossiersCharges: true, dossiersErreur: null });
     } catch (e) {
       const message = e instanceof Error ? e.message : "Impossible de charger les dossiers.";
       set({ dossiersErreur: message });
@@ -151,6 +190,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   selectionnerDossier: (id) => {
+    ecrireStockage(CLE_DOSSIER_ACTIF, id === null ? null : String(id));
     set({ dossierActifId: id });
     // Changer de dossier n'a pas de sens à mélanger avec la conversation
     // en cours -- même règle que gui.py::_selectionner_dossier.
@@ -159,17 +199,22 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   ajouterDossierLocal: (dossier) => set((s) => ({ dossiers: [dossier, ...s.dossiers] })),
 
-  retirerDossierLocal: (id) =>
+  retirerDossierLocal: (id) => {
+    if (get().dossierActifId === id) ecrireStockage(CLE_DOSSIER_ACTIF, null);
     set((s) => ({
       dossiers: s.dossiers.filter((d) => d.id !== id),
       dossierActifId: s.dossierActifId === id ? null : s.dossierActifId,
-    })),
+    }));
+  },
 
   mettreAJourDossierLocal: (dossier) =>
     set((s) => ({ dossiers: s.dossiers.map((d) => (d.id === dossier.id ? dossier : d)) })),
 
-  espaceActif: "avocat",
-  definirEspace: (espace) => set({ espaceActif: espace }),
+  espaceActif: lireEspacePersiste(),
+  definirEspace: (espace) => {
+    ecrireStockage(CLE_ESPACE_ACTIF, espace);
+    set({ espaceActif: espace });
+  },
 
   juridictionActive: JURIDICTION_PAR_DEFAUT,
   sourcesJuridictions: [JURIDICTION_PAR_DEFAUT],

@@ -134,3 +134,34 @@ def test_export_delais_word(client: TestClient, dossier_demo_id: int):
     assert r.status_code == 200
     assert r.headers["content-type"] == "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
     assert len(r.content) > 0
+
+
+def test_echeances_des_dossiers_dernier_calcul_seulement(client: TestClient, dossier_demo_id: int):
+    assert client.get("/api/dossiers/echeances").json() == []
+
+    client.post("/api/greffier/delais", json={
+        "dossier_id": dossier_demo_id, "delais": [{"type": "appel_civil", "date_depart": "2026-01-05", "libelle": "Ancien"}],
+    })
+    client.post("/api/greffier/delais", json={
+        "dossier_id": dossier_demo_id,
+        "delais": [
+            {"type": "appel_civil", "date_depart": "2026-03-12", "libelle": "Jugement du 12 mars"},
+            {"type": "pourvoi_civil", "date_depart": "2026-03-12"},
+        ],
+    })
+
+    r = client.get("/api/dossiers/echeances")
+    assert r.status_code == 200
+    corps = r.json()
+    assert len(corps) == 1 and corps[0]["dossier_id"] == dossier_demo_id
+    assert sorted(d["date_echeance"] for d in corps[0]["delais"]) == ["2026-04-13", "2026-05-12"]
+    assert corps[0]["delais"][0]["libelle"]
+
+
+def test_echeances_ignore_les_dossiers_sans_calcul(client: TestClient, dossier_demo_id: int):
+    autre = client.post("/api/dossiers/", json={"nom": "Sans délais"}).json()["id"]
+    client.post("/api/greffier/delais", json={
+        "dossier_id": dossier_demo_id, "delais": [{"type": "appel_civil", "date_depart": "2026-03-12"}],
+    })
+    ids = [e["dossier_id"] for e in client.get("/api/dossiers/echeances").json()]
+    assert dossier_demo_id in ids and autre not in ids

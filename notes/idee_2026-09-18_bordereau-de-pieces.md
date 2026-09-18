@@ -87,3 +87,13 @@ dont lecture du tableau Word) ; scénario réel dans Chromium (instances
 isolées) : saisie, réordonnancement, blocage des doublons, reprise depuis un
 import, enregistrement, même bordereau côté Greffier, export Word relu,
 présence dans « Documents générés » et la recherche, aucune erreur JS.
+
+## Mise à jour (2026-09-18, suite)
+
+- **Suppression du bordereau entier : faite** (bouton « Supprimer le bordereau »
+  avec confirmation ; supprime l'entrée `documents_generes`).
+- **Lien pièce <-> fichier : non faisable en l'état** : l'application ne conserve
+  pas les fichiers importés, seulement leur texte extrait ajouté aux faits. Il
+  faudrait d'abord stocker les fichiers (nouveau stockage, taille, sécurité) ;
+  décision produit à prendre.
+- Détection de pièces manquantes : toujours non faite.

@@ -102,3 +102,15 @@ total, persistance après navigation, export Word, suppression, aucune erreur JS
 ## Statut
 
 **✅ Implémentée (version chronomètre + bilan) et testée — 2026-09-18.**
+
+## Mise à jour (2026-09-18, suite)
+
+- **Pause du chronomètre : faite** (`pages/arsenal/chronometre.ts`, fonctions pures
+  testées : le temps de pause ne compte pas, plusieurs pauses s'enchaînent).
+- **Comparaison entre séances : faite** (`pages/arsenal/seancesEntrainement.ts`) :
+  tableau « Vos séances » avec, pour chaque séance, le rapprochement ou
+  l'éloignement du temps prévu par rapport à la précédente (réduction de l'écart
+  absolu).
+- **Tolérance de 10 % (minimum 10 s) : validée par l'utilisateur.**
+- Toujours non fait : synthèse rédigée par IA, reprise d'une séance interrompue
+  par un rechargement de la page.

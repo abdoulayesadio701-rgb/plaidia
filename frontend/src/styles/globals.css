@@ -441,7 +441,13 @@
   }
   .banner-scrim {
     @apply absolute inset-0;
-    background: linear-gradient(100deg, rgb(var(--color-void)) 0%, rgb(var(--color-void) / 0.92) 22%, rgb(var(--color-void) / 0.55) 42%, rgb(var(--color-void) / 0.12) 62%, transparent 78%);
+    /* Voile toujours sombre (littéral, pas --color-void qui vaut #F7F7F9 en
+       thème clair) : le titre du bandeau est en blanc et doit rester lisible
+       dans les deux thèmes. */
+    background: linear-gradient(100deg, rgb(11 10 15) 0%, rgb(11 10 15 / 0.92) 22%, rgb(11 10 15 / 0.55) 42%, rgb(11 10 15 / 0.12) 62%, transparent 78%);
+  }
+  .banner-photo .kicker {
+    color: rgb(255 255 255 / 0.75);
   }
   .banner-wash {
     @apply absolute inset-0;

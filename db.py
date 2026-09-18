@@ -1119,6 +1119,32 @@ def creer_document_genere(dossier_id, feature, titre, parametres, contenu, langu
     return get_document_genere(document_id)
 
 
+def derniers_delais_par_dossier():
+    """Pour chaque dossier ayant au moins un calcul de délais de procédure
+    (feature="delais"), l'échéance de chaque délai du calcul le plus récent :
+    [{dossier_id, delais: [{libelle, date_echeance}]}]. Un seul calcul fait
+    foi par dossier -- comme sur la page « Suivi des délais »."""
+    _assurer_migration()
+    conn = get_connection()
+    rows = conn.execute(
+        "SELECT id, dossier_id FROM documents_generes WHERE feature = 'delais' ORDER BY date_modification DESC, id DESC"
+    ).fetchall()
+    conn.close()
+    dernier_par_dossier = {}
+    for row in rows:
+        dernier_par_dossier.setdefault(row["dossier_id"], row["id"])
+    resultat = []
+    for dossier_id, document_id in dernier_par_dossier.items():
+        contenu = get_document_genere(document_id)["contenu"]
+        delais = [
+            {"libelle": d.get("libelle", ""), "date_echeance": d["date_echeance"]}
+            for d in contenu.get("delais", [])
+            if d.get("date_echeance")
+        ]
+        resultat.append({"dossier_id": dossier_id, "delais": delais})
+    return resultat
+
+
 def get_document_genere(document_id):
     _assurer_migration()
     conn = get_connection()

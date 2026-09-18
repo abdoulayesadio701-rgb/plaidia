@@ -156,6 +156,11 @@ export interface PlanResultat {
   statut?: StatutDocument;
 }
 
+export interface EcheancesDossier {
+  dossier_id: number;
+  delais: { libelle: string; date_echeance: string }[];
+}
+
 export interface PieceBordereau {
   numero: number;
   intitule: string;

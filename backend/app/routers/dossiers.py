@@ -20,6 +20,7 @@ from app.schemas.dossiers import (
     FaitsAjout,
     AnalyseHistoriqueOut,
     DossierPostureUpdate,
+    EcheancesDossierOut,
     ResultatRechercheContenuOut,
 )
 from app.schemas.documents import DocumentGenereOut, DocumentStatutIn, DocumentStatutOut
@@ -54,6 +55,14 @@ def rechercher_dossiers(terme: str):
     """Recherche un mot-clé dans les faits, parties, nom, domaine et
     analyses de tous les dossiers."""
     return db.rechercher_dans_dossiers(terme)
+
+
+@router.get("/echeances", response_model=list[EcheancesDossierOut])
+def echeances_des_dossiers():
+    """Échéances du dernier calcul de délais de chaque dossier, pour signaler
+    sur la liste des dossiers ceux dont une échéance approche. Déclarée avant
+    /{dossier_id} : sinon « echeances » serait lu comme un identifiant."""
+    return db.derniers_delais_par_dossier()
 
 
 @router.get("/{dossier_id}/documents-generes", response_model=list[DocumentGenereOut])

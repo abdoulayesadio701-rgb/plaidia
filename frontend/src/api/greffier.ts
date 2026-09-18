@@ -113,3 +113,11 @@ export function analyserRequisitoire(texte: string): Promise<RequisitoireResulta
 export function analyserRapportInstruction(texte: string): Promise<RapportInstructionResultat> {
   return apiRequest<RapportInstructionResultat>("/api/greffier/rapport-instruction", { method: "POST", body: { texte } });
 }
+
+export function exporterRequisitoire(resultat: RequisitoireResultat): Promise<{ blob: Blob; filename?: string }> {
+  return apiRequestBlob("/api/greffier/requisitoire/export", { method: "POST", body: resultat });
+}
+
+export function exporterRapportInstruction(resultat: RapportInstructionResultat): Promise<{ blob: Blob; filename?: string }> {
+  return apiRequestBlob("/api/greffier/rapport-instruction/export", { method: "POST", body: resultat });
+}

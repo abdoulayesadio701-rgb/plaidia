@@ -4,7 +4,7 @@
 
 import { ApiError, apiRequest, apiRequestBlob, apiUpload, BASE_URL } from "./http";
 import { useActivityStore } from "@/store/useActivityStore";
-import type { AnalyseHistorique, DocumentGenere, DocumentImporte, Dossier, DossierCreateInput, RechercheDossierResultat, ResultatRechercheContenu } from "./types";
+import type { AnalyseHistorique, DocumentGenere, DocumentImporte, Dossier, DossierCreateInput, EcheancesDossier, RechercheDossierResultat, ResultatRechercheContenu } from "./types";
 
 export function creerDossier(input: DossierCreateInput): Promise<Dossier> {
   return apiRequest<Dossier>("/api/dossiers/", { method: "POST", body: input });
@@ -20,6 +20,11 @@ export function obtenirDossier(dossierId: number): Promise<Dossier> {
 
 export function rechercherDossiers(terme: string): Promise<RechercheDossierResultat[]> {
   return apiRequest<RechercheDossierResultat[]>("/api/dossiers/recherche", { query: { terme } });
+}
+
+/** Échéances du dernier calcul de délais de chaque dossier (signalées sur la liste des dossiers). */
+export function echeancesDesDossiers(): Promise<EcheancesDossier[]> {
+  return apiRequest<EcheancesDossier[]>("/api/dossiers/echeances");
 }
 
 export function modifierDomaine(dossierId: number, domaine: string): Promise<Dossier> {
