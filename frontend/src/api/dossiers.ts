@@ -4,7 +4,7 @@
 
 import { ApiError, apiRequest, apiRequestBlob, apiUpload, BASE_URL } from "./http";
 import { useActivityStore } from "@/store/useActivityStore";
-import type { AnalyseHistorique, DocumentGenere, DocumentImporte, Dossier, DossierCreateInput, RechercheDossierResultat } from "./types";
+import type { AnalyseHistorique, DocumentGenere, DocumentImporte, Dossier, DossierCreateInput, RechercheDossierResultat, ResultatRechercheContenu } from "./types";
 
 export function creerDossier(input: DossierCreateInput): Promise<Dossier> {
   return apiRequest<Dossier>("/api/dossiers/", { method: "POST", body: input });
@@ -74,6 +74,15 @@ export async function exporterFaitsBruts(dossierId: number): Promise<{ blob: Blo
 
 export async function exporterHistorique(dossierId: number): Promise<{ blob: Blob; filename?: string }> {
   return apiRequestBlob(`/api/dossiers/${dossierId}/export/historique`);
+}
+
+/** Recherche en plein texte dans tout le contenu déjà généré pour ce
+ * dossier (plan, simulateur, résumé, chronologie, vérification
+ * procédurale, note client, analyses de conclusions, notes) -- Avocat et
+ * Greffier confondus, sans restriction de rôle (voir
+ * notes/idee_2026-09-18_recherche-transversale-dossier.md). */
+export function rechercherDansDossier(dossierId: number, q: string): Promise<ResultatRechercheContenu[]> {
+  return apiRequest<ResultatRechercheContenu[]>(`/api/dossiers/${dossierId}/recherche`, { query: { q } });
 }
 
 /**

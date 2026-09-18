@@ -53,6 +53,15 @@ export interface AnalyseHistorique {
   statut: StatutDocument;
 }
 
+export interface ResultatRechercheContenu {
+  source: "document_genere" | "analyse" | "note";
+  feature: string;
+  id: number;
+  titre: string;
+  extrait: string;
+  date: string;
+}
+
 // ---------------------------------------------------------------------
 // Analyse (backend/app/schemas/analyse.py)
 // ---------------------------------------------------------------------

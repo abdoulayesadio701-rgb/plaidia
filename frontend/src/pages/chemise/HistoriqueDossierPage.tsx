@@ -8,7 +8,7 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { analyse as analyseApi, dossiers as dossiersApi, downloadBlob } from "@/api";
-import type { StatutDocument } from "@/api";
+import type { ResultatRechercheContenu, StatutDocument } from "@/api";
 import { chat as chatApi } from "@/api";
 import { useAlertesArticlesDossier, useAppStore, useDossierActif } from "@/store/useAppStore";
 import { useAsync } from "@/hooks/useAsync";
@@ -45,6 +45,11 @@ const CHEMIN_PAR_FEATURE = {
   chronologie: "greffier/chronologie",
   verification_procedurale: "greffier/verification-procedurale",
   note_client: "carnet/note-client",
+  // Ces deux features ne viennent pas de documents_generes (voir
+  // db.rechercher_dans_documents_dossier) : pas d'id de document
+  // individuellement adressable, le lien renvoie vers la page générale.
+  conclusions: "arsenal/analyser",
+  notes: "carnet/notes",
 } as const;
 
 export default function HistoriqueDossierPage() {
@@ -56,6 +61,9 @@ export default function HistoriqueDossierPage() {
   const [statuts, setStatuts] = useState<Record<number, StatutDocument>>({});
   const [statutEnCours, setStatutEnCours] = useState<number | null>(null);
   const [exportEnCours, setExportEnCours] = useState(false);
+  const [rechercheTexte, setRechercheTexte] = useState("");
+  const [rechercheResultats, setRechercheResultats] = useState<ResultatRechercheContenu[] | null>(null);
+  const [rechercheEnCours, setRechercheEnCours] = useState(false);
 
   const { data: analyses, loading, error, reload } = useAsync(
     () => dossiersApi.historiqueAnalyses(dossierActif!.id),
@@ -115,8 +123,45 @@ export default function HistoriqueDossierPage() {
     }
   };
 
+  // Recherche transversale (plan/simulateur/résumé/chronologie/vérification
+  // procédurale/note client/analyses/notes) -- débounce simple, pas de
+  // hook dédié pour un seul usage. Voir
+  // notes/idee_2026-09-18_recherche-transversale-dossier.md pour les choix
+  // de portée (plein texte), de tri (date décroissante par groupe) et de
+  // visibilité (aucune restriction par rôle).
+  useEffect(() => {
+    if (!dossierActif) return;
+    const terme = rechercheTexte.trim();
+    if (!terme) {
+      setRechercheResultats(null);
+      setRechercheEnCours(false);
+      return;
+    }
+    setRechercheEnCours(true);
+    const minuteur = setTimeout(() => {
+      dossiersApi
+        .rechercherDansDossier(dossierActif.id, terme)
+        .then(setRechercheResultats)
+        .catch(() => setRechercheResultats([]))
+        .finally(() => setRechercheEnCours(false));
+    }, 300);
+    return () => clearTimeout(minuteur);
+  }, [rechercheTexte, dossierActif]);
+
   if (!dossierActif) {
     return <EmptyState titre={t("historiqueDossier.emptyTitre")} description={t("historiqueDossier.emptyDescription")} />;
+  }
+
+  // Regroupé par feature en préservant l'ordre (déjà trié par date
+  // décroissante côté backend, donc chaque groupe reste trié par date
+  // décroissante -- voir décision 2 de la note d'idée).
+  const rechercheGroupes: [string, ResultatRechercheContenu[]][] = [];
+  if (rechercheResultats) {
+    for (const r of rechercheResultats) {
+      const groupe = rechercheGroupes.find(([feature]) => feature === r.feature);
+      if (groupe) groupe[1].push(r);
+      else rechercheGroupes.push([r.feature, [r]]);
+    }
   }
 
   return (
@@ -202,6 +247,51 @@ export default function HistoriqueDossierPage() {
             </p>
           )}
         </div>
+      </div>
+
+      <div className="card space-y-3 p-6">
+        <p className="text-micro font-medium uppercase tracking-wide text-amethyst-400">{t("historiqueDossier.rechercheTitre")}</p>
+        <input
+          type="search"
+          className="input"
+          placeholder={t("historiqueDossier.recherchePlaceholder")}
+          value={rechercheTexte}
+          onChange={(e) => setRechercheTexte(e.target.value)}
+        />
+        {rechercheEnCours && <p className="text-xs text-muted">{t("historiqueDossier.rechercheEnCours")}</p>}
+        {!rechercheEnCours && rechercheResultats && rechercheResultats.length === 0 && (
+          <p className="text-xs text-muted">{t("historiqueDossier.rechercheAucunResultat")}</p>
+        )}
+        {!rechercheEnCours && rechercheGroupes.length > 0 && (
+          <div className="space-y-4">
+            {rechercheGroupes.map(([feature, resultats]) => (
+              <div key={feature}>
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gold-500">
+                  {t(`historiqueDossier.rechercheGroupe.${feature}`, feature)}
+                </p>
+                <div className="space-y-2">
+                  {resultats.map((r) => {
+                    const chemin = CHEMIN_PAR_FEATURE[r.feature as keyof typeof CHEMIN_PAR_FEATURE] ?? "grimoire/jurisprudence";
+                    const lien = r.source === "document_genere" ? `/app/${chemin}?document_id=${r.id}` : `/app/${chemin}`;
+                    return (
+                      <Link
+                        key={`${r.source}-${r.id}`}
+                        to={lien}
+                        className="card block space-y-1 p-3 transition-colors hover:border-gold-500/40"
+                      >
+                        <div className="flex items-center justify-between gap-3">
+                          <span className="truncate text-sm font-medium text-ivory">{r.titre}</span>
+                          <span className="shrink-0 text-xs text-muted">{formaterDate(r.date, i18n.language)}</span>
+                        </div>
+                        <p className="truncate text-xs text-warmgray">{r.extrait}</p>
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       <div>

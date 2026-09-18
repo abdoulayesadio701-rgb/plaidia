@@ -242,7 +242,21 @@
     "nombreArguments_one": "{{count}} argument",
     "nombreArguments_other": "{{count}} arguments",
     "nombrePointsAttention_one": "{{count}} point d'attention",
-    "nombrePointsAttention_other": "{{count}} points d'attention"
+    "nombrePointsAttention_other": "{{count}} points d'attention",
+    "rechercheTitre": "Rechercher dans ce dossier",
+    "recherchePlaceholder": "Rechercher un mot dans tout ce qui a été généré pour ce dossier…",
+    "rechercheAucunResultat": "Aucun résultat pour cette recherche.",
+    "rechercheEnCours": "Recherche…",
+    "rechercheGroupe": {
+      "plan": "Plan de plaidoirie",
+      "simulateur": "Simulateur d'objections",
+      "resume": "Résumé de dossier",
+      "chronologie": "Chronologie",
+      "verification_procedurale": "Vérification procédurale",
+      "note_client": "Note client",
+      "conclusions": "Analyses de conclusions",
+      "notes": "Notes"
+    }
   },
   "preparerDossier": {
     "emptyTitre": "Aucun dossier sélectionné",

@@ -454,6 +454,82 @@ def rechercher_dans_dossiers(mot_cle: str) -> list:
     return resultats
 
 
+def rechercher_dans_documents_dossier(dossier_id, terme):
+    """Recherche en plein texte dans les documents_generes (plan, simulateur,
+    résumé, chronologie, vérification procédurale, note client), les analyses
+    de conclusions et les notes d'UN dossier -- distinct de
+    rechercher_dans_dossiers() ci-dessus qui cherche seulement dans les
+    champs du dossier lui-même (faits/parties/nom/domaine) à travers TOUS
+    les dossiers. Aucune restriction par espace (Avocat/Greffier) : voir
+    notes/idee_2026-09-18_recherche-transversale-dossier.md, décision 3 --
+    l'application n'a pas de système de rôle/authentification à ce jour.
+    Retourne une liste triée par date décroissante, tous types confondus ;
+    le regroupement par type se fait côté appelant (API/frontend)."""
+    conn = get_connection()
+    terme_lower = terme.lower()
+    resultats = []
+
+    def extrait_autour(valeur, idx):
+        debut = max(0, idx - 60)
+        fin = min(len(valeur), idx + len(terme) + 60)
+        return ("…" if debut > 0 else "") + valeur[debut:fin].replace("\n", " ") + ("…" if fin < len(valeur) else "")
+
+    rows = conn.execute(
+        "SELECT id, feature, titre, contenu_json, date_modification FROM documents_generes WHERE dossier_id = ?",
+        (dossier_id,),
+    ).fetchall()
+    for r in rows:
+        hay = f"{r['titre']}\n{r['contenu_json']}"
+        idx = hay.lower().find(terme_lower)
+        if idx != -1:
+            resultats.append({
+                "source": "document_genere",
+                "feature": r["feature"],
+                "id": r["id"],
+                "titre": r["titre"],
+                "extrait": extrait_autour(hay, idx),
+                "date": r["date_modification"],
+            })
+
+    rows = conn.execute(
+        "SELECT id, date, arguments_json, points_attention_json FROM analyses WHERE dossier_id = ?",
+        (dossier_id,),
+    ).fetchall()
+    for r in rows:
+        hay = (r["arguments_json"] or "") + "\n" + (r["points_attention_json"] or "")
+        idx = hay.lower().find(terme_lower)
+        if idx != -1:
+            resultats.append({
+                "source": "analyse",
+                "feature": "conclusions",
+                "id": r["id"],
+                "titre": f"Analyse de conclusions du {r['date'][:10]}",
+                "extrait": extrait_autour(hay, idx),
+                "date": r["date"],
+            })
+
+    rows = conn.execute(
+        "SELECT id, note_brute, note_structuree, date_creation FROM notes WHERE dossier_id = ?",
+        (dossier_id,),
+    ).fetchall()
+    for r in rows:
+        hay = (r["note_structuree"] or "") + "\n" + (r["note_brute"] or "")
+        idx = hay.lower().find(terme_lower)
+        if idx != -1:
+            resultats.append({
+                "source": "note",
+                "feature": "notes",
+                "id": r["id"],
+                "titre": f"Note du {r['date_creation'][:10]}",
+                "extrait": extrait_autour(hay, idx),
+                "date": r["date_creation"],
+            })
+
+    conn.close()
+    resultats.sort(key=lambda r: r["date"], reverse=True)
+    return resultats
+
+
 # --- Analyses -----------------------------------------------------------
 
 def save_analyse(dossier_id, arguments, points_attention, langue="fr"):

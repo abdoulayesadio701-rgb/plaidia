@@ -20,6 +20,7 @@ from app.schemas.dossiers import (
     FaitsAjout,
     AnalyseHistoriqueOut,
     DossierPostureUpdate,
+    ResultatRechercheContenuOut,
 )
 from app.schemas.documents import DocumentGenereOut, DocumentStatutIn, DocumentStatutOut
 from fastapi import APIRouter, File, HTTPException, Query, UploadFile
@@ -93,6 +94,15 @@ def modifier_posture(dossier_id: int, payload: DossierPostureUpdate):
     get_dossier_or_404(dossier_id)
     db.update_posture(dossier_id, payload.partie_representee, payload.stade_procedure, payload.objectif)
     return get_dossier_or_404(dossier_id)
+
+
+@router.get("/{dossier_id}/recherche", response_model=list[ResultatRechercheContenuOut])
+def rechercher_dans_le_dossier(dossier_id: int, q: str = Query(..., min_length=1, max_length=200)):
+    """Recherche en plein texte dans tout le contenu déjà généré/persisté
+    pour ce dossier (documents_generes, analyses, notes) -- Avocat et
+    Greffier confondus, voir db.rechercher_dans_documents_dossier."""
+    get_dossier_or_404(dossier_id)
+    return db.rechercher_dans_documents_dossier(dossier_id, q)
 
 
 @router.get("/{dossier_id}/analyses", response_model=list[AnalyseHistoriqueOut])

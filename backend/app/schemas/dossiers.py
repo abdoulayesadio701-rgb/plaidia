@@ -64,3 +64,12 @@ class AnalyseHistoriqueOut(BaseModel):
     arguments: list[dict]
     points_attention: list[str]
     statut: str = "Brouillon"
+
+
+class ResultatRechercheContenuOut(BaseModel):
+    source: str  # "document_genere" | "analyse" | "note"
+    feature: str  # "plan" | "simulateur" | "resume" | "chronologie" | "verification_procedurale" | "note_client" | "conclusions" | "notes"
+    id: int
+    titre: str
+    extrait: str
+    date: str

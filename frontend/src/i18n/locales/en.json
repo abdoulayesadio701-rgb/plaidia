@@ -242,7 +242,21 @@
     "nombreArguments_one": "{{count}} argument",
     "nombreArguments_other": "{{count}} arguments",
     "nombrePointsAttention_one": "{{count}} point of attention",
-    "nombrePointsAttention_other": "{{count}} points of attention"
+    "nombrePointsAttention_other": "{{count}} points of attention",
+    "rechercheTitre": "Search this case",
+    "recherchePlaceholder": "Search a word across everything generated for this case…",
+    "rechercheAucunResultat": "No results for this search.",
+    "rechercheEnCours": "Searching…",
+    "rechercheGroupe": {
+      "plan": "Plea plan",
+      "simulateur": "Objection simulator",
+      "resume": "Case summary",
+      "chronologie": "Timeline",
+      "verification_procedurale": "Procedural check",
+      "note_client": "Client note",
+      "conclusions": "Submission analyses",
+      "notes": "Notes"
+    }
   },
   "preparerDossier": {
     "emptyTitre": "No case selected",
