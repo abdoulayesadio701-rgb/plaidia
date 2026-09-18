@@ -250,6 +250,7 @@
     "rechercheGroupe": {
       "plan": "Plan de plaidoirie",
       "simulateur": "Simulateur d'objections",
+      "entrainement": "Entraînement chronométré",
       "resume": "Résumé de dossier",
       "chronologie": "Chronologie",
       "verification_procedurale": "Vérification procédurale",
@@ -438,6 +439,36 @@
     "avertissement": "Calcul indicatif à vérifier : délais de distance, suspension, interruption et point de départ réel (signification, notification ou prononcé) ne sont pas pris en compte.",
     "pretTitre": "Prêt à calculer les échéances",
     "pretDescription": "Ajoutez un ou plusieurs délais, puis cliquez sur « Calculer les échéances »."
+  },
+  "entrainement": {
+    "emptyTitre": "Aucun dossier sélectionné",
+    "emptyDescription": "Sélectionnez ou créez un dossier pour vous entraîner à plaider.",
+    "aucunPlanTitre": "Aucun plan de plaidoirie",
+    "aucunPlanDescription": "L'entraînement s'appuie sur le plan de plaidoirie du dossier et sur le temps alloué à chaque section. Générez d'abord un plan.",
+    "genererPlan": "Générer un plan de plaidoirie",
+    "sousTitre": "Le chronomètre suit chaque section du plan avec son temps alloué. Passez à la section suivante quand vous avez terminé : le bilan compare le temps prévu au temps réel.",
+    "demarrer": "Commencer l'entraînement",
+    "recommencer": "Recommencer un entraînement",
+    "sectionNumero": "Section {{numero}} sur {{total}}",
+    "argumentCle": "Argument clé",
+    "sectionSuivante": "Section suivante",
+    "terminer": "Terminer l'entraînement",
+    "arreter": "Arrêter ici",
+    "colSection": "Section",
+    "colAlloue": "Alloué",
+    "colReel": "Réel",
+    "colEcart": "Écart",
+    "statut": {
+      "dans_les_temps": "Dans les temps",
+      "depasse": "Dépassée",
+      "en_avance": "En avance",
+      "non_traite": "Non traitée"
+    },
+    "syntheseDepasse": "Vous avez dépassé le temps prévu de {{duree}} sur les sections traitées.",
+    "syntheseAvance": "Vous avez terminé {{duree}} avant le temps prévu sur les sections traitées.",
+    "synthesePile": "Vous avez tenu exactement le temps prévu sur les sections traitées.",
+    "aRaccourcir": "Sections à raccourcir : {{liste}}",
+    "nonTraitees": "Sections non traitées (entraînement arrêté avant) : {{liste}}"
   },
   "verifProcedurale": {
     "emptyTitre": "Aucun dossier sélectionné",
@@ -697,6 +728,7 @@
       "resumer": "Résumer ce dossier",
       "plan": "Générer un plan de plaidoirie",
       "simulateur": "Simuler les objections probables",
+      "entrainement": "S'entraîner à plaider (chronométré)",
       "rapport-complet": "Rapport complet",
       "style": "Analyse stylistique des conclusions adverses",
       "verification-procedurale": "Vérification procédurale"

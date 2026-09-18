@@ -46,6 +46,7 @@ const CHEMIN_PAR_FEATURE = {
   verification_procedurale: "greffier/verification-procedurale",
   note_client: "carnet/note-client",
   delais: "greffier/delais",
+  entrainement: "arsenal/entrainement",
   // Ces deux features ne viennent pas de documents_generes (voir
   // db.rechercher_dans_documents_dossier) : pas d'id de document
   // individuellement adressable, le lien renvoie vers la page générale.

@@ -57,6 +57,7 @@ export const NAVIGATION: Record<Espace, NavSection[]> = {
         { path: "/arsenal/resumer", label: "Résumer ce dossier", requiresDossier: true },
         { path: "/arsenal/plan", label: "Générer un plan de plaidoirie", requiresDossier: true },
         { path: "/arsenal/simulateur", label: "Simuler les objections probables", requiresDossier: true },
+        { path: "/arsenal/entrainement", label: "S'entraîner à plaider (chronométré)", requiresDossier: true },
         { path: "/arsenal/rapport-complet", label: "Rapport complet", requiresDossier: true },
         { path: "/arsenal/style", label: "Analyse stylistique des conclusions adverses", requiresDossier: false },
         { path: "/arsenal/verification-procedurale", label: "Vérification procédurale", requiresDossier: true },

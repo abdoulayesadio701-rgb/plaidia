@@ -68,7 +68,7 @@ class AnalyseHistoriqueOut(BaseModel):
 
 class ResultatRechercheContenuOut(BaseModel):
     source: str  # "document_genere" | "analyse" | "note"
-    feature: str  # "plan" | "simulateur" | "resume" | "chronologie" | "verification_procedurale" | "note_client" | "conclusions" | "notes"
+    feature: str  # "plan" | "simulateur" | "resume" | "chronologie" | "verification_procedurale" | "note_client" | "delais" | "entrainement" | "conclusions" | "notes"
     id: int
     titre: str
     extrait: str

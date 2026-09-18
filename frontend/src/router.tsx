@@ -38,6 +38,7 @@ import NoteClientPage from "@/pages/carnet/NoteClientPage";
 import TraduirePage from "@/pages/carnet/TraduirePage";
 import ChronologiePage from "@/pages/greffier/ChronologiePage";
 import DelaisPage from "@/pages/greffier/DelaisPage";
+import EntrainementPage from "@/pages/arsenal/EntrainementPage";
 import ExtractionPage from "@/pages/greffier/ExtractionPage";
 import ClassementPage from "@/pages/greffier/ClassementPage";
 import CoherencePage from "@/pages/greffier/CoherencePage";
@@ -55,6 +56,7 @@ const PAGES_IMPLEMENTEES: Record<string, ReactElement> = {
   "/chat": <ChatPage />,
   "/conversations": <ConversationsPage />,
   "/arsenal/analyser": <AnalyserConclusionsPage />,
+  "/arsenal/entrainement": <EntrainementPage />,
   "/arsenal/resumer": <ResumerDossierPage />,
   "/arsenal/plan": <PlanPlaidoiriePage />,
   "/arsenal/simulateur": <SimulateurObjectionsPage />,

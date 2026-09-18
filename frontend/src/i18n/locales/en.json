@@ -250,6 +250,7 @@
     "rechercheGroupe": {
       "plan": "Plea plan",
       "simulateur": "Objection simulator",
+      "entrainement": "Timed practice",
       "resume": "Case summary",
       "chronologie": "Timeline",
       "verification_procedurale": "Procedural check",
@@ -438,6 +439,36 @@
     "avertissement": "Indicative computation, to be checked: distance extensions, suspension, interruption and the actual starting point (service, notification or pronouncement) are not taken into account.",
     "pretTitre": "Ready to compute expiry dates",
     "pretDescription": "Add one or more deadlines, then click « Compute expiry dates »."
+  },
+  "entrainement": {
+    "emptyTitre": "No case selected",
+    "emptyDescription": "Select or create a case to practise your plea.",
+    "aucunPlanTitre": "No plea plan",
+    "aucunPlanDescription": "Practice relies on the case's plea plan and the time allotted to each section. Generate a plan first.",
+    "genererPlan": "Generate a plea plan",
+    "sousTitre": "The timer follows each section of the plan with its allotted time. Move on to the next section when you are done: the report compares planned and actual time.",
+    "demarrer": "Start practising",
+    "recommencer": "Start a new practice",
+    "sectionNumero": "Section {{numero}} of {{total}}",
+    "argumentCle": "Key argument",
+    "sectionSuivante": "Next section",
+    "terminer": "Finish practice",
+    "arreter": "Stop here",
+    "colSection": "Section",
+    "colAlloue": "Allotted",
+    "colReel": "Actual",
+    "colEcart": "Difference",
+    "statut": {
+      "dans_les_temps": "On time",
+      "depasse": "Over time",
+      "en_avance": "Ahead",
+      "non_traite": "Not covered"
+    },
+    "syntheseDepasse": "You went over the planned time by {{duree}} on the sections covered.",
+    "syntheseAvance": "You finished {{duree}} ahead of the planned time on the sections covered.",
+    "synthesePile": "You kept exactly to the planned time on the sections covered.",
+    "aRaccourcir": "Sections to shorten: {{liste}}",
+    "nonTraitees": "Sections not covered (practice stopped earlier): {{liste}}"
   },
   "verifProcedurale": {
     "emptyTitre": "No case selected",
@@ -697,6 +728,7 @@
       "resumer": "Summarise this case",
       "plan": "Generate a pleading plan",
       "simulateur": "Simulate likely objections",
+      "entrainement": "Practise your plea (timed)",
       "rapport-complet": "Full report",
       "style": "Stylistic analysis of opposing submissions",
       "verification-procedurale": "Procedural check"

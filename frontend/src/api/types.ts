@@ -156,6 +156,32 @@ export interface PlanResultat {
   statut?: StatutDocument;
 }
 
+export interface SectionMesuree {
+  point: string;
+  alloue_secondes: number;
+  reel_secondes: number;
+  traitee: boolean;
+}
+
+export type StatutSectionEntrainement = "dans_les_temps" | "depasse" | "en_avance" | "non_traite";
+
+export interface SectionBilan {
+  point: string;
+  alloue_secondes: number;
+  reel_secondes: number;
+  ecart_secondes: number;
+  statut: StatutSectionEntrainement;
+}
+
+export interface BilanEntrainement {
+  sections: SectionBilan[];
+  total_alloue_secondes: number;
+  total_reel_secondes: number;
+  total_ecart_secondes: number;
+  document_id?: number | null;
+  statut?: StatutDocument;
+}
+
 export interface Objection {
   origine: string;
   question: string;

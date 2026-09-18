@@ -59,7 +59,46 @@ répartition proportionnelle à la longueur du texte), 1 page frontend avec
 logique de chronomètre côté client (pas de streaming nécessaire), export
 réutilisant le pattern existant.
 
+## Implémentation (2026-09-18)
+
+Implémentée dans une version plus simple que l'idée, sans aucun appel IA :
+
+- **Pas de répartition du temps à calculer** : le plan de plaidoirie porte
+  déjà `duree_minutes` par section (calculé à sa génération). L'entraînement
+  relit simplement le plan le plus récent du dossier ; une section sans durée
+  reçoit une part égale du temps de parole restant.
+- **Chronomètre 100 % côté navigateur** (page `/arsenal/entrainement`) :
+  section en cours avec son argument clé et ses notes, chrono `écoulé / alloué`
+  qui passe au orange à 90 % puis au rouge au-delà, boutons « Section
+  suivante » et « Arrêter ici » (les sections non atteintes sont marquées
+  « non traitées » et exclues des totaux).
+- **Bilan calculé et enregistré côté serveur** (`POST /api/entrainement/`) :
+  écart par section, statut (dans les temps / dépassée / en avance / non
+  traitée) avec une tolérance de 10 % du temps alloué, plancher 10 s ; synthèse
+  affichée en clair (dépassement ou avance total, sections à raccourcir).
+  Persisté dans `documents_generes` (feature="entrainement"), rechargé au
+  montage, visible dans « Documents générés » et dans la recherche
+  transversale ; export Word ; suppression avec confirmation.
+- **Non fait** : synthèse rédigée par IA, comparaison entre plusieurs
+  entraînements (seul le dernier bilan est affiché, les précédents restent en
+  base), pause du chronomètre, reprise d'un entraînement interrompu par un
+  refresh.
+- **Seuils à valider** : la tolérance de 10 % (min. 10 s) est un choix par
+  défaut, à ajuster (`backend/app/entrainement.py`).
+
+Fichiers : `backend/app/entrainement.py`, `backend/app/routers/entrainement.py`,
+`backend/app/schemas/entrainement.py` (nouveaux), `backend/app/main.py`,
+`backend/tests/test_entrainement.py` (nouveau, 10 tests),
+`frontend/src/pages/arsenal/EntrainementPage.tsx` et
+`frontend/src/api/entrainement.ts` (nouveaux), `frontend/src/api/{index,types}.ts`,
+`frontend/src/router.tsx`, `frontend/src/config/navigation.ts`,
+`frontend/src/pages/chemise/HistoriqueDossierPage.tsx`, `fr.json` / `en.json`.
+
+Vérifié : `tsc --noEmit` propre ; `pytest` backend 266/266 ; scénario réel dans
+Chromium (Playwright, instances isolées, horloge simulée) : état vide sans
+plan, chrono, section dépassée / dans les temps / en avance / non traitées,
+total, persistance après navigation, export Word, suppression, aucune erreur JS.
+
 ## Statut
 
-Idée proposée, non implémentée. À valider avec l'utilisateur avant tout
-développement.
+**✅ Implémentée (version chronomètre + bilan) et testée — 2026-09-18.**
