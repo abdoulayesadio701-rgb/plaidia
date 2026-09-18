@@ -12,9 +12,11 @@ import type { StyleResultat } from "@/api";
 import { useAppStore, useDossierActif } from "@/store/useAppStore";
 import { useLazyAction } from "@/hooks/useLazyAction";
 import { useImportTexte } from "@/hooks/useImportTexte";
+import { useValeurPersistante, useResultatPersistant, effacerBrouillons } from "@/hooks/useBrouillonPersistant";
 import { EXTENSIONS_DOCUMENT } from "@/config/fichiers";
 import Button from "@/components/Button";
 import ChoixImportModal from "@/components/ChoixImportModal";
+import ConfirmerModal from "@/components/ConfirmerModal";
 import EmptyState from "@/components/EmptyState";
 import ErrorState from "@/components/ErrorState";
 import FileDropZone from "@/components/FileDropZone";
@@ -31,14 +33,22 @@ const SECTIONS: { key: CleSection; cleLabel: string; icone: string }[] = [
   { key: "ruptures_registre", cleLabel: "analyseStyle.rupturesRegistre", icone: "📉" },
 ];
 
+const CLE_TEXTE = "plaidia:style:texte";
+const CLE_RESULTAT = "plaidia:style:resultat";
+
 export default function AnalyseStylePage() {
   const { t } = useTranslation();
   const dossierActif = useDossierActif();
   const pousserToast = useAppStore((s) => s.pousserToast);
-  const [texte, setTexte] = useState("");
+  const [texte, setTexte] = useValeurPersistante(CLE_TEXTE, "");
   const [exportEnCours, setExportEnCours] = useState(false);
+  const [confirmationSuppression, setConfirmationSuppression] = useState(false);
 
-  const { data, loading, error, executer, definirDonnees } = useLazyAction((t: string) => analyseApi.analyserStyle(t));
+  const { data, loading, error, executer, definirDonnees, reinitialiser } = useLazyAction((t: string) => analyseApi.analyserStyle(t));
+  // Page indépendante de tout dossier (requiresDossier: false) -- pas de
+  // documents_generes côté serveur possible, persistance locale à la place
+  // (voir useBrouillonPersistant).
+  useResultatPersistant(CLE_RESULTAT, data, definirDonnees);
 
   const exporter = async () => {
     if (!data) return;
@@ -51,6 +61,13 @@ export default function AnalyseStylePage() {
     } finally {
       setExportEnCours(false);
     }
+  };
+
+  const supprimer = () => {
+    reinitialiser();
+    setTexte("");
+    effacerBrouillons(CLE_TEXTE, CLE_RESULTAT);
+    setConfirmationSuppression(false);
   };
   // Page indépendante de tout dossier (requiresDossier: false) -- un dossier
   // actif reste optionnel : quand il y en a un, le texte extrait est aussi
@@ -109,10 +126,11 @@ export default function AnalyseStylePage() {
 
       {!loading && !error && data && (
         <div className="space-y-5">
-          <div className="flex justify-end">
+          <div className="flex justify-end gap-2">
             <Button variant="secondary" loading={exportEnCours} onClick={() => void exporter()}>
               ⬇ {t("arsenal.exporterWord")}
             </Button>
+            <Button variant="ghost" onClick={() => setConfirmationSuppression(true)}>🗑 {t("commun.supprimer")}</Button>
           </div>
           <ResultatStyle data={data} t={t} />
           <ChatContextuelPanel
@@ -128,6 +146,16 @@ export default function AnalyseStylePage() {
         <EmptyState
           titre={t("analyserConclusions.pretTitre")}
           description={t("analyseStyle.pretDescription")}
+        />
+      )}
+
+      {confirmationSuppression && (
+        <ConfirmerModal
+          titre={t("arsenal.confirmerSuppressionTitre")}
+          description={t("arsenal.confirmerSuppressionDescription")}
+          texteBouton={t("commun.supprimer")}
+          onFermer={() => setConfirmationSuppression(false)}
+          onConfirmer={supprimer}
         />
       )}
     </div>

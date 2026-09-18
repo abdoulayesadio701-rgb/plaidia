@@ -17,14 +17,19 @@ import type { ExtractionResultat } from "@/api";
 import { useAppStore, useDossierActif } from "@/store/useAppStore";
 import { useLazyAction } from "@/hooks/useLazyAction";
 import { useImportTexte } from "@/hooks/useImportTexte";
+import { useValeurPersistante, useResultatPersistant, effacerBrouillons } from "@/hooks/useBrouillonPersistant";
 import { EXTENSIONS_DOCUMENT } from "@/config/fichiers";
 import Button from "@/components/Button";
 import ChoixImportModal from "@/components/ChoixImportModal";
+import ConfirmerModal from "@/components/ConfirmerModal";
 import EmptyState from "@/components/EmptyState";
 import ErrorState from "@/components/ErrorState";
 import FileDropZone from "@/components/FileDropZone";
 import { SkeletonList } from "@/components/Skeleton";
 import ChatContextuelPanel from "@/components/chat/ChatContextuelPanel";
+
+const CLE_TEXTE = "plaidia:extraction:texte";
+const CLE_RESULTAT = "plaidia:extraction:resultat";
 
 export default function ExtractionPage() {
   const { t } = useTranslation();
@@ -37,10 +42,14 @@ export default function ExtractionPage() {
   ];
   const dossierActif = useDossierActif();
   const pousserToast = useAppStore((s) => s.pousserToast);
-  const [texte, setTexte] = useState("");
+  const [texte, setTexte] = useValeurPersistante(CLE_TEXTE, "");
   const [exportEnCours, setExportEnCours] = useState(false);
+  const [confirmationSuppression, setConfirmationSuppression] = useState(false);
 
-  const { data, loading, error, executer, definirDonnees } = useLazyAction((t: string) => greffierApi.extraction(t));
+  const { data, loading, error, executer, definirDonnees, reinitialiser } = useLazyAction((t: string) => greffierApi.extraction(t));
+  // Page indépendante de tout dossier -- persistance locale (voir
+  // useBrouillonPersistant), pas de documents_generes côté serveur.
+  useResultatPersistant(CLE_RESULTAT, data, definirDonnees);
   const { enImport, survole, dragProps, importerFichiers, choixEnAttente, resoudreChoix } = useImportTexte({
     dossierId: dossierActif?.id ?? null,
     getTexteActuel: () => texte,
@@ -60,6 +69,13 @@ export default function ExtractionPage() {
     } finally {
       setExportEnCours(false);
     }
+  };
+
+  const supprimer = () => {
+    reinitialiser();
+    setTexte("");
+    effacerBrouillons(CLE_TEXTE, CLE_RESULTAT);
+    setConfirmationSuppression(false);
   };
 
   return (
@@ -109,10 +125,11 @@ export default function ExtractionPage() {
 
       {!loading && !error && data && (
         <div className="space-y-5">
-          <div className="flex justify-end">
+          <div className="flex justify-end gap-2">
             <Button variant="secondary" loading={exportEnCours} onClick={() => void exporter()}>
               ⬇ {t("arsenal.exporterWord")}
             </Button>
+            <Button variant="ghost" onClick={() => setConfirmationSuppression(true)}>🗑 {t("commun.supprimer")}</Button>
           </div>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             {BLOCS.map(({ key, label, icone }) => {
@@ -151,6 +168,16 @@ export default function ExtractionPage() {
 
       {!loading && !error && !data && (
         <EmptyState titre={t("extraction.pretTitre")} description={t("extraction.pretDescription")} />
+      )}
+
+      {confirmationSuppression && (
+        <ConfirmerModal
+          titre={t("arsenal.confirmerSuppressionTitre")}
+          description={t("arsenal.confirmerSuppressionDescription")}
+          texteBouton={t("commun.supprimer")}
+          onFermer={() => setConfirmationSuppression(false)}
+          onConfirmer={supprimer}
+        />
       )}
     </div>
   );

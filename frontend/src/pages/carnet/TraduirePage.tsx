@@ -12,29 +12,45 @@ import { analyse as analyseApi, downloadBlob } from "@/api";
 import { useAppStore } from "@/store/useAppStore";
 import { useLazyAction } from "@/hooks/useLazyAction";
 import { useImportTexte } from "@/hooks/useImportTexte";
+import { useValeurPersistante, useResultatPersistant, effacerBrouillons } from "@/hooks/useBrouillonPersistant";
 import { EXTENSIONS_DOCUMENT } from "@/config/fichiers";
 import Button from "@/components/Button";
 import ChoixImportModal from "@/components/ChoixImportModal";
+import ConfirmerModal from "@/components/ConfirmerModal";
 import EmptyState from "@/components/EmptyState";
 import ErrorState from "@/components/ErrorState";
 import FileDropZone from "@/components/FileDropZone";
 import RichOutput from "@/components/RichOutput";
 import { SkeletonBlock } from "@/components/Skeleton";
 
+const CLE_TEXTE = "plaidia:traduire:texte";
+const CLE_RESULTAT = "plaidia:traduire:resultat";
+
 export default function TraduirePage() {
   const { t } = useTranslation();
   const pousserToast = useAppStore((s) => s.pousserToast);
   const LABEL_LANGUE: Record<string, string> = { fr: t("traduire.francais"), en: t("traduire.anglais") };
-  const [texte, setTexte] = useState("");
+  const [texte, setTexte] = useValeurPersistante(CLE_TEXTE, "");
   const [exportEnCours, setExportEnCours] = useState(false);
-  const { data, loading, error, executer } = useLazyAction((t: string) => analyseApi.traduireTexte(t));
-  // Page indépendante de tout dossier (requiresDossier: false) --
-  // extraction seule, rien n'est écrit en base (voir extraireFichier).
+  const [confirmationSuppression, setConfirmationSuppression] = useState(false);
+  const { data, loading, error, executer, definirDonnees, reinitialiser } = useLazyAction((t: string) => analyseApi.traduireTexte(t));
+  // Page indépendante de tout dossier (requiresDossier: false) -- pas de
+  // documents_generes côté serveur possible, persistance locale à la place
+  // (voir useBrouillonPersistant) : le brouillon survit à une navigation ou
+  // un refresh, propre à cet appareil.
+  useResultatPersistant(CLE_RESULTAT, data, definirDonnees);
   const { enImport, survole, dragProps, importerFichiers, choixEnAttente, resoudreChoix } = useImportTexte({
     dossierId: null,
     getTexteActuel: () => texte,
     onTexteExtrait: setTexte,
   });
+
+  const supprimer = () => {
+    reinitialiser();
+    setTexte("");
+    effacerBrouillons(CLE_TEXTE, CLE_RESULTAT);
+    setConfirmationSuppression(false);
+  };
 
   const copier = async () => {
     if (!data?.texte_traduit) return;
@@ -124,6 +140,7 @@ export default function TraduirePage() {
               <Button variant="secondary" loading={exportEnCours} onClick={() => void exporter()}>
                 ⬇ {t("arsenal.exporterWord")}
               </Button>
+              <Button variant="ghost" onClick={() => setConfirmationSuppression(true)}>🗑 {t("commun.supprimer")}</Button>
             </div>
           </div>
           <RichOutput texte={data.texte_traduit} />
@@ -132,6 +149,16 @@ export default function TraduirePage() {
 
       {!loading && !error && !data && (
         <EmptyState titre={t("traduire.pretTitre")} description={t("traduire.pretDescription")} />
+      )}
+
+      {confirmationSuppression && (
+        <ConfirmerModal
+          titre={t("arsenal.confirmerSuppressionTitre")}
+          description={t("arsenal.confirmerSuppressionDescription")}
+          texteBouton={t("commun.supprimer")}
+          onFermer={() => setConfirmationSuppression(false)}
+          onConfirmer={supprimer}
+        />
       )}
     </div>
   );

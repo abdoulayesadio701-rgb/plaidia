@@ -13,9 +13,11 @@ import { greffier as greffierApi } from "@/api";
 import { useDossierActif } from "@/store/useAppStore";
 import { useLazyAction } from "@/hooks/useLazyAction";
 import { useImportTexte } from "@/hooks/useImportTexte";
+import { useValeurPersistante, useResultatPersistant, effacerBrouillons } from "@/hooks/useBrouillonPersistant";
 import { EXTENSIONS_DOCUMENT } from "@/config/fichiers";
 import Button from "@/components/Button";
 import ChoixImportModal from "@/components/ChoixImportModal";
+import ConfirmerModal from "@/components/ConfirmerModal";
 import EmptyState from "@/components/EmptyState";
 import ErrorState from "@/components/ErrorState";
 import FileDropZone from "@/components/FileDropZone";
@@ -23,12 +25,19 @@ import RichOutput from "@/components/RichOutput";
 import JaugeConfiance from "@/components/JaugeConfiance";
 import { SkeletonList } from "@/components/Skeleton";
 
+const CLE_TEXTE = "plaidia:classement:texte";
+const CLE_RESULTAT = "plaidia:classement:resultat";
+
 export default function ClassementPage() {
   const { t } = useTranslation();
   const dossierActif = useDossierActif();
-  const [texte, setTexte] = useState("");
+  const [texte, setTexte] = useValeurPersistante(CLE_TEXTE, "");
+  const [confirmationSuppression, setConfirmationSuppression] = useState(false);
 
-  const { data, loading, error, executer } = useLazyAction((t: string) => greffierApi.classement(t));
+  const { data, loading, error, executer, definirDonnees, reinitialiser } = useLazyAction((t: string) => greffierApi.classement(t));
+  // Page indépendante de tout dossier -- persistance locale (voir
+  // useBrouillonPersistant), pas de documents_generes côté serveur.
+  useResultatPersistant(CLE_RESULTAT, data, definirDonnees);
   // Page indépendante de tout dossier (requiresDossier: false) -- voir
   // useImportTexte : dossier actif optionnel, extraireFichier sinon.
   const { enImport, survole, dragProps, importerFichiers, choixEnAttente, resoudreChoix } = useImportTexte({
@@ -38,6 +47,13 @@ export default function ClassementPage() {
   });
 
   const lancer = () => void executer(texte);
+
+  const supprimer = () => {
+    reinitialiser();
+    setTexte("");
+    effacerBrouillons(CLE_TEXTE, CLE_RESULTAT);
+    setConfirmationSuppression(false);
+  };
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
@@ -86,6 +102,9 @@ export default function ClassementPage() {
 
       {!loading && !error && data && (
         <div className="card space-y-5 p-6">
+          <div className="flex justify-end">
+            <Button variant="ghost" onClick={() => setConfirmationSuppression(true)}>🗑 {t("commun.supprimer")}</Button>
+          </div>
           <div>
             <p className="text-micro font-medium uppercase tracking-wide text-amethyst-400">{t("classement.natureDocument")}</p>
             <p className="mt-1 font-serif text-h3 font-semibold capitalize text-gold-500">{t(`natureDocument.${data.nature}`, data.nature)}</p>
@@ -100,6 +119,16 @@ export default function ClassementPage() {
 
       {!loading && !error && !data && (
         <EmptyState titre={t("classement.pretTitre")} description={t("classement.pretDescription")} />
+      )}
+
+      {confirmationSuppression && (
+        <ConfirmerModal
+          titre={t("arsenal.confirmerSuppressionTitre")}
+          description={t("arsenal.confirmerSuppressionDescription")}
+          texteBouton={t("commun.supprimer")}
+          onFermer={() => setConfirmationSuppression(false)}
+          onConfirmer={supprimer}
+        />
       )}
     </div>
   );

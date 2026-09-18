@@ -13,9 +13,11 @@ import type { Contradiction } from "@/api";
 import { useAppStore } from "@/store/useAppStore";
 import { useLazyAction } from "@/hooks/useLazyAction";
 import { useImportTexte } from "@/hooks/useImportTexte";
+import { useValeurPersistante, useResultatPersistant, effacerBrouillons } from "@/hooks/useBrouillonPersistant";
 import { EXTENSIONS_DOCUMENT } from "@/config/fichiers";
 import Button from "@/components/Button";
 import ChoixImportModal from "@/components/ChoixImportModal";
+import ConfirmerModal from "@/components/ConfirmerModal";
 import EmptyState from "@/components/EmptyState";
 import ErrorState from "@/components/ErrorState";
 import FileDropZone from "@/components/FileDropZone";
@@ -97,15 +99,22 @@ function nouveauDocument(numero: number, t: TFunction): DocumentBrouillon {
   return { id: `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`, nomDocument: t("coherence.documentNumero", { numero }), texte: "" };
 }
 
+const CLE_DOCUMENTS = "plaidia:coherence:documents";
+const CLE_RESULTAT = "plaidia:coherence:resultat";
+
 export default function CoherencePage() {
   const { t } = useTranslation();
   const pousserToast = useAppStore((s) => s.pousserToast);
-  const [documents, setDocuments] = useState<DocumentBrouillon[]>([nouveauDocument(1, t), nouveauDocument(2, t)]);
+  const [documents, setDocuments] = useValeurPersistante<DocumentBrouillon[]>(CLE_DOCUMENTS, [nouveauDocument(1, t), nouveauDocument(2, t)]);
   const [exportEnCours, setExportEnCours] = useState(false);
+  const [confirmationSuppression, setConfirmationSuppression] = useState(false);
 
-  const { data, loading, error, executer, definirDonnees } = useLazyAction((docs: { nom_document: string; texte: string }[]) =>
+  const { data, loading, error, executer, definirDonnees, reinitialiser } = useLazyAction((docs: { nom_document: string; texte: string }[]) =>
     greffierApi.controleCoherence(docs)
   );
+  // Page indépendante de tout dossier -- persistance locale (voir
+  // useBrouillonPersistant), pas de documents_generes côté serveur.
+  useResultatPersistant(CLE_RESULTAT, data, definirDonnees);
 
   const exporter = async () => {
     if (!data) return;
@@ -118,6 +127,13 @@ export default function CoherencePage() {
     } finally {
       setExportEnCours(false);
     }
+  };
+
+  const supprimer = () => {
+    reinitialiser();
+    setDocuments([nouveauDocument(1, t), nouveauDocument(2, t)]);
+    effacerBrouillons(CLE_DOCUMENTS, CLE_RESULTAT);
+    setConfirmationSuppression(false);
   };
 
   const majDocument = (id: string, patch: Partial<DocumentBrouillon>) =>
@@ -176,10 +192,11 @@ export default function CoherencePage() {
 
       {!loading && !error && data && (
         <div className="space-y-6">
-          <div className="flex justify-end">
+          <div className="flex justify-end gap-2">
             <Button variant="secondary" loading={exportEnCours} onClick={() => void exporter()}>
               ⬇ {t("arsenal.exporterWord")}
             </Button>
+            <Button variant="ghost" onClick={() => setConfirmationSuppression(true)}>🗑 {t("commun.supprimer")}</Button>
           </div>
           <div>
             <p className="mb-3 font-serif text-h3 font-semibold text-gold-500">{t("coherence.contradictions")}</p>
@@ -241,6 +258,16 @@ export default function CoherencePage() {
             placeholder={t("coherence.chatPlaceholder")}
           />
         </div>
+      )}
+
+      {confirmationSuppression && (
+        <ConfirmerModal
+          titre={t("arsenal.confirmerSuppressionTitre")}
+          description={t("arsenal.confirmerSuppressionDescription")}
+          texteBouton={t("commun.supprimer")}
+          onFermer={() => setConfirmationSuppression(false)}
+          onConfirmer={supprimer}
+        />
       )}
     </div>
   );

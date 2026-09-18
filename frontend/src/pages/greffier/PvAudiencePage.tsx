@@ -12,21 +12,29 @@ import { greffier as greffierApi, downloadBlob } from "@/api";
 import { useAppStore } from "@/store/useAppStore";
 import { useLazyAction } from "@/hooks/useLazyAction";
 import { useImportTexte } from "@/hooks/useImportTexte";
+import { useValeurPersistante, effacerBrouillons } from "@/hooks/useBrouillonPersistant";
 import { EXTENSIONS_DOCUMENT } from "@/config/fichiers";
 import Button from "@/components/Button";
 import ChoixImportModal from "@/components/ChoixImportModal";
+import ConfirmerModal from "@/components/ConfirmerModal";
 import EmptyState from "@/components/EmptyState";
 import ErrorState from "@/components/ErrorState";
 import FileDropZone from "@/components/FileDropZone";
 import { SkeletonBlock } from "@/components/Skeleton";
 import ChatContextuelPanel from "@/components/chat/ChatContextuelPanel";
 
+const CLE_NOTES = "plaidia:pv-audience:notes";
+const CLE_PV = "plaidia:pv-audience:pv";
+
 export default function PvAudiencePage() {
   const { t } = useTranslation();
   const pousserToast = useAppStore((s) => s.pousserToast);
-  const [notes, setNotes] = useState("");
-  const [pvTexte, setPvTexte] = useState("");
+  // Page indépendante de tout dossier -- persistance locale (voir
+  // useBrouillonPersistant), pas de documents_generes côté serveur.
+  const [notes, setNotes] = useValeurPersistante(CLE_NOTES, "");
+  const [pvTexte, setPvTexte] = useValeurPersistante(CLE_PV, "");
   const [exportEnCours, setExportEnCours] = useState(false);
+  const [confirmationSuppression, setConfirmationSuppression] = useState(false);
 
   const { loading, error, executer } = useLazyAction((n: string) => greffierApi.pvAudience(n));
   const { enImport, survole, dragProps, importerFichiers, choixEnAttente, resoudreChoix } = useImportTexte({
@@ -38,6 +46,13 @@ export default function PvAudiencePage() {
   const generer = async () => {
     const resultat = await executer(notes);
     if (resultat) setPvTexte(resultat.texte);
+  };
+
+  const supprimer = () => {
+    setNotes("");
+    setPvTexte("");
+    effacerBrouillons(CLE_NOTES, CLE_PV);
+    setConfirmationSuppression(false);
   };
 
   const copier = async () => {
@@ -108,6 +123,7 @@ export default function PvAudiencePage() {
                 <Button variant="secondary" loading={exportEnCours} onClick={() => void exporter()}>
                   ⬇ {t("arsenal.exporterWord")}
                 </Button>
+                <Button variant="ghost" onClick={() => setConfirmationSuppression(true)}>🗑 {t("commun.supprimer")}</Button>
               </div>
             )}
           </div>
@@ -146,6 +162,16 @@ export default function PvAudiencePage() {
           )}
         </div>
       </div>
+
+      {confirmationSuppression && (
+        <ConfirmerModal
+          titre={t("arsenal.confirmerSuppressionTitre")}
+          description={t("arsenal.confirmerSuppressionDescription")}
+          texteBouton={t("commun.supprimer")}
+          onFermer={() => setConfirmationSuppression(false)}
+          onConfirmer={supprimer}
+        />
+      )}
     </div>
   );
 }
