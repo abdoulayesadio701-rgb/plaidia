@@ -154,3 +154,41 @@ def exporter_faits_bruts(dossier_id: int):
         filename=os.path.basename(chemin),
         media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     )
+
+
+@router.get("/{dossier_id}/export/historique")
+def exporter_historique(dossier_id: int):
+    """Export Word de la fiche du dossier (faits/parties/domaine) et de
+    l'historique de ses analyses de conclusions -- même principe que
+    exporter_faits_bruts ci-dessus (refetch depuis dossier_id, pas de
+    payload envoyé par le front) ; voir HistoriqueDossierPage.tsx côté
+    front, dont c'est l'export."""
+    dossier = get_dossier_or_404(dossier_id)
+    analyses = db.get_analyses_for_dossier(dossier_id)
+
+    lignes = [
+        f"Domaine : {dossier.get('domaine') or '—'}",
+        f"Parties : {dossier.get('parties') or '—'}",
+        "",
+        "FAITS",
+        dossier.get("faits") or "—",
+        "",
+    ]
+    if analyses:
+        lignes.append("HISTORIQUE DES ANALYSES DE CONCLUSIONS")
+        for a in analyses:
+            lignes.append("")
+            lignes.append(f"{a['date']} — {a['statut']}")
+            for arg in a.get("arguments", []):
+                lignes.append(f"- {arg.get('resume', '')}")
+            if a.get("points_attention"):
+                lignes.append("Points d'attention :")
+                for p in a["points_attention"]:
+                    lignes.append(f"  - {p}")
+
+    chemin = legacy_export.exporter_texte_libre_word(f"Historique — {dossier['nom']}", "\n".join(lignes))
+    return FileResponse(
+        chemin,
+        filename=os.path.basename(chemin),
+        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    )

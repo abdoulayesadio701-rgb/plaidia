@@ -7,10 +7,11 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
-import { notes as notesApi } from "@/api";
+import { notes as notesApi, downloadBlob } from "@/api";
 import type { Note } from "@/api";
 import { useAppStore, useDossierActif } from "@/store/useAppStore";
 import { useAsync } from "@/hooks/useAsync";
+import Button from "@/components/Button";
 import EmptyState from "@/components/EmptyState";
 import ErrorState from "@/components/ErrorState";
 import RichOutput from "@/components/RichOutput";
@@ -38,8 +39,22 @@ export default function ConsulterNotesPage() {
   const { t, i18n } = useTranslation();
   const dossierActif = useDossierActif();
   const pousserToast = useAppStore((s) => s.pousserToast);
+  const [exportEnCours, setExportEnCours] = useState(false);
 
   const { data: notes, loading, error, reload } = useAsync(() => notesApi.listerNotes(dossierActif!.id), [dossierActif?.id], dossierActif !== null);
+
+  const exporter = async () => {
+    if (!dossierActif) return;
+    setExportEnCours(true);
+    try {
+      const { blob, filename } = await notesApi.exporterNotes(dossierActif.id);
+      downloadBlob(blob, filename ?? "notes.docx");
+    } catch (e) {
+      pousserToast("error", e instanceof Error ? e.message : t("arsenal.echecExport"));
+    } finally {
+      setExportEnCours(false);
+    }
+  };
 
   if (!dossierActif) {
     return <EmptyState titre={t("consulterNotes.emptyTitre")} description={t("consulterNotes.emptyDescription")} />;
@@ -54,10 +69,17 @@ export default function ConsulterNotesPage() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
-      <div>
-        <p className="kicker">{t("nav.sections.carnet")}</p>
-        <h1 className="mt-1 font-serif text-h2 font-semibold text-gold-500">{t("consulterNotes.titre")}</h1>
-        <p className="mt-2 text-sm text-warmgray">{t("arsenal.dossierActif")} : {dossierActif.nom}</p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="kicker">{t("nav.sections.carnet")}</p>
+          <h1 className="mt-1 font-serif text-h2 font-semibold text-gold-500">{t("consulterNotes.titre")}</h1>
+          <p className="mt-2 text-sm text-warmgray">{t("arsenal.dossierActif")} : {dossierActif.nom}</p>
+        </div>
+        {notes && notes.length > 0 && (
+          <Button variant="secondary" loading={exportEnCours} onClick={() => void exporter()}>
+            ⬇ {t("arsenal.exporterWord")}
+          </Button>
+        )}
       </div>
 
       {loading && <SkeletonList count={3} />}

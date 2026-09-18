@@ -599,6 +599,19 @@ def verifier_analyse_modifiable(analyse_id):
     return analyse
 
 
+def supprimer_analyse(analyse_id: int) -> None:
+    """Suppression DÉFINITIVE et IRRÉVERSIBLE d'une analyse de conclusions --
+    à n'appeler que depuis une action explicite de l'utilisateur (bouton
+    « Supprimer » avec confirmation), jamais automatiquement. Nettoie aussi
+    son épingle éventuelle (voir epingler(), type="analyse" -- même principe
+    que delete_dossier() pour elements_epingles, pas de FK déclarée)."""
+    conn = get_connection()
+    conn.execute("DELETE FROM elements_epingles WHERE type = 'analyse' AND reference_id = ?", (analyse_id,))
+    conn.execute("DELETE FROM analyses WHERE id = ?", (analyse_id,))
+    conn.commit()
+    conn.close()
+
+
 # --- Trames ---------------------------------------------------------------
 
 def save_trame(domaine, nom, structure):
@@ -1099,6 +1112,20 @@ def verifier_document_modifiable(document_id):
     if document and document["statut"] == "Final":
         raise DocumentFinalError(_l_cycle_vie("document_final", document_id=document_id))
     return document
+
+
+def supprimer_document_genere(document_id: int) -> None:
+    """Suppression DÉFINITIVE et IRRÉVERSIBLE d'un document généré (plan,
+    simulateur, résumé...) -- à n'appeler que depuis une action explicite de
+    l'utilisateur (bouton « Supprimer » avec confirmation), jamais
+    automatiquement. Nettoie aussi son historique de versions, sur le même
+    principe que delete_dossier() ci-dessus (pas de FK ON DELETE CASCADE
+    pour versions_document.document_id)."""
+    conn = get_connection()
+    conn.execute("DELETE FROM versions_document WHERE document_id = ?", (document_id,))
+    conn.execute("DELETE FROM documents_generes WHERE id = ?", (document_id,))
+    conn.commit()
+    conn.close()
 
 
 # --- Épinglage ----------------------------------------------------------

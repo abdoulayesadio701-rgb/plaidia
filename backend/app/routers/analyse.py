@@ -23,6 +23,8 @@ from app.schemas.analyse import (
     ExportAnalyseIn,
     ExportRapportCompletIn,
     ExportSimulateurIn,
+    ExportStyleIn,
+    ExportTraductionIn,
     PlanIn,
     PlanOut,
     RapportCompletIn,
@@ -234,24 +236,43 @@ def changer_statut_conclusions(analyse_id: int, payload: StatutDocumentIn):
     return {"analyse_id": analyse_id, "statut": analyse["statut"]}
 
 
+@router.delete("/conclusions/{analyse_id}", status_code=204)
+def supprimer_conclusions(analyse_id: int):
+    """Suppression DÉFINITIVE, sur action explicite uniquement (bouton
+    « Supprimer » confirmé côté front) -- jamais appelée automatiquement,
+    aucune expiration. Voir db.supprimer_analyse."""
+    if not db.get_analyse(analyse_id):
+        raise HTTPException(status_code=404, detail=libelle("analyse_introuvable", analyse_id=analyse_id))
+    db.supprimer_analyse(analyse_id)
+
+
 @router.post("/resume", response_model=ResumeOut)
 def resumer_dossier(payload: ResumeIn):
     """Route vers DeepSeek (voir analyse.TypeTache.RESUME) -- garde-fou
     d'entrée et contrôle déterministe des citations ajoutés ici en même
     temps que le changement de fournisseur : ils manquaient déjà sous
-    Claude sur cette route, ce n'est pas spécifique à DeepSeek."""
+    Claude sur cette route, ce n'est pas spécifique à DeepSeek.
+
+    Persisté dans documents_generes (feature="resume"), même mécanisme que
+    /plan et /simulateur -- y compris en mode démo -- pour que le résumé
+    survive à une navigation ou un refresh (voir PlanPlaidoiriePage /
+    ResumerDossierPage côté front)."""
     dossier = get_dossier_or_404(payload.dossier_id)
     if demo.mode_demo_effectif():
-        return demo_data.resume_demo()
-    demo.exiger_cle_api_deepseek()
-    contexte = construire_contexte_dossier(dossier)
-    quality_pipeline.executer_garde_fou(contexte)
-    resume = legacy_analyse.resumer_dossier(contexte)
-    for point in resume.get("points_cles", []):
-        for c in quality_pipeline.verifier_citations_deterministe(str(point), [contexte]):
-            if c["statut_deterministe"] != "VERIFIE":
-                print(f"[analyse] citation non vérifiée dans un résumé DeepSeek : {c}", flush=True)
-    return resume
+        resume = demo_data.resume_demo()
+    else:
+        demo.exiger_cle_api_deepseek()
+        contexte = construire_contexte_dossier(dossier)
+        quality_pipeline.executer_garde_fou(contexte)
+        resume = legacy_analyse.resumer_dossier(contexte)
+        for point in resume.get("points_cles", []):
+            for c in quality_pipeline.verifier_citations_deterministe(str(point), [contexte]):
+                if c["statut_deterministe"] != "VERIFIE":
+                    print(f"[analyse] citation non vérifiée dans un résumé DeepSeek : {c}", flush=True)
+    document = db.creer_document_genere(
+        payload.dossier_id, "resume", f"Résumé — {dossier['nom']}", {}, resume, langue=legacy_analyse.langue_requete(),
+    )
+    return ResumeOut(**resume, document_id=document["id"], statut=document["statut"])
 
 
 @router.post("/plan", response_model=PlanOut)
@@ -460,6 +481,52 @@ def traduire(payload: TraductionIn):
     demo.exiger_cle_api()
     quality_pipeline.executer_garde_fou(payload.texte)
     return legacy_analyse.traduire_texte(payload.texte)
+
+
+@router.post("/style/export")
+def exporter_style(payload: ExportStyleIn):
+    """Export Word générique (export.py::exporter_texte_libre_word), sans
+    dossier requis -- l'analyse stylistique est indépendante de tout
+    dossier (voir analyser_style ci-dessus). Texte en français, comme les
+    autres exports texte libre (pv-audience, vérification procédurale) qui
+    n'ont pas de variante anglaise."""
+    sections = [
+        ("LANGAGE DE COUVERTURE", payload.langage_de_couverture),
+        ("AFFIRMATIONS ABSOLUES", payload.affirmations_absolues),
+        ("VOIX PASSIVE SUSPECTE", payload.voix_passive_suspecte),
+        ("RUPTURES DE REGISTRE", payload.ruptures_registre),
+    ]
+    lignes = []
+    for titre_section, elements in sections:
+        lignes.append(titre_section)
+        if not elements:
+            lignes.append("— Rien détecté")
+        for e in elements:
+            lignes.append(f"« {e.citation} »")
+            lignes.append(f"  {e.commentaire}")
+        lignes.append("")
+    if payload.synthese_strategique:
+        lignes.append("SYNTHÈSE STRATÉGIQUE")
+        lignes.append(payload.synthese_strategique)
+
+    chemin = legacy_export.exporter_texte_libre_word("Analyse stylistique des conclusions adverses", "\n".join(lignes))
+    return FileResponse(
+        chemin,
+        filename=os.path.basename(chemin),
+        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    )
+
+
+@router.post("/traduire/export")
+def exporter_traduction(payload: ExportTraductionIn):
+    """Export Word générique, sans dossier requis -- même principe que
+    /style/export."""
+    chemin = legacy_export.exporter_texte_libre_word("Traduction", payload.texte_traduit)
+    return FileResponse(
+        chemin,
+        filename=os.path.basename(chemin),
+        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    )
 
 
 @router.post("/conclusions/export")

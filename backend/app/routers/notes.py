@@ -58,6 +58,37 @@ def supprimer_note(note_id: int):
     db.delete_note(note_id)
 
 
+@router.get("/dossier/{dossier_id}/export")
+def exporter_notes(dossier_id: int):
+    """Export Word de toutes les notes du dossier, dans l'ordre déjà
+    renvoyé par get_notes_dossier (le plus récent d'abord, voir
+    lister_notes ci-dessus) -- même principe que
+    dossiers.py::exporter_faits_bruts (refetch depuis dossier_id, pas de
+    payload envoyé par le front)."""
+    dossier = get_dossier_or_404(dossier_id)
+    notes = db.get_notes_dossier(dossier_id)
+    lignes = []
+    for n in notes:
+        lignes.append(n["date_creation"])
+        lignes.append(n.get("note_structuree") or n["note_brute"])
+        if n.get("actions"):
+            lignes.append("Actions à faire :")
+            for a in n["actions"]:
+                lignes.append(f"- {a}")
+        if n.get("points"):
+            lignes.append("Points à retenir :")
+            for p in n["points"]:
+                lignes.append(f"- {p}")
+        lignes.append("")
+
+    chemin = legacy_export.exporter_texte_libre_word(f"Notes — {dossier['nom']}", "\n".join(lignes))
+    return FileResponse(
+        chemin,
+        filename=os.path.basename(chemin),
+        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    )
+
+
 @router.post("/note-client", response_model=NoteClientOut)
 def rediger_note_client(payload: NoteClientIn):
     dossier = get_dossier_or_404(payload.dossier_id)

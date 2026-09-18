@@ -8,8 +8,9 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
-import { greffier as greffierApi } from "@/api";
+import { greffier as greffierApi, downloadBlob } from "@/api";
 import type { Contradiction } from "@/api";
+import { useAppStore } from "@/store/useAppStore";
 import { useLazyAction } from "@/hooks/useLazyAction";
 import { useImportTexte } from "@/hooks/useImportTexte";
 import { EXTENSIONS_DOCUMENT } from "@/config/fichiers";
@@ -98,11 +99,26 @@ function nouveauDocument(numero: number, t: TFunction): DocumentBrouillon {
 
 export default function CoherencePage() {
   const { t } = useTranslation();
+  const pousserToast = useAppStore((s) => s.pousserToast);
   const [documents, setDocuments] = useState<DocumentBrouillon[]>([nouveauDocument(1, t), nouveauDocument(2, t)]);
+  const [exportEnCours, setExportEnCours] = useState(false);
 
   const { data, loading, error, executer, definirDonnees } = useLazyAction((docs: { nom_document: string; texte: string }[]) =>
     greffierApi.controleCoherence(docs)
   );
+
+  const exporter = async () => {
+    if (!data) return;
+    setExportEnCours(true);
+    try {
+      const { blob, filename } = await greffierApi.exporterCoherence(data);
+      downloadBlob(blob, filename ?? "coherence.docx");
+    } catch (e) {
+      pousserToast("error", e instanceof Error ? e.message : t("arsenal.echecExport"));
+    } finally {
+      setExportEnCours(false);
+    }
+  };
 
   const majDocument = (id: string, patch: Partial<DocumentBrouillon>) =>
     setDocuments((liste) => liste.map((d) => (d.id === id ? { ...d, ...patch } : d)));
@@ -160,6 +176,11 @@ export default function CoherencePage() {
 
       {!loading && !error && data && (
         <div className="space-y-6">
+          <div className="flex justify-end">
+            <Button variant="secondary" loading={exportEnCours} onClick={() => void exporter()}>
+              ⬇ {t("arsenal.exporterWord")}
+            </Button>
+          </div>
           <div>
             <p className="mb-3 font-serif text-h3 font-semibold text-gold-500">{t("coherence.contradictions")}</p>
             {contradictionsTriees.length === 0 ? (

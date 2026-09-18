@@ -27,3 +27,13 @@ def changer_statut(document_id: int, payload: DocumentStatutIn):
     if not document:
         raise HTTPException(status_code=404, detail=libelle("document_introuvable", document_id=document_id))
     return document
+
+
+@router.delete("/{document_id}", status_code=204)
+def supprimer_document(document_id: int):
+    """Suppression DÉFINITIVE, sur action explicite uniquement (bouton
+    « Supprimer » confirmé côté front) -- jamais appelée automatiquement,
+    aucune expiration. Voir db.supprimer_document_genere."""
+    if not db.get_document_genere(document_id):
+        raise HTTPException(status_code=404, detail=libelle("document_introuvable", document_id=document_id))
+    db.supprimer_document_genere(document_id)

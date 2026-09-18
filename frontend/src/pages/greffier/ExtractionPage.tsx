@@ -12,9 +12,9 @@
 
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { greffier as greffierApi } from "@/api";
+import { greffier as greffierApi, downloadBlob } from "@/api";
 import type { ExtractionResultat } from "@/api";
-import { useDossierActif } from "@/store/useAppStore";
+import { useAppStore, useDossierActif } from "@/store/useAppStore";
 import { useLazyAction } from "@/hooks/useLazyAction";
 import { useImportTexte } from "@/hooks/useImportTexte";
 import { EXTENSIONS_DOCUMENT } from "@/config/fichiers";
@@ -36,7 +36,9 @@ export default function ExtractionPage() {
     { key: "decisions", label: t("extraction.decisions"), icone: "⚖" },
   ];
   const dossierActif = useDossierActif();
+  const pousserToast = useAppStore((s) => s.pousserToast);
   const [texte, setTexte] = useState("");
+  const [exportEnCours, setExportEnCours] = useState(false);
 
   const { data, loading, error, executer, definirDonnees } = useLazyAction((t: string) => greffierApi.extraction(t));
   const { enImport, survole, dragProps, importerFichiers, choixEnAttente, resoudreChoix } = useImportTexte({
@@ -46,6 +48,19 @@ export default function ExtractionPage() {
   });
 
   const lancer = () => void executer(texte);
+
+  const exporter = async () => {
+    if (!data) return;
+    setExportEnCours(true);
+    try {
+      const { blob, filename } = await greffierApi.exporterExtraction(data);
+      downloadBlob(blob, filename ?? "extraction.docx");
+    } catch (e) {
+      pousserToast("error", e instanceof Error ? e.message : t("arsenal.echecExport"));
+    } finally {
+      setExportEnCours(false);
+    }
+  };
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
@@ -94,6 +109,11 @@ export default function ExtractionPage() {
 
       {!loading && !error && data && (
         <div className="space-y-5">
+          <div className="flex justify-end">
+            <Button variant="secondary" loading={exportEnCours} onClick={() => void exporter()}>
+              ⬇ {t("arsenal.exporterWord")}
+            </Button>
+          </div>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             {BLOCS.map(({ key, label, icone }) => {
               const items = data[key];

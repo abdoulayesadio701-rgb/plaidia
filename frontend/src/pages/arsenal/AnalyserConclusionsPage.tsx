@@ -6,13 +6,14 @@
  * de logique de sauvegarde à écrire ici, juste à le signaler à l'écran.
  */
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { analyse as analyseApi } from "@/api";
 import type { StatutDocument } from "@/api";
 import { useAppStore, useDossierActif } from "@/store/useAppStore";
 import { useLazyStream } from "@/hooks/useLazyStream";
 import { useImportTexte } from "@/hooks/useImportTexte";
+import { useDerniereAnalyseConclusions } from "@/hooks/useDernierDocumentGenere";
 import { EXTENSIONS_DOCUMENT } from "@/config/fichiers";
 import Button from "@/components/Button";
 import ArgumentCard from "@/components/ArgumentCard";
@@ -27,6 +28,7 @@ import { SkeletonList } from "@/components/Skeleton";
 import ChatContextuelPanel from "@/components/chat/ChatContextuelPanel";
 import VerificationPanel from "@/components/VerificationPanel";
 import StatutDocumentMenu, { StatutDocumentBadge } from "@/components/StatutDocument";
+import ConfirmerModal from "@/components/ConfirmerModal";
 import type { ConclusionsResultat } from "@/api/types";
 
 export default function AnalyserConclusionsPage() {
@@ -35,18 +37,51 @@ export default function AnalyserConclusionsPage() {
   const pousserToast = useAppStore((s) => s.pousserToast);
   const [texte, setTexte] = useState("");
   const [changementStatutEnCours, setChangementStatutEnCours] = useState(false);
+  const [suppressionEnCours, setSuppressionEnCours] = useState(false);
+  const [confirmationSuppression, setConfirmationSuppression] = useState(false);
 
   const lancerFlux = useCallback(
     (t: string, cb: Parameters<typeof analyseApi.streamAnalyserConclusions>[2], signal: AbortSignal) =>
       analyseApi.streamAnalyserConclusions(t, dossierActif?.id, cb, signal),
     [dossierActif?.id]
   );
-  const { data, etape, loading, error, executer, definirDonnees } = useLazyStream<ConclusionsResultat, [string]>(lancerFlux);
+  const { data, etape, loading, error, executer, definirDonnees, reinitialiser } = useLazyStream<ConclusionsResultat, [string]>(lancerFlux);
   const { enImport, survole, dragProps, importerFichiers, choixEnAttente, resoudreChoix } = useImportTexte({
     dossierId: dossierActif?.id ?? null,
     getTexteActuel: () => texte,
     onTexteExtrait: setTexte,
   });
+  // Recharge automatiquement, au montage, la dernière analyse de
+  // conclusions déjà persistée pour ce dossier (table `analyses`) -- une
+  // simple lecture, jamais un nouvel appel IA -- pour qu'elle reste visible
+  // après une navigation ou un refresh complet.
+  const { analyse: derniereAnalyse, loading: derniereAnalyseLoading } = useDerniereAnalyseConclusions(dossierActif?.id);
+
+  useEffect(() => {
+    if (!derniereAnalyse || data) return;
+    definirDonnees({
+      arguments: derniereAnalyse.arguments,
+      points_attention: derniereAnalyse.points_attention,
+      analyse_id: derniereAnalyse.id,
+      statut: derniereAnalyse.statut,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [derniereAnalyse]);
+
+  const supprimer = async () => {
+    if (!data?.analyse_id) return;
+    setSuppressionEnCours(true);
+    try {
+      await analyseApi.supprimerConclusions(data.analyse_id);
+      reinitialiser();
+      setConfirmationSuppression(false);
+      pousserToast("success", t("arsenal.resultatSupprime"));
+    } catch (e) {
+      pousserToast("error", e instanceof Error ? e.message : t("arsenal.erreurSuppression"));
+    } finally {
+      setSuppressionEnCours(false);
+    }
+  };
 
   const changerStatut = async (statut: StatutDocument) => {
     if (!data?.analyse_id) return;
@@ -105,13 +140,13 @@ export default function AnalyserConclusionsPage() {
 
       {choixEnAttente && <ChoixImportModal noms={choixEnAttente.noms} onChoisir={resoudreChoix} />}
 
-      {loading && !data?.arguments && <SkeletonList count={3} />}
+      {(loading && !data?.arguments) || derniereAnalyseLoading ? <SkeletonList count={3} /> : null}
 
       {loading && <EtapePipelineIndicator etape={etape} />}
 
       {!loading && error && <ErrorState message={error} onRetry={() => void executer(texte)} />}
 
-      {!error && data?.arguments && (
+      {!derniereAnalyseLoading && !error && data?.arguments && (
         <div className="space-y-5">
           {data.analyse_id != null && (
             <div className="flex flex-wrap items-center justify-between gap-3">
@@ -127,6 +162,7 @@ export default function AnalyserConclusionsPage() {
                   dossierId={dossierActif.id}
                   libelle={`${t("arsenal.libelleAnalyse")} — ${dossierActif.nom}`}
                 />
+                <Button variant="ghost" onClick={() => setConfirmationSuppression(true)}>🗑 {t("commun.supprimer")}</Button>
               </div>
             </div>
           )}
@@ -170,10 +206,21 @@ export default function AnalyserConclusionsPage() {
         </div>
       )}
 
-      {!loading && !error && !data?.arguments && (
+      {!loading && !derniereAnalyseLoading && !error && !data?.arguments && (
         <EmptyState
           titre={t("analyserConclusions.pretTitre")}
           description={t("analyserConclusions.pretDescription")}
+        />
+      )}
+
+      {confirmationSuppression && (
+        <ConfirmerModal
+          titre={t("arsenal.confirmerSuppressionTitre")}
+          description={t("arsenal.confirmerSuppressionDescription")}
+          texteBouton={t("commun.supprimer")}
+          enCours={suppressionEnCours}
+          onFermer={() => setConfirmationSuppression(false)}
+          onConfirmer={supprimer}
         />
       )}
     </div>

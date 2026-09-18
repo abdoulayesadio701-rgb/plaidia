@@ -7,9 +7,9 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
-import { analyse as analyseApi } from "@/api";
+import { analyse as analyseApi, downloadBlob } from "@/api";
 import type { StyleResultat } from "@/api";
-import { useDossierActif } from "@/store/useAppStore";
+import { useAppStore, useDossierActif } from "@/store/useAppStore";
 import { useLazyAction } from "@/hooks/useLazyAction";
 import { useImportTexte } from "@/hooks/useImportTexte";
 import { EXTENSIONS_DOCUMENT } from "@/config/fichiers";
@@ -34,9 +34,24 @@ const SECTIONS: { key: CleSection; cleLabel: string; icone: string }[] = [
 export default function AnalyseStylePage() {
   const { t } = useTranslation();
   const dossierActif = useDossierActif();
+  const pousserToast = useAppStore((s) => s.pousserToast);
   const [texte, setTexte] = useState("");
+  const [exportEnCours, setExportEnCours] = useState(false);
 
   const { data, loading, error, executer, definirDonnees } = useLazyAction((t: string) => analyseApi.analyserStyle(t));
+
+  const exporter = async () => {
+    if (!data) return;
+    setExportEnCours(true);
+    try {
+      const { blob, filename } = await analyseApi.exporterStyle(data);
+      downloadBlob(blob, filename ?? "analyse_style.docx");
+    } catch (e) {
+      pousserToast("error", e instanceof Error ? e.message : t("arsenal.echecExport"));
+    } finally {
+      setExportEnCours(false);
+    }
+  };
   // Page indépendante de tout dossier (requiresDossier: false) -- un dossier
   // actif reste optionnel : quand il y en a un, le texte extrait est aussi
   // ajouté à ses faits (importerDocument) ; sinon, extraction seule
@@ -94,6 +109,11 @@ export default function AnalyseStylePage() {
 
       {!loading && !error && data && (
         <div className="space-y-5">
+          <div className="flex justify-end">
+            <Button variant="secondary" loading={exportEnCours} onClick={() => void exporter()}>
+              ⬇ {t("arsenal.exporterWord")}
+            </Button>
+          </div>
           <ResultatStyle data={data} t={t} />
           <ChatContextuelPanel
             feature="style"

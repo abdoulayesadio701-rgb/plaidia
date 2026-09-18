@@ -5,21 +5,53 @@
  * IA a un coût réel, jamais silencieux.
  */
 
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { analyse as analyseApi } from "@/api";
-import { useDossierActif } from "@/store/useAppStore";
+import type { ResumeResultat } from "@/api";
+import { useAppStore, useDossierActif } from "@/store/useAppStore";
 import { useLazyAction } from "@/hooks/useLazyAction";
+import { useDernierDocumentGenere } from "@/hooks/useDernierDocumentGenere";
 import Button from "@/components/Button";
 import EmptyState from "@/components/EmptyState";
 import ErrorState from "@/components/ErrorState";
 import RichOutput from "@/components/RichOutput";
 import { SkeletonList } from "@/components/Skeleton";
 import ChatContextuelPanel from "@/components/chat/ChatContextuelPanel";
+import ConfirmerModal from "@/components/ConfirmerModal";
 
 export default function ResumerDossierPage() {
   const { t } = useTranslation();
   const dossierActif = useDossierActif();
-  const { data, loading, error, executer, definirDonnees } = useLazyAction(() => analyseApi.resumerDossier(dossierActif!.id));
+  const pousserToast = useAppStore((s) => s.pousserToast);
+  const [suppressionEnCours, setSuppressionEnCours] = useState(false);
+  const [confirmationSuppression, setConfirmationSuppression] = useState(false);
+  const { data, loading, error, executer, definirDonnees, reinitialiser } = useLazyAction(() => analyseApi.resumerDossier(dossierActif!.id));
+  // Recharge automatiquement, au montage, le dernier résumé déjà persisté
+  // pour ce dossier -- une simple lecture, jamais un nouvel appel IA -- pour
+  // qu'il reste visible après une navigation ou un refresh complet.
+  const { document: dernierDocument, loading: dernierDocumentLoading } = useDernierDocumentGenere(dossierActif?.id, "resume");
+
+  useEffect(() => {
+    if (!dernierDocument || data) return;
+    definirDonnees({ ...(dernierDocument.contenu as unknown as ResumeResultat), document_id: dernierDocument.id, statut: dernierDocument.statut });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dernierDocument]);
+
+  const supprimer = async () => {
+    if (!data?.document_id) return;
+    setSuppressionEnCours(true);
+    try {
+      await analyseApi.supprimerDocumentGenere(data.document_id);
+      reinitialiser();
+      setConfirmationSuppression(false);
+      pousserToast("success", t("arsenal.resultatSupprime"));
+    } catch (e) {
+      pousserToast("error", e instanceof Error ? e.message : t("arsenal.erreurSuppression"));
+    } finally {
+      setSuppressionEnCours(false);
+    }
+  };
 
   if (!dossierActif) {
     return <EmptyState titre={t("resumerDossier.emptyTitre")} description={t("resumerDossier.emptyDescription")} />;
@@ -34,13 +66,18 @@ export default function ResumerDossierPage() {
           <p className="mt-2 text-sm text-warmgray">{t("arsenal.dossierActif")} : {dossierActif.nom}</p>
         </div>
         {data && (
-          <Button variant="ghost" loading={loading} onClick={() => void executer()}>
-            🔄 {t("simulateur.relancer")}
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="ghost" loading={loading} onClick={() => void executer()}>
+              🔄 {t("simulateur.relancer")}
+            </Button>
+            {data.document_id && (
+              <Button variant="ghost" onClick={() => setConfirmationSuppression(true)}>🗑 {t("commun.supprimer")}</Button>
+            )}
+          </div>
         )}
       </div>
 
-      {!data && !loading && !error && (
+      {!data && !loading && !dernierDocumentLoading && !error && (
         <EmptyState
           titre={t("resumerDossier.pretTitre")}
           description={t("resumerDossier.pretDescription")}
@@ -52,11 +89,11 @@ export default function ResumerDossierPage() {
         />
       )}
 
-      {loading && <SkeletonList count={2} />}
+      {(loading || dernierDocumentLoading) && <SkeletonList count={2} />}
 
       {!loading && error && <ErrorState message={error} onRetry={() => void executer()} />}
 
-      {!loading && !error && data && (
+      {!loading && !dernierDocumentLoading && !error && data && (
         <div className="space-y-5">
           <div className="card p-6">
             <p className="kicker">{t("resumerDossier.resume")}</p>
@@ -99,6 +136,17 @@ export default function ResumerDossierPage() {
             placeholder={t("resumerDossier.chatPlaceholder")}
           />
         </div>
+      )}
+
+      {confirmationSuppression && (
+        <ConfirmerModal
+          titre={t("arsenal.confirmerSuppressionTitre")}
+          description={t("arsenal.confirmerSuppressionDescription")}
+          texteBouton={t("commun.supprimer")}
+          enCours={suppressionEnCours}
+          onFermer={() => setConfirmationSuppression(false)}
+          onConfirmer={supprimer}
+        />
       )}
     </div>
   );

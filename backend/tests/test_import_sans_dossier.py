@@ -5,9 +5,14 @@ ARCHITECTURE_CHAT_CONTEXTUEL.md §2.6, phases 6-8), utilisé par PvAudiencePage
 et CoherencePage, volontairement indépendantes de tout dossier.
 
 Fonctionne entièrement en mode démo (actif dans toute la suite, voir
-conftest.py) : l'extraction PDF/DOCX/XLSX/TXT n'appelle jamais Claude --
-seule la transcription d'image en a besoin, hors périmètre de ces tests.
-"""
+conftest.py) : l'extraction PDF/DOCX n'appelle jamais Claude -- seule la
+transcription d'image en a besoin, hors périmètre de ces tests.
+
+Formats acceptés restreints à PDF/DOCX (voir
+backend/app/deps.py::EXTENSIONS_DOCUMENT_AUTORISEES) -- les tests qui
+vérifient un comportement générique (fichier vide, trop volumineux...) et
+utilisaient un .txt utilisent désormais un .docx minimal, pour rester dans
+les formats réellement acceptés."""
 
 import io
 
@@ -30,6 +35,19 @@ def _pdf_bytes(texte_par_page: list[str]) -> bytes:
                 y -= 20
         c.showPage()
     c.save()
+    return buffer.getvalue()
+
+
+def _docx_bytes(paragraphes: list[str]) -> bytes:
+    """Génère un vrai .docx en mémoire via python-docx (déjà une dépendance
+    du projet, utilisée par export.py)."""
+    import docx
+
+    document = docx.Document()
+    for p in paragraphes:
+        document.add_paragraph(p)
+    buffer = io.BytesIO()
+    document.save(buffer)
     return buffer.getvalue()
 
 
@@ -66,17 +84,18 @@ def test_extraction_format_non_supporte_rejete(client: TestClient):
     assert r.status_code == 415
 
 
-def test_extraction_txt_simple(client: TestClient):
+def test_extraction_docx_simple(client: TestClient):
+    contenu = _docx_bytes(["Texte brut sans dossier."])
     r = client.post(
         "/api/dossiers/extraire",
-        files={"fichier": ("notes.txt", "Texte brut sans dossier.".encode("utf-8"), "text/plain")},
+        files={"fichier": ("notes.docx", contenu, "application/vnd.openxmlformats-officedocument.wordprocessingml.document")},
     )
     assert r.status_code == 201
     assert "Texte brut" in r.json()["texte_extrait"]
 
 
 def test_extraction_fichier_vide_rejetee(client: TestClient):
-    r = client.post("/api/dossiers/extraire", files={"fichier": ("vide.txt", b"", "text/plain")})
+    r = client.post("/api/dossiers/extraire", files={"fichier": ("vide.docx", b"", "application/vnd.openxmlformats-officedocument.wordprocessingml.document")})
     assert r.status_code == 422
     assert "vide" in r.json()["detail"].lower()
 
@@ -96,20 +115,20 @@ def test_extraction_docx_corrompu_rejete_proprement(client: TestClient):
 
 
 def test_extraction_fichier_trop_volumineux_rejete(client: TestClient):
-    contenu_trop_gros = b"a" * (20 * 1024 * 1024 + 1)  # 1 octet au-dessus de la limite
-    r = client.post("/api/dossiers/extraire", files={"fichier": ("enorme.txt", contenu_trop_gros, "text/plain")})
+    contenu_trop_gros = b"a" * (20 * 1024 * 1024 + 1)  # 1 octet au-dessus de la limite -- contenu factice, pas un vrai .docx, mais la limite de taille est vérifiée avant l'extraction
+    r = client.post("/api/dossiers/extraire", files={"fichier": ("enorme.docx", contenu_trop_gros, "application/vnd.openxmlformats-officedocument.wordprocessingml.document")})
     assert r.status_code == 413
     assert "volumineux" in r.json()["detail"].lower()
 
 
 def test_extraction_fichier_juste_sous_la_limite_accepte(client: TestClient):
-    contenu = b"a" * (1024 * 1024)  # 1 Mo, largement sous la limite
-    r = client.post("/api/dossiers/extraire", files={"fichier": ("acceptable.txt", contenu, "text/plain")})
+    contenu = _docx_bytes(["a" * 1000] * 50)  # nettement sous la limite de 20 Mo
+    r = client.post("/api/dossiers/extraire", files={"fichier": ("acceptable.docx", contenu, "application/vnd.openxmlformats-officedocument.wordprocessingml.document")})
     assert r.status_code == 201
 
 
 def test_import_avec_dossier_fichier_vide_rejete(client: TestClient, dossier_demo_id: int):
     """Même garde-fou sur l'endpoint historique (POST /{id}/documents),
     pas seulement sur le nouveau POST /extraire."""
-    r = client.post(f"/api/dossiers/{dossier_demo_id}/documents", files={"fichier": ("vide.txt", b"", "text/plain")})
+    r = client.post(f"/api/dossiers/{dossier_demo_id}/documents", files={"fichier": ("vide.docx", b"", "application/vnd.openxmlformats-officedocument.wordprocessingml.document")})
     assert r.status_code == 422

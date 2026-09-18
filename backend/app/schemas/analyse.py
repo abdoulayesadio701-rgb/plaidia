@@ -64,6 +64,8 @@ class ResumeOut(BaseModel):
     resume_court: str = ""
     points_cles: list[str] = []
     elements_manquants: list[str] = []
+    document_id: Optional[int] = None
+    statut: str = "Brouillon"
 
 
 class PlanIn(BaseModel):
@@ -153,6 +155,16 @@ class TraductionOut(BaseModel):
     langue_detectee: str = ""
     langue_cible: str = ""
     texte_traduit: str = ""
+
+
+class ExportTraductionIn(BaseModel):
+    langue_cible: str = ""
+    texte_traduit: str = Field(..., min_length=1, max_length=MAX_TEXTE_CARACTERES)
+
+
+class ExportStyleIn(StyleOut):
+    """Reprend tel quel le résultat affiché (StyleOut) -- rien à ajouter,
+    l'export part exactement de ce que l'utilisateur voit à l'écran."""
 
 
 class ExportAnalyseIn(BaseModel):

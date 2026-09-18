@@ -38,6 +38,12 @@ class ExtractionOut(BaseModel):
     decisions: list[str] = []
 
 
+class ExportExtractionIn(ExtractionOut):
+    """Reprend tel quel le résultat affiché (ExtractionOut) -- rien à
+    ajouter, l'export part exactement de ce que l'utilisateur voit à
+    l'écran."""
+
+
 class ClassementIn(BaseModel):
     texte: str = Field(..., min_length=1, max_length=MAX_TEXTE_CARACTERES)
 
@@ -66,6 +72,12 @@ class ContradictionOut(BaseModel):
 
 class CoherenceOut(BaseModel):
     elements_par_document: dict[str, ExtractionOut]
+    contradictions: list[ContradictionOut] = []
+    elements_coherents: list[str] = []
+    limites_analyse: str = ""
+
+
+class ExportCoherenceIn(BaseModel):
     contradictions: list[ContradictionOut] = []
     elements_coherents: list[str] = []
     limites_analyse: str = ""

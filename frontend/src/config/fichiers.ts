@@ -7,10 +7,13 @@
  */
 
 /** Formats acceptés par l'extraction de texte générique côté backend (voir
- * extract.py::extract_text) — PDF, Word, Excel, texte, images. Toute page
- * qui accepte un "document quelconque" doit utiliser cette liste plutôt
- * que la retaper. */
-export const EXTENSIONS_DOCUMENT = [".pdf", ".docx", ".xlsx", ".xls", ".txt", ".png", ".jpg", ".jpeg", ".webp"];
+ * extract.py::extract_text) — PDF, Word, Excel, image (pas de .txt : les
+ * deux espaces de l'app, Avocat et Greffier, n'acceptent que ces formats).
+ * Toute page qui accepte un "document quelconque" doit utiliser cette
+ * liste plutôt que la retaper. Même liste que
+ * backend/app/deps.py::EXTENSIONS_DOCUMENT_AUTORISEES, à garder
+ * synchronisées. */
+export const EXTENSIONS_DOCUMENT = [".pdf", ".docx", ".xlsx", ".xls", ".png", ".jpg", ".jpeg", ".webp"];
 
 export function formaterTailleFichier(octets: number): string {
   if (octets < 1024) return `${octets} o`;

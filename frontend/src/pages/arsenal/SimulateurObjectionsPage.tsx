@@ -20,7 +20,9 @@ import { SkeletonList } from "@/components/Skeleton";
 import ChatContextuelPanel from "@/components/chat/ChatContextuelPanel";
 import VerificationPanel from "@/components/VerificationPanel";
 import StatutDocumentMenu, { StatutDocumentBadge } from "@/components/StatutDocument";
+import ConfirmerModal from "@/components/ConfirmerModal";
 import { useAsync } from "@/hooks/useAsync";
+import { useDernierDocumentGenere } from "@/hooks/useDernierDocumentGenere";
 
 export default function SimulateurObjectionsPage() {
   const { t } = useTranslation();
@@ -31,20 +33,44 @@ export default function SimulateurObjectionsPage() {
   const [revelees, setRevelees] = useState<Set<number>>(new Set());
   const [exportEnCours, setExportEnCours] = useState(false);
   const [statutEnCours, setStatutEnCours] = useState(false);
+  const [suppressionEnCours, setSuppressionEnCours] = useState(false);
+  const [confirmationSuppression, setConfirmationSuppression] = useState(false);
   const documentId = Number(searchParams.get("document_id"));
   const aDocument = Number.isInteger(documentId) && documentId > 0;
 
-  const { data, loading, error, executer, definirDonnees } = useLazyAction(() => analyseApi.simulerObjections(dossierActif!.id));
+  const { data, loading, error, executer, definirDonnees, reinitialiser } = useLazyAction(() => analyseApi.simulerObjections(dossierActif!.id));
   const { data: document, loading: documentLoading, error: documentError } = useAsync(
     () => analyseApi.obtenirDocumentGenere(documentId),
     [documentId, dossierActif?.id],
     aDocument && dossierActif !== null
   );
+  const { document: dernierDocument, loading: dernierDocumentLoading } = useDernierDocumentGenere(
+    dossierActif?.id,
+    "simulateur",
+    !aDocument
+  );
 
   useEffect(() => {
-    if (!document || document.feature !== "simulateur" || document.dossier_id !== dossierActif?.id) return;
-    definirDonnees({ ...(document.contenu as unknown as SimulateurResultat), document_id: document.id, statut: document.statut });
-  }, [document, dossierActif?.id, definirDonnees]);
+    const source = aDocument ? document : dernierDocument;
+    if (!source || source.feature !== "simulateur" || source.dossier_id !== dossierActif?.id) return;
+    definirDonnees({ ...(source.contenu as unknown as SimulateurResultat), document_id: source.id, statut: source.statut });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [document, dernierDocument, aDocument, dossierActif?.id, definirDonnees]);
+
+  const supprimer = async () => {
+    if (!data?.document_id) return;
+    setSuppressionEnCours(true);
+    try {
+      await analyseApi.supprimerDocumentGenere(data.document_id);
+      reinitialiser();
+      setConfirmationSuppression(false);
+      pousserToast("success", t("arsenal.resultatSupprime"));
+    } catch (e) {
+      pousserToast("error", e instanceof Error ? e.message : t("arsenal.erreurSuppression"));
+    } finally {
+      setSuppressionEnCours(false);
+    }
+  };
 
   const changerStatut = async (statut: StatutDocument) => {
     if (!data?.document_id) return;
@@ -100,11 +126,14 @@ export default function SimulateurObjectionsPage() {
             <Button variant="ghost" loading={loading} onClick={() => void executer()}>
               🔄 {t("simulateur.relancer")}
             </Button>
+            {data.document_id && (
+              <Button variant="ghost" onClick={() => setConfirmationSuppression(true)}>🗑 {t("commun.supprimer")}</Button>
+            )}
           </div>
         )}
       </div>
 
-      {!data && !loading && !error && (
+      {!data && !loading && !documentLoading && !dernierDocumentLoading && !error && (
         <EmptyState
           titre={t("simulateur.pretTitre")}
           description={t("simulateur.pretDescription")}
@@ -116,11 +145,11 @@ export default function SimulateurObjectionsPage() {
         />
       )}
 
-      {(loading || documentLoading) && <SkeletonList count={3} />}
+      {(loading || documentLoading || dernierDocumentLoading) && <SkeletonList count={3} />}
 
       {!loading && !documentLoading && (error || documentError) && <ErrorState message={error ?? documentError ?? t("arsenal.erreurChargement")} onRetry={() => void executer()} />}
 
-      {!loading && !documentLoading && !error && !documentError && data && (
+      {!loading && !documentLoading && !dernierDocumentLoading && !error && !documentError && data && (
         <div className="space-y-5">
           <div className="flex items-center justify-between gap-3"><div className="flex items-center gap-2"><span className="text-sm text-warmgray">{t("simulateur.documentSauvegarde")}</span><StatutDocumentBadge statut={data.statut ?? "Brouillon"} /></div><StatutDocumentMenu statut={data.statut ?? "Brouillon"} loading={statutEnCours} onChange={changerStatut} /></div>
           <label className="flex w-fit cursor-pointer items-center gap-2.5 rounded-md border border-gold-600/20 bg-surface px-4 py-2.5 text-sm text-warmgray">
@@ -194,6 +223,17 @@ export default function SimulateurObjectionsPage() {
             placeholder={t("simulateur.chatPlaceholder")}
           />
         </div>
+      )}
+
+      {confirmationSuppression && (
+        <ConfirmerModal
+          titre={t("arsenal.confirmerSuppressionTitre")}
+          description={t("arsenal.confirmerSuppressionDescription")}
+          texteBouton={t("commun.supprimer")}
+          enCours={suppressionEnCours}
+          onFermer={() => setConfirmationSuppression(false)}
+          onConfirmer={supprimer}
+        />
       )}
     </div>
   );

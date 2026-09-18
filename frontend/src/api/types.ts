@@ -124,6 +124,8 @@ export interface ResumeResultat {
   resume_court: string;
   points_cles: string[];
   elements_manquants: string[];
+  document_id?: number | null;
+  statut?: StatutDocument;
 }
 
 export interface PointPlan {

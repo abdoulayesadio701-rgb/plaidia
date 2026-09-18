@@ -114,6 +114,14 @@ export function changerStatutDocument(id: number, statut: StatutDocument): Promi
   return apiRequest<DocumentGenere>(`/api/documents-generes/${id}/statut`, { method: "PATCH", body: { statut } });
 }
 
+export function supprimerDocumentGenere(id: number): Promise<void> {
+  return apiRequest<void>(`/api/documents-generes/${id}`, { method: "DELETE" });
+}
+
+export function supprimerConclusions(analyseId: number): Promise<void> {
+  return apiRequest<void>(`/api/analyse/conclusions/${analyseId}`, { method: "DELETE" });
+}
+
 export function simulerObjections(dossierId: number): Promise<SimulateurResultat> {
   return apiRequest<SimulateurResultat>("/api/analyse/simulateur", { method: "POST", body: { dossier_id: dossierId } });
 }
@@ -136,8 +144,19 @@ export function analyserStyle(texte: string): Promise<StyleResultat> {
   return apiRequest<StyleResultat>("/api/analyse/style", { method: "POST", body: { texte } });
 }
 
+export function exporterStyle(resultat: StyleResultat): Promise<{ blob: Blob; filename?: string }> {
+  return apiRequestBlob("/api/analyse/style/export", { method: "POST", body: resultat });
+}
+
 export function traduireTexte(texte: string): Promise<TraductionResultat> {
   return apiRequest<TraductionResultat>("/api/analyse/traduire", { method: "POST", body: { texte } });
+}
+
+export function exporterTraduction(resultat: TraductionResultat): Promise<{ blob: Blob; filename?: string }> {
+  return apiRequestBlob("/api/analyse/traduire/export", {
+    method: "POST",
+    body: { texte_traduit: resultat.texte_traduit, langue_cible: resultat.langue_cible },
+  });
 }
 
 export function exporterConclusions(

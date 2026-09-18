@@ -7,7 +7,7 @@
 
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { analyse as analyseApi, dossiers as dossiersApi } from "@/api";
+import { analyse as analyseApi, dossiers as dossiersApi, downloadBlob } from "@/api";
 import type { StatutDocument } from "@/api";
 import { chat as chatApi } from "@/api";
 import { useAlertesArticlesDossier, useAppStore, useDossierActif } from "@/store/useAppStore";
@@ -15,6 +15,7 @@ import { useAsync } from "@/hooks/useAsync";
 import { Link } from "react-router-dom";
 import ArgumentCard from "@/components/ArgumentCard";
 import Accordion from "@/components/Accordion";
+import Button from "@/components/Button";
 import EmptyState from "@/components/EmptyState";
 import ErrorState from "@/components/ErrorState";
 import { SkeletonList } from "@/components/Skeleton";
@@ -42,6 +43,7 @@ export default function HistoriqueDossierPage() {
   const acquitterAlerteLoi = useAppStore((s) => s.acquitterAlerteLoi);
   const [statuts, setStatuts] = useState<Record<number, StatutDocument>>({});
   const [statutEnCours, setStatutEnCours] = useState<number | null>(null);
+  const [exportEnCours, setExportEnCours] = useState(false);
 
   const { data: analyses, loading, error, reload } = useAsync(
     () => dossiersApi.historiqueAnalyses(dossierActif!.id),
@@ -88,18 +90,36 @@ export default function HistoriqueDossierPage() {
     }
   };
 
+  const exporter = async () => {
+    if (!dossierActif) return;
+    setExportEnCours(true);
+    try {
+      const { blob, filename } = await dossiersApi.exporterHistorique(dossierActif.id);
+      downloadBlob(blob, filename ?? "historique.docx");
+    } catch (e) {
+      pousserToast("error", e instanceof Error ? e.message : t("arsenal.echecExport"));
+    } finally {
+      setExportEnCours(false);
+    }
+  };
+
   if (!dossierActif) {
     return <EmptyState titre={t("historiqueDossier.emptyTitre")} description={t("historiqueDossier.emptyDescription")} />;
   }
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
-      <div>
-        <p className="kicker">{t("nav.sections.chemise")}</p>
-        <h1 className="mt-1 font-serif text-h2 font-semibold text-gold-500">{dossierActif.nom}</h1>
-        <Link to={`/app/chat?dossier_id=${dossierActif.id}`} className="btn-secondary mt-3 inline-flex">
-          {t("historiqueDossier.ouvrirChat")}
-        </Link>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="kicker">{t("nav.sections.chemise")}</p>
+          <h1 className="mt-1 font-serif text-h2 font-semibold text-gold-500">{dossierActif.nom}</h1>
+          <Link to={`/app/chat?dossier_id=${dossierActif.id}`} className="btn-secondary mt-3 inline-flex">
+            {t("historiqueDossier.ouvrirChat")}
+          </Link>
+        </div>
+        <Button variant="secondary" loading={exportEnCours} onClick={() => void exporter()}>
+          ⬇ {t("arsenal.exporterWord")}
+        </Button>
       </div>
 
       {alertesArticles.length > 0 && (
@@ -182,7 +202,14 @@ export default function HistoriqueDossierPage() {
         {!documentsLoading && !documentsError && documentsGeneres && documentsGeneres.length > 0 && (
           <div className="space-y-2">
             {documentsGeneres.map((document) => {
-              const chemin = document.feature === "plan" ? "arsenal/plan" : document.feature === "simulateur" ? "arsenal/simulateur" : "grimoire/jurisprudence";
+              const chemin =
+                document.feature === "plan"
+                  ? "arsenal/plan"
+                  : document.feature === "simulateur"
+                    ? "arsenal/simulateur"
+                    : document.feature === "resume"
+                      ? "arsenal/resumer"
+                      : "grimoire/jurisprudence";
               return (
                 <Link
                   key={document.id}

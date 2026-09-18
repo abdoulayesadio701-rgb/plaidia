@@ -8,7 +8,8 @@
 
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { analyse as analyseApi } from "@/api";
+import { analyse as analyseApi, downloadBlob } from "@/api";
+import { useAppStore } from "@/store/useAppStore";
 import { useLazyAction } from "@/hooks/useLazyAction";
 import { useImportTexte } from "@/hooks/useImportTexte";
 import { EXTENSIONS_DOCUMENT } from "@/config/fichiers";
@@ -22,8 +23,10 @@ import { SkeletonBlock } from "@/components/Skeleton";
 
 export default function TraduirePage() {
   const { t } = useTranslation();
+  const pousserToast = useAppStore((s) => s.pousserToast);
   const LABEL_LANGUE: Record<string, string> = { fr: t("traduire.francais"), en: t("traduire.anglais") };
   const [texte, setTexte] = useState("");
+  const [exportEnCours, setExportEnCours] = useState(false);
   const { data, loading, error, executer } = useLazyAction((t: string) => analyseApi.traduireTexte(t));
   // Page indépendante de tout dossier (requiresDossier: false) --
   // extraction seule, rien n'est écrit en base (voir extraireFichier).
@@ -39,6 +42,19 @@ export default function TraduirePage() {
       await navigator.clipboard.writeText(data.texte_traduit);
     } catch {
       // Silencieux : le texte reste sélectionnable/copiable à la main dans la carte ci-dessous.
+    }
+  };
+
+  const exporter = async () => {
+    if (!data) return;
+    setExportEnCours(true);
+    try {
+      const { blob, filename } = await analyseApi.exporterTraduction(data);
+      downloadBlob(blob, filename ?? "traduction.docx");
+    } catch (e) {
+      pousserToast("error", e instanceof Error ? e.message : t("arsenal.echecExport"));
+    } finally {
+      setExportEnCours(false);
     }
   };
 
@@ -101,9 +117,14 @@ export default function TraduirePage() {
                 cible: LABEL_LANGUE[data.langue_cible] ?? data.langue_cible,
               })}
             </p>
-            <button onClick={() => void copier()} className="text-xs text-amethyst-400 hover:underline">
-              {t("traduire.copierTraduction")}
-            </button>
+            <div className="flex items-center gap-3">
+              <button onClick={() => void copier()} className="text-xs text-amethyst-400 hover:underline">
+                {t("traduire.copierTraduction")}
+              </button>
+              <Button variant="secondary" loading={exportEnCours} onClick={() => void exporter()}>
+                ⬇ {t("arsenal.exporterWord")}
+              </Button>
+            </div>
           </div>
           <RichOutput texte={data.texte_traduit} />
         </div>

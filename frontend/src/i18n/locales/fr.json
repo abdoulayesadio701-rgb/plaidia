@@ -248,7 +248,7 @@
     "emptyTitre": "Aucun dossier sélectionné",
     "emptyDescription": "Sélectionnez ou créez un dossier pour y importer des documents.",
     "exporterFaitsBruts": "Exporter les faits bruts (Word)",
-    "dropzoneDescription": "ou cliquez pour parcourir — PDF, Word, Excel, image ou texte. Chaque document importé est ajouté aux faits du dossier."
+    "dropzoneDescription": "ou cliquez pour parcourir — PDF, Word, Excel ou image. Chaque document importé est ajouté aux faits du dossier."
   },
   "consulterJurisprudence": {
     "emptyTitre": "Aucun dossier sélectionné",
@@ -318,7 +318,7 @@
     "contenu": "Contenu",
     "contenuPlaceholder": "Collez ici le texte intégral (ou l'extrait pertinent) du texte juridique.",
     "deposezIci": "Déposez le texte juridique ici",
-    "dropzoneDescription": "ou cliquez pour parcourir — PDF, Word, Excel, image ou texte. Renseignez d'abord la source ci-dessus.",
+    "dropzoneDescription": "ou cliquez pour parcourir — PDF, Word, Excel ou image. Renseignez d'abord la source ci-dessus.",
     "importer": "Importer",
     "ongletValide": "Validé",
     "texteValide": "Texte « {{ref}} » validé.",
@@ -525,7 +525,11 @@
     "erreurChargement": "Erreur de chargement.",
     "echecExport": "Échec de l'export.",
     "exporterWord": "Exporter en Word",
-    "formatsAcceptes": "PDF, Word, Excel, image — le texte extrait est injecté ci-dessus."
+    "formatsAcceptes": "PDF, Word, Excel, image — le texte extrait est injecté ci-dessus.",
+    "confirmerSuppressionTitre": "Supprimer ce résultat ?",
+    "confirmerSuppressionDescription": "Voulez-vous réellement supprimer ce résultat ? Cette action supprimera le contenu sauvegardé.",
+    "resultatSupprime": "Résultat supprimé.",
+    "erreurSuppression": "Impossible de supprimer ce résultat."
   },
   "analyserConclusions": {
     "emptyTitre": "Aucun dossier sélectionné",

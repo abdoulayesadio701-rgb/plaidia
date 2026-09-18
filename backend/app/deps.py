@@ -202,9 +202,11 @@ def _traduire_valeur(valeur: str, correspondance: dict[str, str]) -> str:
     return _l(cle) if cle else valeur
 
 # Formats acceptés par l'extraction de texte générique (voir
-# extract.py::extract_text) -- PDF, Word, Excel, texte, images. Même liste
-# que frontend/src/lib/fichiers.ts::EXTENSIONS_DOCUMENT, à garder synchronisées.
-EXTENSIONS_DOCUMENT_AUTORISEES = {".pdf", ".docx", ".xlsx", ".xls", ".txt", ".png", ".jpg", ".jpeg", ".webp"}
+# extract.py::extract_text) -- PDF, Word, Excel, image (pas de .txt : les
+# deux espaces de l'app, Avocat et Greffier, n'acceptent que ces formats).
+# Même liste que frontend/src/config/fichiers.ts::EXTENSIONS_DOCUMENT, à
+# garder synchronisées.
+EXTENSIONS_DOCUMENT_AUTORISEES = {".pdf", ".docx", ".xlsx", ".xls", ".png", ".jpg", ".jpeg", ".webp"}
 
 # §13 (ARCHITECTURE_CHAT_CONTEXTUEL.md) : limite de taille explicite --
 # UploadFile n'en impose aucune par défaut, un fichier sans limite lu

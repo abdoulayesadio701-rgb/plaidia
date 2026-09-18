@@ -6,7 +6,11 @@ ou image (PNG/JPG/WEBP, via la vision de Claude pour la transcription).
 import base64
 from pathlib import Path
 
-FORMATS_SUPPORTES = ".pdf, .docx, .xlsx, .xls, .txt, .png, .jpg, .jpeg, .webp"
+FORMATS_SUPPORTES = ".pdf, .docx, .xlsx, .xls, .png, .jpg, .jpeg, .webp"
+# .txt reste géré ci-dessous (utilisé par des tests/scripts internes qui
+# appellent extract_text directement), mais l'upload applicatif ne l'atteint
+# plus : voir backend/app/deps.py::EXTENSIONS_DOCUMENT_AUTORISEES, qui
+# filtre en amont sur les mêmes formats que ci-dessus.
 
 # Seuil de détection "PDF probablement numérisé" (§8) : un PDF natif contient
 # largement plus de caractères de texte réel par page ; en dessous, c'est le

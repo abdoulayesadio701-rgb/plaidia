@@ -248,7 +248,7 @@
     "emptyTitre": "No case selected",
     "emptyDescription": "Select or create a case to import documents into it.",
     "exporterFaitsBruts": "Export raw facts (Word)",
-    "dropzoneDescription": "or click to browse — PDF, Word, Excel, image or text. Each imported document is added to the case facts."
+    "dropzoneDescription": "or click to browse — PDF, Word, Excel or image. Each imported document is added to the case facts."
   },
   "consulterJurisprudence": {
     "emptyTitre": "No case selected",
@@ -318,7 +318,7 @@
     "contenu": "Content",
     "contenuPlaceholder": "Paste the full text (or the relevant excerpt) of the legal text here.",
     "deposezIci": "Drop the legal text here",
-    "dropzoneDescription": "or click to browse — PDF, Word, Excel, image or text. Fill in the source above first.",
+    "dropzoneDescription": "or click to browse — PDF, Word, Excel or image. Fill in the source above first.",
     "importer": "Import",
     "ongletValide": "Validated",
     "texteValide": "Text « {{ref}} » validated.",
@@ -525,7 +525,11 @@
     "erreurChargement": "Loading error.",
     "echecExport": "Export failed.",
     "exporterWord": "Export to Word",
-    "formatsAcceptes": "PDF, Word, Excel, image — the extracted text is injected above."
+    "formatsAcceptes": "PDF, Word, Excel, image — the extracted text is injected above.",
+    "confirmerSuppressionTitre": "Delete this result?",
+    "confirmerSuppressionDescription": "Do you really want to delete this result? This will remove the saved content.",
+    "resultatSupprime": "Result deleted.",
+    "erreurSuppression": "Unable to delete this result."
   },
   "analyserConclusions": {
     "emptyTitre": "No case selected",

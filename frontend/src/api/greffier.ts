@@ -31,12 +31,27 @@ export function extraction(texte: string): Promise<ExtractionResultat> {
   return apiRequest<ExtractionResultat>("/api/greffier/extraction", { method: "POST", body: { texte } });
 }
 
+export function exporterExtraction(resultat: ExtractionResultat): Promise<{ blob: Blob; filename?: string }> {
+  return apiRequestBlob("/api/greffier/extraction/export", { method: "POST", body: resultat });
+}
+
 export function classement(texte: string): Promise<ClassementResultat> {
   return apiRequest<ClassementResultat>("/api/greffier/classement", { method: "POST", body: { texte } });
 }
 
 export function controleCoherence(documents: DocumentACoherence[]): Promise<CoherenceResultat> {
   return apiRequest<CoherenceResultat>("/api/greffier/coherence", { method: "POST", body: { documents } });
+}
+
+export function exporterCoherence(resultat: CoherenceResultat): Promise<{ blob: Blob; filename?: string }> {
+  return apiRequestBlob("/api/greffier/coherence/export", {
+    method: "POST",
+    body: {
+      contradictions: resultat.contradictions,
+      elements_coherents: resultat.elements_coherents,
+      limites_analyse: resultat.limites_analyse,
+    },
+  });
 }
 
 export function rechercheTransversale(terme: string): Promise<RechercheDossierResultat[]> {

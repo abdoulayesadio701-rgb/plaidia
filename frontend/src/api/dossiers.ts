@@ -41,8 +41,8 @@ export function historiqueAnalyses(dossierId: number): Promise<AnalyseHistorique
   return apiRequest<AnalyseHistorique[]>(`/api/dossiers/${dossierId}/analyses`);
 }
 
-export function listerDocumentsGeneres(dossierId: number): Promise<DocumentGenere[]> {
-  return apiRequest<DocumentGenere[]>(`/api/dossiers/${dossierId}/documents-generes`);
+export function listerDocumentsGeneres(dossierId: number, feature?: string): Promise<DocumentGenere[]> {
+  return apiRequest<DocumentGenere[]>(`/api/dossiers/${dossierId}/documents-generes`, feature ? { query: { feature } } : undefined);
 }
 
 export function obtenirDocumentGenere(dossierId: number, documentId: number): Promise<DocumentGenere> {
@@ -70,6 +70,10 @@ export function extraireFichier(fichier: File): Promise<DocumentImporte> {
 
 export async function exporterFaitsBruts(dossierId: number): Promise<{ blob: Blob; filename?: string }> {
   return apiRequestBlob(`/api/dossiers/${dossierId}/export/faits-bruts`);
+}
+
+export async function exporterHistorique(dossierId: number): Promise<{ blob: Blob; filename?: string }> {
+  return apiRequestBlob(`/api/dossiers/${dossierId}/export/historique`);
 }
 
 /**

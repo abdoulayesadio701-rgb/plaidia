@@ -17,6 +17,10 @@ export function supprimerNote(noteId: number): Promise<void> {
   return apiRequest<void>(`/api/notes/${noteId}`, { method: "DELETE" });
 }
 
+export function exporterNotes(dossierId: number): Promise<{ blob: Blob; filename?: string }> {
+  return apiRequestBlob(`/api/notes/dossier/${dossierId}/export`);
+}
+
 export function redigerNoteClient(dossierId: number): Promise<{ texte: string }> {
   return apiRequest<{ texte: string }>("/api/notes/note-client", { method: "POST", body: { dossier_id: dossierId } });
 }

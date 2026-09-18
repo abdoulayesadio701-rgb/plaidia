@@ -25,6 +25,8 @@ from app.schemas.greffier import (
     CoherenceIn,
     CoherenceOut,
     ExportChronologieIn,
+    ExportCoherenceIn,
+    ExportExtractionIn,
     ExportVerificationProceduraleIn,
     ExtractionIn,
     ExtractionOut,
@@ -92,6 +94,34 @@ def extraction(payload: ExtractionIn):
     return elements
 
 
+@router.post("/extraction/export")
+def exporter_extraction(payload: ExportExtractionIn):
+    """Export Word générique, sans dossier requis -- même principe que
+    /pv-audience/export."""
+    blocs = [
+        ("DATES", payload.dates),
+        ("PERSONNES ET PARTIES", payload.personnes_et_parties),
+        ("RÉFÉRENCES", payload.references),
+        ("DEMANDES", payload.demandes),
+        ("DÉCISIONS", payload.decisions),
+    ]
+    lignes = []
+    for titre_bloc, elements in blocs:
+        lignes.append(titre_bloc)
+        if not elements:
+            lignes.append("— Rien détecté")
+        for e in elements:
+            lignes.append(f"- {e}")
+        lignes.append("")
+
+    chemin = legacy_export.exporter_texte_libre_word("Extraction d'éléments clés", "\n".join(lignes))
+    return FileResponse(
+        chemin,
+        filename=os.path.basename(chemin),
+        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    )
+
+
 @router.post("/classement", response_model=ClassementOut)
 def classement(payload: ClassementIn):
     demo.exiger_cle_api()
@@ -117,6 +147,37 @@ def controle_coherence(payload: CoherenceIn):
         contradictions=resultat.get("contradictions", []),
         elements_coherents=resultat.get("elements_coherents", []),
         limites_analyse=resultat.get("limites_analyse", ""),
+    )
+
+
+@router.post("/coherence/export")
+def exporter_coherence(payload: ExportCoherenceIn):
+    """Export Word générique, sans dossier requis -- même principe que
+    /pv-audience/export."""
+    lignes = ["CONTRADICTIONS RELEVÉES"]
+    if not payload.contradictions:
+        lignes.append("— Aucune contradiction relevée")
+    for c in payload.contradictions:
+        lignes.append(f"[{c.gravite}] {c.sujet}")
+        lignes.append(f"  Document 1 : {c.document_1}")
+        lignes.append(f"  Document 2 : {c.document_2}")
+    lignes.append("")
+
+    if payload.elements_coherents:
+        lignes.append("ÉLÉMENTS COHÉRENTS")
+        for e in payload.elements_coherents:
+            lignes.append(f"- {e}")
+        lignes.append("")
+
+    if payload.limites_analyse:
+        lignes.append("LIMITES DE L'ANALYSE")
+        lignes.append(payload.limites_analyse)
+
+    chemin = legacy_export.exporter_texte_libre_word("Contrôle de cohérence entre documents", "\n".join(lignes))
+    return FileResponse(
+        chemin,
+        filename=os.path.basename(chemin),
+        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     )
 
 

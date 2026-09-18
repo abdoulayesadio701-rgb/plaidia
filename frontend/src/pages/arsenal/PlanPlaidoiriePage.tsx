@@ -28,7 +28,9 @@ import { SkeletonList } from "@/components/Skeleton";
 import ChatContextuelPanel from "@/components/chat/ChatContextuelPanel";
 import VerificationPanel from "@/components/VerificationPanel";
 import StatutDocumentMenu, { StatutDocumentBadge } from "@/components/StatutDocument";
+import ConfirmerModal from "@/components/ConfirmerModal";
 import { useAsync } from "@/hooks/useAsync";
+import { useDernierDocumentGenere } from "@/hooks/useDernierDocumentGenere";
 
 interface NavigationState {
   dureeMinutesPreremplie?: number;
@@ -45,6 +47,8 @@ export default function PlanPlaidoiriePage() {
   const [duree, setDuree] = useState(dureeInitiale);
   const [exportEnCours, setExportEnCours] = useState(false);
   const [statutEnCours, setStatutEnCours] = useState(false);
+  const [suppressionEnCours, setSuppressionEnCours] = useState(false);
+  const [confirmationSuppression, setConfirmationSuppression] = useState(false);
   const documentId = Number(searchParams.get("document_id"));
   const aDocument = Number.isInteger(documentId) && documentId > 0;
 
@@ -53,19 +57,46 @@ export default function PlanPlaidoiriePage() {
       analyseApi.streamGenererPlan(dossierActif!.id, d, cb, signal),
     [dossierActif]
   );
-  const { data, etape, loading, error, executer, definirDonnees } = useLazyStream<PlanResultat, [number]>(lancerFlux);
+  const { data, etape, loading, error, executer, definirDonnees, reinitialiser } = useLazyStream<PlanResultat, [number]>(lancerFlux);
+  // Lien explicite depuis l'Historique (?document_id=X) : prioritaire sur
+  // l'auto-chargement du plus récent ci-dessous.
   const { data: document, loading: documentLoading, error: documentError } = useAsync(
     () => analyseApi.obtenirDocumentGenere(documentId),
     [documentId, dossierActif?.id],
     aDocument && dossierActif !== null
   );
+  // Sans lien explicite : recharge automatiquement le dernier plan généré
+  // pour ce dossier -- une simple lecture, jamais un nouvel appel IA -- pour
+  // qu'il reste visible après une navigation ou un refresh complet.
+  const { document: dernierDocument, loading: dernierDocumentLoading } = useDernierDocumentGenere(
+    dossierActif?.id,
+    "plan",
+    !aDocument
+  );
 
   useEffect(() => {
-    if (!document || document.feature !== "plan" || document.dossier_id !== dossierActif?.id) return;
-    definirDonnees({ ...(document.contenu as unknown as PlanResultat), document_id: document.id, statut: document.statut });
-    const minutes = document.parametres.temps_minutes;
+    const source = aDocument ? document : dernierDocument;
+    if (!source || source.feature !== "plan" || source.dossier_id !== dossierActif?.id) return;
+    definirDonnees({ ...(source.contenu as unknown as PlanResultat), document_id: source.id, statut: source.statut });
+    const minutes = source.parametres.temps_minutes;
     if (typeof minutes === "number") setDuree(minutes);
-  }, [document, dossierActif?.id, definirDonnees]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [document, dernierDocument, aDocument, dossierActif?.id, definirDonnees]);
+
+  const supprimer = async () => {
+    if (!data?.document_id) return;
+    setSuppressionEnCours(true);
+    try {
+      await analyseApi.supprimerDocumentGenere(data.document_id);
+      reinitialiser();
+      setConfirmationSuppression(false);
+      pousserToast("success", t("arsenal.resultatSupprime"));
+    } catch (e) {
+      pousserToast("error", e instanceof Error ? e.message : t("arsenal.erreurSuppression"));
+    } finally {
+      setSuppressionEnCours(false);
+    }
+  };
 
   const changerStatut = async (statut: StatutDocument) => {
     if (!data?.document_id) return;
@@ -115,17 +146,23 @@ export default function PlanPlaidoiriePage() {
         </div>
       </div>
 
-      {(loading && !data?.plan) || documentLoading ? <SkeletonList count={2} /> : null}
+      {(loading && !data?.plan) || documentLoading || dernierDocumentLoading ? <SkeletonList count={2} /> : null}
 
       {loading && <EtapePipelineIndicator etape={etape} />}
 
       {!loading && !documentLoading && (error || documentError) && <ErrorState message={error ?? documentError ?? t("arsenal.erreurChargement")} onRetry={() => void executer(duree)} />}
 
-      {!documentLoading && !error && !documentError && data?.plan && (
+      {!documentLoading && !dernierDocumentLoading && !error && !documentError && data?.plan && (
         <div className="space-y-6">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-2"><p className="text-sm text-warmgray">{t("planPlaidoirie.genereePour", { duree })}</p><StatutDocumentBadge statut={data.statut ?? "Brouillon"} /></div>
-            <div className="flex items-center gap-2"><StatutDocumentMenu statut={data.statut ?? "Brouillon"} loading={statutEnCours} onChange={changerStatut} /><Button variant="secondary" loading={exportEnCours} onClick={() => void exporter()}>⬇ {t("arsenal.exporterWord")}</Button></div>
+            <div className="flex items-center gap-2">
+              <StatutDocumentMenu statut={data.statut ?? "Brouillon"} loading={statutEnCours} onChange={changerStatut} />
+              <Button variant="secondary" loading={exportEnCours} onClick={() => void exporter()}>⬇ {t("arsenal.exporterWord")}</Button>
+              {data.document_id && (
+                <Button variant="ghost" onClick={() => setConfirmationSuppression(true)}>🗑 {t("commun.supprimer")}</Button>
+              )}
+            </div>
           </div>
 
           <PlanTimeline plan={data} />
@@ -146,8 +183,19 @@ export default function PlanPlaidoiriePage() {
         </div>
       )}
 
-      {!loading && !error && !data?.plan && (
+      {!loading && !documentLoading && !dernierDocumentLoading && !error && !data?.plan && (
         <EmptyState titre={t("planPlaidoirie.pretTitre")} description={t("planPlaidoirie.pretDescription")} />
+      )}
+
+      {confirmationSuppression && (
+        <ConfirmerModal
+          titre={t("arsenal.confirmerSuppressionTitre")}
+          description={t("arsenal.confirmerSuppressionDescription")}
+          texteBouton={t("commun.supprimer")}
+          enCours={suppressionEnCours}
+          onFermer={() => setConfirmationSuppression(false)}
+          onConfirmer={supprimer}
+        />
       )}
     </div>
   );
