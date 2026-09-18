@@ -928,6 +928,23 @@
       "refutation2Piste": "[VERIF:find a ruling excluding serious misconduct in the case of a transport strike]"
     }
   },
+  "dashboard": {
+    "prochaineEcheance": "Next deadline",
+    "aujourdhui": "Today",
+    "echeancesDepassees_one": "{{count}} deadline overdue",
+    "echeancesDepassees_other": "{{count}} deadlines overdue",
+    "bordereau": "Exhibit list",
+    "pieces_one": "{{count}} exhibit listed",
+    "pieces_other": "{{count}} exhibits listed",
+    "entrainement": "Latest practice",
+    "entrainementDetail": "{{reel}} spent out of {{alloue}} planned",
+    "veille": "Legal watch",
+    "alertes_one": "{{count}} amended article to check",
+    "alertes_other": "{{count}} amended articles to check",
+    "recents": "Recent documents",
+    "vide": "Nothing to show yet: generate a plan, an analysis or a timeline, or add exhibits, to see the case status here.",
+    "indisponible": "The case dashboard is temporarily unavailable."
+  },
   "home": {
     "choisissezAction": "Choose an action in {{espace}} on the left to continue.",
     "espaceAvocat": "the Lawyer space",

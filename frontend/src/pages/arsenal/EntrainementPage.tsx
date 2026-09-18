@@ -15,6 +15,7 @@ import type { BilanEntrainement, PlanResultat, PointPlan, SectionMesuree, Statut
 import { useAppStore, useDossierActif } from "@/store/useAppStore";
 import { useLazyAction } from "@/hooks/useLazyAction";
 import { useDernierDocumentGenere } from "@/hooks/useDernierDocumentGenere";
+import { formaterChrono, formaterDuree } from "@/config/durees";
 import Button from "@/components/Button";
 import ConfirmerModal from "@/components/ConfirmerModal";
 import EmptyState from "@/components/EmptyState";
@@ -29,16 +30,6 @@ const CLASSE_STATUT: Record<StatutSectionEntrainement, string> = {
   depasse: "badge-risk-high",
   non_traite: "badge border-muted/30 bg-surface-2 text-warmgray",
 };
-
-function formaterDuree(secondes: number): string {
-  const signe = secondes < 0 ? "-" : "";
-  const abs = Math.abs(secondes);
-  return `${signe}${Math.floor(abs / 60)} min ${String(abs % 60).padStart(2, "0")} s`;
-}
-
-function formaterChrono(secondes: number): string {
-  return `${String(Math.floor(secondes / 60)).padStart(2, "0")}:${String(secondes % 60).padStart(2, "0")}`;
-}
 
 /** Temps alloué par section : duree_minutes du plan ; à défaut, le temps de
  * parole restant du plan (parametres.temps_minutes) est réparti à parts

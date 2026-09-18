@@ -12,6 +12,7 @@ import type { ResultatRechercheContenu, StatutDocument } from "@/api";
 import { chat as chatApi } from "@/api";
 import { useAlertesArticlesDossier, useAppStore, useDossierActif } from "@/store/useAppStore";
 import { useAsync } from "@/hooks/useAsync";
+import { CHEMIN_PAR_FEATURE } from "@/config/cheminsDocuments";
 import { Link } from "react-router-dom";
 import ArgumentCard from "@/components/ArgumentCard";
 import Accordion from "@/components/Accordion";
@@ -34,26 +35,6 @@ const CODES_LIBELLES: Record<string, string> = {
   CP: "Code pénal", CCIV: "Code civil", CPC: "Code de procédure civile",
   CPP: "Code de procédure pénale", CTRAV: "Code du travail", CCOM: "Code de commerce",
 };
-
-// Chemin de la page Arsenal/Greffier/Carnet qui affiche ce type de document
-// généré -- tenu à jour à chaque nouvelle fonctionnalité persistée (voir
-// db.creer_document_genere). Défaut (feature inconnue) : grimoire/jurisprudence.
-const CHEMIN_PAR_FEATURE = {
-  plan: "arsenal/plan",
-  simulateur: "arsenal/simulateur",
-  resume: "arsenal/resumer",
-  chronologie: "greffier/chronologie",
-  verification_procedurale: "greffier/verification-procedurale",
-  note_client: "carnet/note-client",
-  delais: "greffier/delais",
-  entrainement: "arsenal/entrainement",
-  bordereau: "chemise/bordereau",
-  // Ces deux features ne viennent pas de documents_generes (voir
-  // db.rechercher_dans_documents_dossier) : pas d'id de document
-  // individuellement adressable, le lien renvoie vers la page générale.
-  conclusions: "arsenal/analyser",
-  notes: "carnet/notes",
-} as const;
 
 export default function HistoriqueDossierPage() {
   const { t, i18n } = useTranslation();

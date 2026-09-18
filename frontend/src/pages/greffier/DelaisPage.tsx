@@ -15,30 +15,12 @@ import { useAppStore, useDossierActif } from "@/store/useAppStore";
 import { useAsync } from "@/hooks/useAsync";
 import { useLazyAction } from "@/hooks/useLazyAction";
 import { useDernierDocumentGenere } from "@/hooks/useDernierDocumentGenere";
+import { classeUrgence, joursRestants, versDateLocale } from "@/config/echeances";
 import Button from "@/components/Button";
 import ConfirmerModal from "@/components/ConfirmerModal";
 import EmptyState from "@/components/EmptyState";
 import ErrorState from "@/components/ErrorState";
 import { SkeletonList } from "@/components/Skeleton";
-
-const MS_PAR_JOUR = 86_400_000;
-
-function versDateLocale(iso: string): Date {
-  const [annee, mois, jour] = iso.split("-").map(Number);
-  return new Date(annee, mois - 1, jour);
-}
-
-function joursRestants(echeanceIso: string): number {
-  const aujourdhui = new Date();
-  const minuit = new Date(aujourdhui.getFullYear(), aujourdhui.getMonth(), aujourdhui.getDate());
-  return Math.round((versDateLocale(echeanceIso).getTime() - minuit.getTime()) / MS_PAR_JOUR);
-}
-
-function classeUrgence(jours: number): string {
-  if (jours <= 7) return "badge-risk-high";
-  if (jours <= 30) return "badge-risk-medium";
-  return "badge-risk-low";
-}
 
 export default function DelaisPage() {
   const { t, i18n } = useTranslation();

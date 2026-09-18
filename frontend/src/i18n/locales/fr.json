@@ -928,6 +928,23 @@
       "refutation2Piste": "[VERIF:rechercher un arrêt excluant la faute grave en cas de grève des transports]"
     }
   },
+  "dashboard": {
+    "prochaineEcheance": "Prochaine échéance",
+    "aujourdhui": "Aujourd'hui",
+    "echeancesDepassees_one": "{{count}} échéance dépassée",
+    "echeancesDepassees_other": "{{count}} échéances dépassées",
+    "bordereau": "Bordereau de pièces",
+    "pieces_one": "{{count}} pièce au bordereau",
+    "pieces_other": "{{count}} pièces au bordereau",
+    "entrainement": "Dernier entraînement",
+    "entrainementDetail": "{{reel}} passés sur {{alloue}} prévus",
+    "veille": "Veille juridique",
+    "alertes_one": "{{count}} article modifié à vérifier",
+    "alertes_other": "{{count}} articles modifiés à vérifier",
+    "recents": "Documents récents",
+    "vide": "Rien à afficher pour l'instant : générez un plan, une analyse ou une chronologie, ou ajoutez des pièces, pour voir ici l'état du dossier.",
+    "indisponible": "Le tableau de bord du dossier est momentanément indisponible."
+  },
   "home": {
     "choisissezAction": "Choisissez une action dans {{espace}} à gauche pour continuer.",
     "espaceAvocat": "l'espace Avocat",
