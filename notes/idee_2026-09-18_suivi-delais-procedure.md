@@ -63,7 +63,46 @@ une base de règles simples (constante, pas d'IA) en plus de la détection par
 IA du point de départ ; le reste (page, export, persistance) est la
 répétition directe de patterns déjà codés dans le projet.
 
+## Implémentation (2026-09-18)
+
+Implémentée dans une version volontairement resserrée par rapport à l'idée :
+
+- **Calcul 100 % déterministe, sans IA** : le greffier choisit un type de
+  délai dans un catalogue (8 délais : appel civil, opposition, appel de
+  référé, pourvoi civil, appel prud'hommes, appel correctionnel, pourvoi
+  pénal, recours administratif) et la date du point de départ. Une date
+  limite doit être reproductible et vérifiable, pas générée. Règles
+  appliquées : art. 640 à 642 CPC (jour de départ exclu, mois de quantième à
+  quantième, jours francs, prorogation au premier jour ouvrable si samedi,
+  dimanche ou férié).
+- **Détection automatique du point de départ par IA : NON faite** (V2 à
+  décider). Elle exigerait une clé API (aucun repli en mode démo) et ferait
+  peser un risque d'erreur sur une donnée critique.
+- **Non pris en compte** (signalé à l'écran et dans l'export Word) : délais
+  de distance (art. 643 CPC), suspension, interruption, point de départ
+  réel (signification / notification / prononcé).
+- **À faire valider par un juriste** : durées et références du catalogue
+  (`backend/app/delais.py`) ; elles n'ont pas été vérifiées sur Légifrance.
+- Persistance : `documents_generes` (feature="delais"), donc rattaché au
+  dossier, rechargé au montage, visible dans « Documents générés » et dans
+  la recherche transversale. Export Word via `exporter_texte_libre_word`.
+
+Fichiers : `backend/app/delais.py` (nouveau), `backend/app/schemas/greffier.py`,
+`backend/app/routers/greffier.py` (`GET /api/greffier/delais/catalogue`,
+`POST /api/greffier/delais`, `POST /api/greffier/delais/export`),
+`backend/tests/test_delais.py` (nouveau, 15 tests),
+`frontend/src/pages/greffier/DelaisPage.tsx` (nouveau),
+`frontend/src/api/{greffier,types}.ts`, `frontend/src/router.tsx`,
+`frontend/src/config/navigation.ts`,
+`frontend/src/pages/chemise/HistoriqueDossierPage.tsx`, `fr.json` / `en.json`.
+
+Vérifié : `tsc --noEmit` propre ; `pytest` backend 256/256 ; scénario réel
+dans Chromium (Playwright, instances isolées) : calcul avec prorogation,
+statut « dépassée », persistance après navigation, présence dans « Documents
+générés » et dans la recherche transversale, export Word, suppression avec
+confirmation, aucune erreur JS.
+
 ## Statut
 
-Idée proposée, non implémentée. À valider avec l'utilisateur avant tout
-développement.
+**Implémentée (version calcul déterministe) et testée — 2026-09-18.**
+Alerte « délai sous 7 jours » sur la liste des dossiers : non faite (V2).

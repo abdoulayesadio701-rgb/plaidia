@@ -254,6 +254,7 @@
       "chronologie": "Timeline",
       "verification_procedurale": "Procedural check",
       "note_client": "Client note",
+      "delais": "Procedural deadlines",
       "conclusions": "Submission analyses",
       "notes": "Notes"
     }
@@ -414,6 +415,29 @@
     "chatPlaceholder": "E.g. \"Add this event: …\", \"why is this element missing?\"…",
     "pretTitre": "Ready to build the timeline",
     "pretDescription": "Click « Build the timeline » to order the case's dated events."
+  },
+  "delais": {
+    "emptyTitre": "No case selected",
+    "emptyDescription": "Select or create a case to track its procedural deadlines.",
+    "sousTitre": "Choose the deadline type and the date of its starting point: the expiry date is computed automatically (French Code of Civil Procedure rules, arts. 640 to 642; extended if it falls on a weekend or public holiday).",
+    "typeLabel": "Deadline type",
+    "typePlaceholder": "Choose a deadline type…",
+    "pointDeDepart": "Starting point",
+    "dateDepartLabel": "Starting point date",
+    "precisionLabel": "Note (optional)",
+    "precisionPlaceholder": "E.g. Judgment of 2 March",
+    "ajouter": "Add this deadline",
+    "calculer": "Compute expiry dates",
+    "recalculer": "Recompute expiry dates",
+    "echeance": "Expiry",
+    "prorogee": "Extended from {{date}} (art. 642 CPC)",
+    "joursRestants_one": "{{count}} day left",
+    "joursRestants_other": "{{count}} days left",
+    "depasse_one": "Overdue by {{count}} day",
+    "depasse_other": "Overdue by {{count}} days",
+    "avertissement": "Indicative computation, to be checked: distance extensions, suspension, interruption and the actual starting point (service, notification or pronouncement) are not taken into account.",
+    "pretTitre": "Ready to compute expiry dates",
+    "pretDescription": "Add one or more deadlines, then click « Compute expiry dates »."
   },
   "verifProcedurale": {
     "emptyTitre": "No case selected",
@@ -697,6 +721,7 @@
     "greffier": {
       "chronologie": "Automatic timeline of this case",
       "verification-procedurale": "Procedural check",
+      "delais": "Procedural deadline tracking",
       "extraction": "Extract key elements from a document",
       "classement": "Automatic document classification",
       "coherence": "Consistency check between documents",

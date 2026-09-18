@@ -4,9 +4,12 @@
 
 import { apiRequest, apiRequestBlob } from "./http";
 import type {
+  CatalogueDelai,
   ChronologieResultat,
   ClassementResultat,
   CoherenceResultat,
+  DelaiDemande,
+  DelaisResultat,
   DocumentACoherence,
   ExtractionResultat,
   PvAudienceResultat,
@@ -24,6 +27,21 @@ export function exporterChronologie(dossierId: number, resultat: ChronologieResu
   return apiRequestBlob("/api/greffier/chronologie/export", {
     method: "POST",
     body: { dossier_id: dossierId, evenements: resultat.evenements, periode_couverte: resultat.periode_couverte },
+  });
+}
+
+export function catalogueDelais(): Promise<CatalogueDelai[]> {
+  return apiRequest<CatalogueDelai[]>("/api/greffier/delais/catalogue");
+}
+
+export function calculerDelais(dossierId: number, delais: DelaiDemande[]): Promise<DelaisResultat> {
+  return apiRequest<DelaisResultat>("/api/greffier/delais", { method: "POST", body: { dossier_id: dossierId, delais } });
+}
+
+export function exporterDelais(dossierId: number, resultat: DelaisResultat): Promise<{ blob: Blob; filename?: string }> {
+  return apiRequestBlob("/api/greffier/delais/export", {
+    method: "POST",
+    body: { dossier_id: dossierId, delais: resultat.delais, avertissement: resultat.avertissement },
   });
 }
 

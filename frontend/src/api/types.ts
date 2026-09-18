@@ -306,6 +306,40 @@ export interface ChronologieResultat {
   statut?: StatutDocument;
 }
 
+export interface CatalogueDelai {
+  code: string;
+  libelle: string;
+  duree: string;
+  reference: string;
+  point_de_depart: string;
+}
+
+export interface DelaiDemande {
+  type: string;
+  date_depart: string;
+  libelle?: string;
+}
+
+export interface DelaiCalcule {
+  type: string;
+  libelle: string;
+  reference: string;
+  duree: string;
+  point_de_depart: string;
+  date_depart: string;
+  echeance_brute: string;
+  date_echeance: string;
+  proroge: boolean;
+  precision: string;
+}
+
+export interface DelaisResultat {
+  delais: DelaiCalcule[];
+  avertissement: string;
+  document_id?: number | null;
+  statut?: StatutDocument;
+}
+
 export interface ExtractionResultat {
   dates: string[];
   personnes_et_parties: string[];

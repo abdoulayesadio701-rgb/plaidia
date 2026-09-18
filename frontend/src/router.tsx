@@ -37,6 +37,7 @@ import ConsulterNotesPage from "@/pages/carnet/ConsulterNotesPage";
 import NoteClientPage from "@/pages/carnet/NoteClientPage";
 import TraduirePage from "@/pages/carnet/TraduirePage";
 import ChronologiePage from "@/pages/greffier/ChronologiePage";
+import DelaisPage from "@/pages/greffier/DelaisPage";
 import ExtractionPage from "@/pages/greffier/ExtractionPage";
 import ClassementPage from "@/pages/greffier/ClassementPage";
 import CoherencePage from "@/pages/greffier/CoherencePage";
@@ -71,6 +72,7 @@ const PAGES_IMPLEMENTEES: Record<string, ReactElement> = {
   "/carnet/note-client": <NoteClientPage />,
   "/carnet/traduire": <TraduirePage />,
   "/greffier/chronologie": <ChronologiePage />,
+  "/greffier/delais": <DelaisPage />,
   "/greffier/extraction": <ExtractionPage />,
   "/greffier/classement": <ClassementPage />,
   "/greffier/coherence": <CoherencePage />,

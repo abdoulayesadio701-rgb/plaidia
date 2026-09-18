@@ -1,5 +1,6 @@
 """Schémas Pydantic pour le router /api/greffier."""
 
+from datetime import date
 from typing import Optional
 
 from pydantic import BaseModel, Field
@@ -128,6 +129,51 @@ class ExportVerificationProceduraleIn(BaseModel):
     echeances_identifiees: list[EcheanceOut] = []
     actes_potentiellement_manquants: list[str] = []
     points_attention: list[str] = []
+
+
+class DelaiDemande(BaseModel):
+    type: str = Field(..., min_length=1, max_length=60, description="Code du catalogue (voir GET /delais/catalogue)")
+    date_depart: date
+    libelle: str = Field("", max_length=200, description="Précision libre (ex. nom de la décision)")
+
+
+class DelaisIn(BaseModel):
+    dossier_id: int
+    delais: list[DelaiDemande] = Field(..., min_length=1, max_length=20)
+
+
+class DelaiCalcule(BaseModel):
+    type: str
+    libelle: str
+    reference: str
+    duree: str
+    point_de_depart: str
+    date_depart: str
+    echeance_brute: str
+    date_echeance: str
+    proroge: bool
+    precision: str = ""
+
+
+class DelaisOut(BaseModel):
+    delais: list[DelaiCalcule] = []
+    avertissement: str = ""
+    document_id: Optional[int] = None
+    statut: str = "Brouillon"
+
+
+class ExportDelaisIn(BaseModel):
+    dossier_id: int
+    delais: list[DelaiCalcule] = []
+    avertissement: str = ""
+
+
+class CatalogueDelaiOut(BaseModel):
+    code: str
+    libelle: str
+    duree: str
+    reference: str
+    point_de_depart: str
 
 
 class RequisitoireIn(BaseModel):

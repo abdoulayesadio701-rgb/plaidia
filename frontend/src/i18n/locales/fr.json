@@ -254,6 +254,7 @@
       "chronologie": "Chronologie",
       "verification_procedurale": "Vérification procédurale",
       "note_client": "Note client",
+      "delais": "Délais de procédure",
       "conclusions": "Analyses de conclusions",
       "notes": "Notes"
     }
@@ -414,6 +415,29 @@
     "chatPlaceholder": "Ex. « Ajoute cet événement : … », « pourquoi cet élément est-il manquant ? »…",
     "pretTitre": "Prêt à construire la chronologie",
     "pretDescription": "Cliquez sur « Construire la chronologie » pour ordonner les événements datés du dossier."
+  },
+  "delais": {
+    "emptyTitre": "Aucun dossier sélectionné",
+    "emptyDescription": "Sélectionnez ou créez un dossier pour suivre ses délais de procédure.",
+    "sousTitre": "Choisissez le type de délai et la date de son point de départ : l'échéance est calculée automatiquement (règles des art. 640 à 642 CPC, prorogation si l'échéance tombe un week-end ou un jour férié).",
+    "typeLabel": "Type de délai",
+    "typePlaceholder": "Choisir un type de délai…",
+    "pointDeDepart": "Point de départ",
+    "dateDepartLabel": "Date du point de départ",
+    "precisionLabel": "Précision (optionnel)",
+    "precisionPlaceholder": "Ex. Jugement du 2 mars",
+    "ajouter": "Ajouter ce délai",
+    "calculer": "Calculer les échéances",
+    "recalculer": "Recalculer les échéances",
+    "echeance": "Échéance",
+    "prorogee": "Prorogée depuis le {{date}} (art. 642 CPC)",
+    "joursRestants_one": "{{count}} jour restant",
+    "joursRestants_other": "{{count}} jours restants",
+    "depasse_one": "Dépassée de {{count}} jour",
+    "depasse_other": "Dépassée de {{count}} jours",
+    "avertissement": "Calcul indicatif à vérifier : délais de distance, suspension, interruption et point de départ réel (signification, notification ou prononcé) ne sont pas pris en compte.",
+    "pretTitre": "Prêt à calculer les échéances",
+    "pretDescription": "Ajoutez un ou plusieurs délais, puis cliquez sur « Calculer les échéances »."
   },
   "verifProcedurale": {
     "emptyTitre": "Aucun dossier sélectionné",
@@ -697,6 +721,7 @@
     "greffier": {
       "chronologie": "Chronologie automatique de cette affaire",
       "verification-procedurale": "Vérification procédurale",
+      "delais": "Suivi des délais de procédure",
       "extraction": "Extraction d'éléments clés d'un document",
       "classement": "Classement automatique d'un document",
       "coherence": "Contrôle de cohérence entre documents",

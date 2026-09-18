@@ -99,6 +99,7 @@ export const NAVIGATION: Record<Espace, NavSection[]> = {
       items: [
         { path: "/greffier/chronologie", label: "Chronologie automatique de cette affaire", requiresDossier: true },
         { path: "/greffier/verification-procedurale", label: "Vérification procédurale", requiresDossier: true },
+        { path: "/greffier/delais", label: "Suivi des délais de procédure", requiresDossier: true },
       ],
     },
     {

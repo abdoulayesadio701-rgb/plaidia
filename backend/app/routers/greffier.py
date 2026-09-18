@@ -14,18 +14,22 @@ import os
 import analyse as legacy_analyse
 import db
 import export as legacy_export
-from app import demo, demo_data, quality_pipeline
+from app import delais, demo, demo_data, quality_pipeline
 from app.deps import construire_contexte_dossier, get_dossier_or_404
 from app.security_guard import executer_garde_fou
 from app.schemas.greffier import (
+    CatalogueDelaiOut,
     ChronologieIn,
     ChronologieOut,
     ClassementIn,
     ClassementOut,
     CoherenceIn,
     CoherenceOut,
+    DelaisIn,
+    DelaisOut,
     ExportChronologieIn,
     ExportCoherenceIn,
+    ExportDelaisIn,
     ExportExtractionIn,
     ExportVerificationProceduraleIn,
     ExtractionIn,
@@ -40,7 +44,7 @@ from app.schemas.greffier import (
     VerificationProceduraleIn,
     VerificationProceduraleOut,
 )
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 from fastapi.responses import FileResponse
 
 router = APIRouter(prefix="/api/greffier", tags=["greffier"])
@@ -269,6 +273,76 @@ def exporter_verification_procedurale(payload: ExportVerificationProceduraleIn):
         f"{dossier['nom']} — Vérification procédurale",
         texte,
         note_bas_page="Analyse automatisée à vérifier manuellement -- ne remplace pas le contrôle d'un professionnel du droit.",
+    )
+    return FileResponse(
+        chemin,
+        filename=os.path.basename(chemin),
+        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    )
+
+
+@router.get("/delais/catalogue", response_model=list[CatalogueDelaiOut])
+def catalogue_delais():
+    return [
+        CatalogueDelaiOut(
+            code=r.code, libelle=r.libelle, duree=delais.duree_texte(r), reference=r.reference,
+            point_de_depart=r.point_de_depart,
+        )
+        for r in delais.CATALOGUE.values()
+    ]
+
+
+@router.post("/delais", response_model=DelaisOut)
+def calculer_delais(payload: DelaisIn):
+    """Calcul déterministe (voir app/delais.py, aucun appel modèle : fonctionne
+    identiquement en mode démo) puis persistance dans documents_generes
+    (feature="delais"), même mécanisme que /chronologie -- pour que les
+    échéances survivent à une navigation ou un refresh."""
+    dossier = get_dossier_or_404(payload.dossier_id)
+    calcules = []
+    for demande in payload.delais:
+        regle = delais.CATALOGUE.get(demande.type)
+        if regle is None:
+            raise HTTPException(status_code=422, detail=f"Type de délai inconnu : {demande.type}")
+        brute, effective = delais.calculer_echeance(regle, demande.date_depart)
+        calcules.append({
+            "type": regle.code,
+            "libelle": regle.libelle,
+            "reference": regle.reference,
+            "duree": delais.duree_texte(regle),
+            "point_de_depart": regle.point_de_depart,
+            "date_depart": demande.date_depart.isoformat(),
+            "echeance_brute": brute.isoformat(),
+            "date_echeance": effective.isoformat(),
+            "proroge": effective != brute,
+            "precision": demande.libelle,
+        })
+    resultat = {"delais": calcules, "avertissement": delais.AVERTISSEMENT}
+    document = db.creer_document_genere(
+        payload.dossier_id, "delais", f"Délais de procédure — {dossier['nom']}", {}, resultat,
+    )
+    return DelaisOut(**resultat, document_id=document["id"], statut=document["statut"])
+
+
+@router.post("/delais/export")
+def exporter_delais(payload: ExportDelaisIn):
+    dossier = get_dossier_or_404(payload.dossier_id)
+    lignes = []
+    for d in sorted(payload.delais, key=lambda d: d.date_echeance):
+        intitule = f"{d.libelle} ({d.precision})" if d.precision else d.libelle
+        lignes.append(intitule)
+        lignes.append(f"  Base légale : {d.reference} — délai de {d.duree}")
+        lignes.append(f"  Point de départ : {d.point_de_depart} du {d.date_depart}")
+        ligne_echeance = f"  Échéance : {d.date_echeance}"
+        if d.proroge:
+            ligne_echeance += f" (prorogée depuis le {d.echeance_brute}, art. 642 CPC)"
+        lignes.append(ligne_echeance)
+        lignes.append("")
+
+    chemin = legacy_export.exporter_texte_libre_word(
+        f"{dossier['nom']} — Délais de procédure",
+        "\n".join(lignes),
+        note_bas_page=payload.avertissement or delais.AVERTISSEMENT,
     )
     return FileResponse(
         chemin,
