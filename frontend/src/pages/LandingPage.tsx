@@ -278,10 +278,10 @@ export default function LandingPage() {
         <div className="banner-edgefade" aria-hidden="true" />
         <div className="relative z-10 mx-auto w-full max-w-6xl px-6 sm:px-10">
           <p className="kicker">{t("landing.ceQueLoutilNeFeraJamais")}</p>
-          <h2 className="mt-3 max-w-xl font-display text-3xl font-bold leading-tight text-ivory sm:text-4xl">
+          <h2 className="mt-3 max-w-xl font-display text-3xl font-bold leading-tight text-white sm:text-4xl">
             {t("landing.peserChaqueArgument")}
             <br />
-            <span className="text-gold-500">{t("landing.jamaisTrancher")}</span>
+            <span className="text-white">{t("landing.jamaisTrancher")}</span>
           </h2>
         </div>
       </section>
