@@ -139,4 +139,11 @@ Validée par l'utilisateur, implémentée telle que documentée ci-dessus.
 
 ## Statut
 
-**Implémenté et vérifié.**
+**✅ Implémentée et testée — 2026-09-18.**
+
+Résumé : la recherche plein texte transversale (documents_generes, analyses,
+notes) est en production sur `main` (commit `0327f9b`), accessible depuis la
+fiche dossier pour les deux espaces Avocat et Greffier, sans restriction de
+rôle. `tsc --noEmit` propre et suite `pytest` backend à 240/241 (seul échec :
+un test de timing préexistant sans rapport avec ce changement) ; comportement
+confirmé par un test manuel de bout en bout.
