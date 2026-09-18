@@ -30,7 +30,7 @@ export default function ChronologiePage() {
     setExportEnCours(true);
     try {
       const { blob, filename } = await greffierApi.exporterChronologie(dossierActif.id, data);
-      downloadBlob(blob, filename ?? `${dossierActif.nom}_chronologie.csv`);
+      downloadBlob(blob, filename ?? `${dossierActif.nom}_chronologie.docx`);
     } catch (e) {
       pousserToast("error", e instanceof Error ? e.message : t("arsenal.echecExport"));
     } finally {
@@ -53,7 +53,7 @@ export default function ChronologiePage() {
         <div className="flex flex-wrap gap-2">
           {data && (
             <Button variant="secondary" loading={exportEnCours} onClick={() => void exporter()}>
-              ⬇ {t("chronologie.exporterCsv")}
+              ⬇ {t("arsenal.exporterWord")}
             </Button>
           )}
           <Button variant="primary" loading={loading} onClick={() => void executer()}>

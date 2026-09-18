@@ -62,17 +62,19 @@ def chronologie(payload: ChronologieIn):
 
 @router.post("/chronologie/export")
 def exporter_chronologie(payload: ExportChronologieIn):
-    """Export CSV (export.py::exporter_csv) -- une chronologie est un
-    tableau (date, événement), un tableur est plus utile qu'un document
-    Word pour la retrier/filtrer ensuite (voir AUDIT_IMPORT_EXPORT.md §6)."""
+    """Export Word générique (export.py::exporter_texte_libre_word) --
+    seuls les formats Word/PDF sont acceptés en export dans l'application
+    (voir AUDIT_IMPORT_EXPORT.md), le CSV a été retiré."""
     dossier = get_dossier_or_404(payload.dossier_id)
-    lignes = [[e.date, e.evenement] for e in payload.evenements]
-    chemin = legacy_export.exporter_csv(
-        f"{dossier['nom']} — {legacy_export._l('chronologie_titre')}",
-        [legacy_export._l("date"), legacy_export._l("evenement")],
-        lignes,
+    lignes = [f"{e.date} — {e.evenement}" for e in payload.evenements]
+    chemin = legacy_export.exporter_texte_libre_word(
+        f"{dossier['nom']} — Chronologie", "\n".join(lignes)
     )
-    return FileResponse(chemin, filename=os.path.basename(chemin), media_type="text/csv")
+    return FileResponse(
+        chemin,
+        filename=os.path.basename(chemin),
+        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    )
 
 
 @router.post("/extraction", response_model=ExtractionOut)

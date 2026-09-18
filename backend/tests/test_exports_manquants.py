@@ -1,9 +1,11 @@
 """
 test_exports_manquants.py — Tests des 3 exports ajoutés lors de l'audit
 import/export (AUDIT_IMPORT_EXPORT.md §B) : simulateur d'objections,
-chronologie (CSV), vérification procédurale -- les seules fonctionnalités
-de l'Arsenal/Greffier qui produisaient un résultat structuré sans jamais
-pouvoir l'exporter.
+chronologie, vérification procédurale -- les seules fonctionnalités de
+l'Arsenal/Greffier qui produisaient un résultat structuré sans jamais
+pouvoir l'exporter. La chronologie était initialement exportée en CSV,
+repassée en Word pour ne garder que Word/PDF comme formats d'export dans
+toute l'application.
 
 Fonctionne en mode démo (voir conftest.py) : ces endpoints ne font aucun
 appel Claude, seulement de la mise en forme + export.py.
@@ -33,15 +35,14 @@ def test_export_simulateur_dossier_inconnu_404(client: TestClient):
     assert r.status_code == 404
 
 
-def test_export_chronologie_csv(client: TestClient, dossier_demo_id: int):
+def test_export_chronologie_word(client: TestClient, dossier_demo_id: int):
     r = client.post(
         "/api/greffier/chronologie/export",
         json={"dossier_id": dossier_demo_id, "evenements": [{"date": "12/03/2024", "evenement": "Assignation délivrée"}]},
     )
     assert r.status_code == 200
-    assert r.headers["content-type"].startswith("text/csv")
-    corps = r.content.decode("utf-8-sig")
-    assert "Date" in corps and "Assignation délivrée" in corps
+    assert r.headers["content-type"] == "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    assert len(r.content) > 0
 
 
 def test_export_verification_procedurale_word(client: TestClient, dossier_demo_id: int):

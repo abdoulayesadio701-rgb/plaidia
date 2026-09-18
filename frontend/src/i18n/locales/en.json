@@ -393,7 +393,6 @@
   "chronologie": {
     "emptyTitre": "No case selected",
     "emptyDescription": "Select or create a case to build its timeline.",
-    "exporterCsv": "Export to CSV",
     "construire": "Build the timeline",
     "periodeCouverte": "Period covered",
     "aucunEvenementTitre": "No dated event identified",

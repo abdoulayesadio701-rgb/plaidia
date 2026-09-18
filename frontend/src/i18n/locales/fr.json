@@ -393,7 +393,6 @@
   "chronologie": {
     "emptyTitre": "Aucun dossier sélectionné",
     "emptyDescription": "Sélectionnez ou créez un dossier pour construire sa chronologie.",
-    "exporterCsv": "Exporter en CSV",
     "construire": "Construire la chronologie",
     "periodeCouverte": "Période couverte",
     "aucunEvenementTitre": "Aucun événement daté identifié",
