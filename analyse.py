@@ -433,6 +433,95 @@ def _echapper_guillemets_internes(raw: str) -> str:
     return "".join(resultat)
 
 
+def _echapper_caracteres_controle_internes(raw: str) -> str:
+    """Échappe les caractères de contrôle bruts (retour à la ligne,
+    tabulation, retour chariot...) laissés tels quels par le modèle À
+    L'INTÉRIEUR d'une chaîne JSON, au lieu de la séquence échappée
+    attendue (\\n, \\t...) -- cas réel observé sur un résumé de dossier
+    multi-paragraphes : le modèle produit un vrai saut de ligne dans le
+    texte plutôt que \\n, ce qui est invalide au sens strict de JSON
+    (RFC 8259 §7) et casse json.loads avec un message trompeur
+    ("Unterminated string...") qui laisse penser à une troncature alors
+    que rien ne manque réellement -- un seul octet de contrôle brut suffit
+    à déclencher cette erreur, bien avant la fin réelle de la chaîne.
+    Distinct de ReponseTronqueeError (limite de tokens atteinte, voir
+    _appeler_modele ci-dessous) : ce défaut-ci touche N'IMPORTE QUEL appel
+    modèle qui produit du texte libre multi-lignes dans une valeur JSON,
+    pas seulement ceux qui passent par ce routeur.
+
+    Même technique de suivi que _echapper_guillemets_internes : ne touche
+    que l'intérieur d'une chaîne, laisse intactes les séquences déjà
+    échappées."""
+    resultat = []
+    en_chaine = False
+    echappement = False
+    for c in raw:
+        if not en_chaine:
+            resultat.append(c)
+            if c == '"':
+                en_chaine = True
+            continue
+        if echappement:
+            resultat.append(c)
+            echappement = False
+            continue
+        if c == "\\":
+            resultat.append(c)
+            echappement = True
+            continue
+        if c == '"':
+            resultat.append(c)
+            en_chaine = False
+            continue
+        if c == "\n":
+            resultat.append("\\n")
+        elif c == "\r":
+            resultat.append("\\r")
+        elif c == "\t":
+            resultat.append("\\t")
+        elif ord(c) < 0x20:
+            resultat.append(f"\\u{ord(c):04x}")
+        else:
+            resultat.append(c)
+    return "".join(resultat)
+
+
+def _parser_json_modele(raw: str) -> dict:
+    """Point d'entrée UNIQUE pour parser la réponse JSON d'un appel modèle
+    dans ce module -- ne JAMAIS appeler json.loads(raw) directement ailleurs,
+    c'est exactement ce qui a laissé le bug des caractères de contrôle
+    internes (voir _echapper_caracteres_controle_internes) passer inaperçu
+    sur la plupart des fonctionnalités de l'app pendant longtemps, chacune
+    dupliquant le même `try: json.loads(raw) except JSONDecodeError: raise`
+    sans réparation.
+
+    Réparation en cascade, du défaut le plus fréquent au plus rare : brut
+    -> caractères de contrôle échappés -> guillemets internes échappés ->
+    les deux combinés -> chacune de ces quatre variantes encore réparée
+    comme si elle était tronquée (_reparer_json_tronque, pour le cas où le
+    modèle a EN PLUS été coupé par le budget de tokens). Lève une
+    ValueError au même format que l'ancien appel direct si tout échoue,
+    pour ne rien changer au contrat des appelants existants."""
+    raw = raw.replace("```json", "").replace("```", "").strip()
+    variantes = (
+        raw,
+        _echapper_caracteres_controle_internes(raw),
+        _echapper_guillemets_internes(raw),
+        _echapper_guillemets_internes(_echapper_caracteres_controle_internes(raw)),
+    )
+    derniere_erreur: json.JSONDecodeError | None = None
+    for variante in variantes:
+        try:
+            return json.loads(variante)
+        except json.JSONDecodeError as e:
+            derniere_erreur = e
+    for variante in variantes:
+        repare = _reparer_json_tronque(variante)
+        if repare is not None:
+            return repare
+    raise ValueError(f"Réponse du modèle non-JSON : {derniere_erreur}\n\nRéponse brute :\n{raw}")
+
+
 def _appeler_modele(type_tache: TypeTache, system: str, messages: list[dict], max_tokens: int) -> str:
     """Point d'entrée unique pour les fonctions qui veulent router leur
     appel selon la tâche plutôt que d'appeler _client() directement --
@@ -700,10 +789,7 @@ def simuler_objections(contexte_dossier: str, contexte_recherche: str | None = N
     raw = response.content[0].text.strip()
     raw = raw.replace("```json", "").replace("```", "").strip()
 
-    try:
-        parsed = json.loads(raw)
-    except json.JSONDecodeError as e:
-        raise ValueError(f"Réponse du modèle non-JSON : {e}\n\nRéponse brute :\n{raw}")
+    parsed = _parser_json_modele(raw)
 
     parsed.setdefault("objections", [])
     return parsed
@@ -771,10 +857,7 @@ def construire_chronologie(contexte_affaire: str) -> dict:
         1800,
     )
     raw = raw.replace("```json", "").replace("```", "").strip()
-    try:
-        parsed = json.loads(raw)
-    except json.JSONDecodeError as e:
-        raise ValueError(f"Réponse du modèle non-JSON : {e}\n\nRéponse brute :\n{raw}")
+    parsed = _parser_json_modele(raw)
     parsed.setdefault("evenements", [])
     parsed.setdefault("elements_manquants", [])
     return parsed
@@ -812,10 +895,7 @@ def extraire_elements_cles(texte_document: str) -> dict:
         1500,
     )
     raw = raw.replace("```json", "").replace("```", "").strip()
-    try:
-        parsed = json.loads(raw)
-    except json.JSONDecodeError as e:
-        raise ValueError(f"Réponse du modèle non-JSON : {e}\n\nRéponse brute :\n{raw}")
+    parsed = _parser_json_modele(raw)
     for cle in ("dates", "personnes_et_parties", "references", "demandes", "decisions"):
         parsed.setdefault(cle, [])
     return parsed
@@ -849,10 +929,7 @@ def classifier_document(texte_document: str) -> dict:
         messages=[{"role": "user", "content": f"Document :\n{texte_document[:4000]}"}],
     )
     raw = response.content[0].text.strip().replace("```json", "").replace("```", "").strip()
-    try:
-        parsed = json.loads(raw)
-    except json.JSONDecodeError as e:
-        raise ValueError(f"Réponse du modèle non-JSON : {e}\n\nRéponse brute :\n{raw}")
+    parsed = _parser_json_modele(raw)
     parsed.setdefault("nature", "autre")
     parsed.setdefault("justification", "")
     parsed.setdefault("confiance", "Faible")
@@ -936,10 +1013,7 @@ def analyser_requisitoire(texte_requisitoire: str) -> dict:
         1800,
     )
     raw = raw.replace("```json", "").replace("```", "").strip()
-    try:
-        parsed = json.loads(raw)
-    except json.JSONDecodeError as e:
-        raise ValueError(f"Réponse du modèle non-JSON : {e}\n\nRéponse brute :\n{raw}")
+    parsed = _parser_json_modele(raw)
     parsed.setdefault("qualification_retenue", "")
     for cle in ("faits_et_elements_invoques", "circonstances_aggravantes", "circonstances_attenuantes", "points_attention"):
         parsed.setdefault(cle, [])
@@ -980,10 +1054,7 @@ def analyser_rapport_instruction(texte_rapport: str) -> dict:
         1800,
     )
     raw = raw.replace("```json", "").replace("```", "").strip()
-    try:
-        parsed = json.loads(raw)
-    except json.JSONDecodeError as e:
-        raise ValueError(f"Réponse du modèle non-JSON : {e}\n\nRéponse brute :\n{raw}")
+    parsed = _parser_json_modele(raw)
     for cle in ("actes_instruction", "elements_a_charge", "elements_a_decharge", "mesures_ordonnees", "points_attention"):
         parsed.setdefault(cle, [])
     parsed.setdefault("sens_propose", "non précisé")
@@ -1004,45 +1075,30 @@ def rediger_note_client(contexte_dossier: str) -> str:
 
 
 def _resultat_depuis_appel(appel) -> dict:
-    """Nettoie/parse la réponse d'un appel modèle, avec réparation si elle
-    est signalée ou détectée comme tronquée, ou si des guillemets internes
-    non échappés cassent le JSON -- factorisé pour être appliqué
-    identiquement à l'appel principal (DeepSeek) et au repli (Claude) dans
-    resumer_dossier(). `appel` est un callable sans argument qui renvoie le
-    texte brut ou lève ReponseTronqueeError.
-
-    Deux défauts distincts peuvent rendre la réponse non-JSON, avec chacun
-    leur réparation (voir _reparer_json_tronque et
-    _echapper_guillemets_internes) -- et parfois les deux à la fois (un
-    guillemet interne plus tôt dans la réponse, puis une troncature par
-    budget plus loin), d'où l'essai des deux réparations combinées en tout
-    dernier recours avant d'abandonner."""
+    """Nettoie/parse la réponse d'un appel modèle via _parser_json_modele
+    (réparation des caractères de contrôle internes, des guillemets
+    internes, et des troncatures -- voir sa docstring), plus un cas
+    supplémentaire propre à ce point d'entrée : une troncature SIGNALÉE
+    explicitement par le fournisseur (ReponseTronqueeError, voir
+    _appeler_modele) plutôt que simplement détectée après coup dans un
+    JSON invalide. Factorisé pour être appliqué identiquement à l'appel
+    principal (DeepSeek) et au repli (Claude) dans resumer_dossier().
+    `appel` est un callable sans argument qui renvoie le texte brut ou
+    lève ReponseTronqueeError."""
     try:
         raw = appel()
     except ReponseTronqueeError as e:
-        repare = _reparer_json_tronque(e.raw)
-        if repare is not None:
-            return repare
-        repare = _reparer_json_tronque(_echapper_guillemets_internes(e.raw))
-        if repare is not None:
-            return repare
+        for variante in (
+            e.raw,
+            _echapper_caracteres_controle_internes(e.raw),
+            _echapper_guillemets_internes(e.raw),
+            _echapper_guillemets_internes(_echapper_caracteres_controle_internes(e.raw)),
+        ):
+            repare = _reparer_json_tronque(variante)
+            if repare is not None:
+                return repare
         raise
-    raw = raw.replace("```json", "").replace("```", "").strip()
-    try:
-        return json.loads(raw)
-    except json.JSONDecodeError:
-        repare = _reparer_json_tronque(raw)
-        if repare is not None:
-            return repare
-        raw_echappe = _echapper_guillemets_internes(raw)
-        try:
-            return json.loads(raw_echappe)
-        except json.JSONDecodeError:
-            pass
-        repare = _reparer_json_tronque(raw_echappe)
-        if repare is not None:
-            return repare
-        raise
+    return _parser_json_modele(raw)
 
 
 def resumer_dossier(contexte_dossier: str) -> dict:
@@ -1105,10 +1161,7 @@ def generer_plan_plaidoirie(contexte_dossier: str, temps_minutes: int, contexte_
     raw = response.content[0].text.strip()
     raw = raw.replace("```json", "").replace("```", "").strip()
 
-    try:
-        parsed = json.loads(raw)
-    except json.JSONDecodeError as e:
-        raise ValueError(f"Réponse du modèle non-JSON : {e}\n\nRéponse brute :\n{raw}")
+    parsed = _parser_json_modele(raw)
 
     parsed.setdefault("plan", [])
     parsed.setdefault("points_attention", [])
@@ -1148,12 +1201,7 @@ def analyser_conclusions(texte: str, contexte_recherche: str | None = None, juri
     raw = response.content[0].text.strip()
     raw = raw.replace("```json", "").replace("```", "").strip()
 
-    try:
-        parsed = json.loads(raw)
-    except json.JSONDecodeError as e:
-        raise ValueError(
-            f"Réponse du modèle non-JSON, impossible à parser : {e}\n\nRéponse brute :\n{raw}"
-        )
+    parsed = _parser_json_modele(raw)
 
     parsed.setdefault("arguments", [])
     parsed.setdefault("points_attention", [])
@@ -1270,8 +1318,8 @@ def _verifier_coherence_globale_moyens(arguments: list[dict]) -> str:
             system=COHERENCE_MOYENS_SYSTEM_PROMPT + _directive_langue(),
             messages=[{"role": "user", "content": resume}],
         )
-        raw = response.content[0].text.strip().replace("```json", "").replace("```", "").strip()
-        parsed = json.loads(raw)
+        raw = response.content[0].text.strip()
+        parsed = _parser_json_modele(raw)
         return (parsed.get("note_coherence") or "").strip()
     except Exception:
         return ""
@@ -1371,10 +1419,7 @@ def traduire_texte(texte: str) -> dict:
         messages=[{"role": "user", "content": f"Texte à traduire :\n{texte}"}],
     )
     raw = response.content[0].text.strip().replace("```json", "").replace("```", "").strip()
-    try:
-        parsed = json.loads(raw)
-    except json.JSONDecodeError as e:
-        raise ValueError(f"Réponse du modèle non-JSON : {e}\n\nRéponse brute :\n{raw}")
+    parsed = _parser_json_modele(raw)
     parsed.setdefault("langue_detectee", "")
     parsed.setdefault("langue_cible", "")
     parsed.setdefault("texte_traduit", "")
@@ -1442,10 +1487,7 @@ def traiter_message_edition(
         messages=messages,
     )
     raw = response.content[0].text.strip().replace("```json", "").replace("```", "").strip()
-    try:
-        parsed = json.loads(raw)
-    except json.JSONDecodeError as e:
-        raise ValueError(f"Réponse du modèle non-JSON : {e}\n\nRéponse brute :\n{raw}")
+    parsed = _parser_json_modele(raw)
 
     parsed.setdefault("intent", "clarification")
     parsed.setdefault("scope", "global")
@@ -1492,10 +1534,7 @@ def verifier_procedure(contexte_affaire: str) -> dict:
         messages=[{"role": "user", "content": f"Contenu de l'affaire :\n{contexte_affaire}"}],
     )
     raw = response.content[0].text.strip().replace("```json", "").replace("```", "").strip()
-    try:
-        parsed = json.loads(raw)
-    except json.JSONDecodeError as e:
-        raise ValueError(f"Réponse du modèle non-JSON : {e}\n\nRéponse brute :\n{raw}")
+    parsed = _parser_json_modele(raw)
     parsed.setdefault("echeances_identifiees", [])
     parsed.setdefault("actes_potentiellement_manquants", [])
     parsed.setdefault("points_attention", [])
@@ -1553,10 +1592,7 @@ def controler_coherence(elements_par_document: list) -> dict:
         messages=[{"role": "user", "content": f"Éléments extraits des documents :\n{contenu}"}],
     )
     raw = response.content[0].text.strip().replace("```json", "").replace("```", "").strip()
-    try:
-        parsed = json.loads(raw)
-    except json.JSONDecodeError as e:
-        raise ValueError(f"Réponse du modèle non-JSON : {e}\n\nRéponse brute :\n{raw}")
+    parsed = _parser_json_modele(raw)
     parsed.setdefault("contradictions", [])
     parsed.setdefault("elements_coherents", [])
     parsed.setdefault("limites_analyse", "")
@@ -1656,10 +1692,7 @@ def identifier_notions_juridiques(faits: str, but: str = "") -> dict:
         messages=[{"role": "user", "content": contenu}],
     )
     raw = response.content[0].text.strip().replace("```json", "").replace("```", "").strip()
-    try:
-        parsed = json.loads(raw)
-    except json.JSONDecodeError as e:
-        raise ValueError(f"Réponse du modèle non-JSON : {e}\n\nRéponse brute :\n{raw}")
+    parsed = _parser_json_modele(raw)
     parsed.setdefault("domaine", "")
     parsed.setdefault("qualification_juridique", "")
     parsed.setdefault("mots_cles_recherche", [])
@@ -1768,10 +1801,7 @@ def traiter_notes(notes_brutes: str) -> dict:
         1500,
     )
     raw = raw.replace("```json", "").replace("```", "").strip()
-    try:
-        parsed = json.loads(raw)
-    except json.JSONDecodeError as e:
-        raise ValueError(f"Réponse du modèle non-JSON : {e}\n\nRéponse brute :\n{raw}")
+    parsed = _parser_json_modele(raw)
     parsed.setdefault("note_structuree", notes_brutes)
     parsed.setdefault("actions_a_faire", [])
     parsed.setdefault("points_a_retenir", [])
@@ -1819,10 +1849,10 @@ def interpreter_intention(texte: str) -> dict:
         system=INTENTION_SYSTEM_PROMPT,
         messages=[{"role": "user", "content": texte}],
     )
-    raw = response.content[0].text.strip().replace("```json", "").replace("```", "").strip()
+    raw = response.content[0].text.strip()
     try:
-        parsed = json.loads(raw)
-    except json.JSONDecodeError:
+        parsed = _parser_json_modele(raw)
+    except ValueError:
         return {"action": "menu", "duree_minutes": None, "confiance": "basse", "reformulation": ""}
     parsed.setdefault("action", "menu")
     parsed.setdefault("duree_minutes", None)
@@ -1871,10 +1901,7 @@ def analyser_style_adverse(texte: str) -> dict:
         messages=[{"role": "user", "content": texte}],
     )
     raw = response.content[0].text.strip().replace("```json", "").replace("```", "").strip()
-    try:
-        parsed = json.loads(raw)
-    except json.JSONDecodeError as e:
-        raise ValueError(f"Réponse du modèle non-JSON : {e}\n\nRéponse brute :\n{raw}")
+    parsed = _parser_json_modele(raw)
     for cle in ("langage_de_couverture", "affirmations_absolues", "voix_passive_suspecte", "ruptures_registre"):
         parsed.setdefault(cle, [])
     parsed.setdefault("synthese_strategique", "")
@@ -1952,10 +1979,10 @@ def evaluer_garde_fou_entree(texte: str) -> dict:
         # caractères, voir demo.MAX_TEXTE_CARACTERES) pour ce filtre rapide.
         messages=[{"role": "user", "content": texte[:6000]}],
     )
-    raw = response.content[0].text.strip().replace("```json", "").replace("```", "").strip()
+    raw = response.content[0].text.strip()
     try:
-        parsed = json.loads(raw)
-    except json.JSONDecodeError:
+        parsed = _parser_json_modele(raw)
+    except ValueError:
         return {
             "allowed": True,
             "risk_level": "low",
@@ -2006,10 +2033,10 @@ def analyser_intention_juridique(message: str, historique: list[dict] | None = N
         system=INTENTION_JURIDIQUE_SYSTEM_PROMPT,
         messages=messages,
     )
-    raw = response.content[0].text.strip().replace("```json", "").replace("```", "").strip()
+    raw = response.content[0].text.strip()
     try:
-        parsed = json.loads(raw)
-    except json.JSONDecodeError:
+        parsed = _parser_json_modele(raw)
+    except ValueError:
         parsed = {}
     parsed.setdefault("objectif", "")
     parsed.setdefault("domaine_juridique", "")
@@ -2067,10 +2094,10 @@ def verifier_juridiquement(contenu_a_verifier: str, citations_evaluees: list[dic
         system=VERIFICATEUR_SYSTEM_PROMPT + _directive_langue(),
         messages=[{"role": "user", "content": contenu}],
     )
-    raw = response.content[0].text.strip().replace("```json", "").replace("```", "").strip()
+    raw = response.content[0].text.strip()
     try:
-        parsed = json.loads(raw)
-    except json.JSONDecodeError:
+        parsed = _parser_json_modele(raw)
+    except ValueError:
         parsed = {}
     parsed.setdefault("statut_global", "A_VERIFIER")
     parsed.setdefault("elements", [])
@@ -2121,10 +2148,10 @@ def critiquer_reponse(contenu_a_critiquer: str, contexte_dossier: str = "") -> d
         system=CRITIQUE_SYSTEM_PROMPT + _directive_langue(),
         messages=[{"role": "user", "content": contenu}],
     )
-    raw = response.content[0].text.strip().replace("```json", "").replace("```", "").strip()
+    raw = response.content[0].text.strip()
     try:
-        parsed = json.loads(raw)
-    except json.JSONDecodeError:
+        parsed = _parser_json_modele(raw)
+    except ValueError:
         parsed = {}
     parsed.setdefault("critiques", [])
     parsed.setdefault("synthese", "")
@@ -2167,10 +2194,10 @@ def valider_finalement(resultat_verification: dict, resultat_critique: dict) -> 
         system=VALIDATION_FINALE_SYSTEM_PROMPT + _directive_langue(),
         messages=[{"role": "user", "content": contenu}],
     )
-    raw = response.content[0].text.strip().replace("```json", "").replace("```", "").strip()
+    raw = response.content[0].text.strip()
     try:
-        parsed = json.loads(raw)
-    except json.JSONDecodeError:
+        parsed = _parser_json_modele(raw)
+    except ValueError:
         parsed = {}
     parsed.setdefault("statut_global", "INCERTAIN")
     parsed.setdefault("points_a_verifier", [])
@@ -2248,10 +2275,10 @@ def generer_strategie_combative(
         system=STRATEGIE_COMBATIVE_SYSTEM_PROMPT + _directive_langue(),
         messages=[{"role": "user", "content": message}],
     )
-    raw = response.content[0].text.strip().replace("```json", "").replace("```", "").strip()
+    raw = response.content[0].text.strip()
     try:
-        parsed = json.loads(raw)
-    except json.JSONDecodeError:
+        parsed = _parser_json_modele(raw)
+    except ValueError:
         parsed = {}
     parsed.setdefault("moyens", [])
     parsed.setdefault("reponses_arguments_adverses", [])

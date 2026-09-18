@@ -11,6 +11,8 @@ sur les deux endpoints concernés -- sans appel réseau réel, comme pour tout
 autre agent LLM de ce projet (voir test_security_guard.py, test_deepseek.py
 historique)."""
 
+import json
+
 import analyse as legacy_analyse
 import pytest
 from app.security_guard import DemandeRefusee
@@ -339,6 +341,73 @@ def test_resumer_dossier_se_repare_seul_sans_solliciter_claude(monkeypatch):
     assert resultat["resume_court"] == "x"
     assert resultat["points_cles"] == ["a"]
     assert appels_secours == []
+
+
+# --- Caractères de contrôle internes (_echapper_caracteres_controle_internes,
+# --- _parser_json_modele) -- cas réel observé en conditions réelles :
+# --- un résumé de dossier multi-paragraphes casse json.loads avec un
+# --- "Unterminated string" trompeur car le modèle a laissé un vrai saut de
+# --- ligne dans la valeur au lieu de l'échapper (\n) -------------------------
+
+def test_echapper_caracteres_controle_internes_echappe_un_saut_de_ligne_litteral():
+    brut = '{"resume_court": "Premiere ligne.\nDeuxieme ligne.", "points_cles": []}'
+    echappe = legacy_analyse._echapper_caracteres_controle_internes(brut)
+    assert json.loads(echappe) == {"resume_court": "Premiere ligne.\nDeuxieme ligne.", "points_cles": []}
+
+
+def test_echapper_caracteres_controle_internes_laisse_intactes_les_sequences_deja_echappees():
+    """Un \\n déjà correctement échappé (deux caractères littéraux
+    backslash + n, pas un vrai saut de ligne) ne doit pas être touché."""
+    brut = '{"resume_court": "Deja echappe.\\\\nSuite."}'
+    assert legacy_analyse._echapper_caracteres_controle_internes(brut) == brut
+    assert json.loads(brut) == {"resume_court": "Deja echappe.\\nSuite."}
+
+
+def test_parser_json_modele_repare_un_saut_de_ligne_litteral_dans_une_chaine():
+    """Bout en bout de la fonction consolidée : un JSON par ailleurs
+    valide, mais avec un vrai saut de ligne dans une valeur, doit être
+    parsé sans erreur plutôt que de lever "Unterminated string"."""
+    brut = '{"resume_court": "Premiere ligne.\nDeuxieme ligne.\nTroisieme ligne.", "points_cles": ["a"], "elements_manquants": []}'
+    parsed = legacy_analyse._parser_json_modele(brut)
+    assert parsed == {
+        "resume_court": "Premiere ligne.\nDeuxieme ligne.\nTroisieme ligne.",
+        "points_cles": ["a"],
+        "elements_manquants": [],
+    }
+
+
+def test_parser_json_modele_cumule_saut_de_ligne_et_guillemet_interne():
+    """Cas réel observé (voir capture d'écran utilisateur) : un résumé
+    multi-paragraphes ET une citation entre guillemets droits non
+    échappée dans la même réponse."""
+    brut = (
+        '{"resume_court": "Il invoque la "legitime defense".\n'
+        'Deuxieme paragraphe du resume.", "points_cles": [], "elements_manquants": []}'
+    )
+    parsed = legacy_analyse._parser_json_modele(brut)
+    assert parsed["resume_court"] == 'Il invoque la "legitime defense".\nDeuxieme paragraphe du resume.'
+
+
+def test_parser_json_modele_leve_une_erreur_claire_si_vraiment_irreparable():
+    with pytest.raises(ValueError, match="non-JSON"):
+        legacy_analyse._parser_json_modele("pas du JSON du tout")
+
+
+def test_resumer_dossier_repare_une_reponse_avec_saut_de_ligne_litteral(monkeypatch):
+    """Bout en bout, reproduit exactement le bug signalé : DeepSeek renvoie
+    un résumé multi-paragraphes avec de vrais sauts de ligne dans
+    resume_court plutôt que \\n échappé -- resumer_dossier() ne doit plus
+    échouer avec "Réponse du modèle non-JSON"."""
+    def _deepseek_multiligne(type_tache, system, messages, max_tokens):
+        return (
+            '{"resume_court": "Dans la nuit du 14 au 15 novembre 2023, une altercation.\n'
+            'Deuxieme paragraphe.\nTroisieme paragraphe.", "points_cles": ["a", "b"], "elements_manquants": []}'
+        )
+
+    monkeypatch.setattr(legacy_analyse, "_appeler_modele", _deepseek_multiligne)
+    resultat = legacy_analyse.resumer_dossier("contenu du dossier")
+    assert "Deuxieme paragraphe." in resultat["resume_court"]
+    assert resultat["points_cles"] == ["a", "b"]
 
 
 # --- Fonctions migrées : structuration (chronologie, PV, réquisitoire, ------
