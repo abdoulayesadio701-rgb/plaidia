@@ -33,7 +33,7 @@ def _log_chat(message: str) -> None:
 import analyse as legacy_analyse
 import db
 import recherche_juridique as legacy_rj
-from app import chat_actions, demo, demo_data, quality_pipeline
+from app import chat_actions, demo, demo_data, demo_data_outils, quality_pipeline
 from app.deps import construire_contexte_dossier, get_dossier_or_404, libelle, sse_event as _sse
 from app.security_guard import executer_garde_fou
 from app.schemas.chat import (
@@ -198,7 +198,17 @@ def chat_stream(payload: ChatStreamIn):
 
 @router.post("/contextuel", response_model=ChatContextuelOut)
 def chat_contextuel(payload: ChatContextuelIn):
-    demo.exiger_cle_api()
+    if demo.mode_demo_effectif():
+        # Aucune modification appliquée : le résultat affiché reste tel quel
+        # et la réponse explique pourquoi (voir demo_data_outils).
+        return ChatContextuelOut(
+            intent="clarification",
+            scope="global",
+            operation="none",
+            parameters={},
+            resultat_modifie=None,
+            reponse_agent=demo_data_outils.chat_contextuel_demo(),
+        )
 
     # Garde-fou d'entrée seulement (§1, §9) -- pas le trio qualité complet
     # ici : une édition locale est déjà protégée par la validation de

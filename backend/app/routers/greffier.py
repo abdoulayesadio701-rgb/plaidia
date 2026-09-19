@@ -14,7 +14,7 @@ import os
 import analyse as legacy_analyse
 import db
 import export as legacy_export
-from app import delais, demo, demo_data, quality_pipeline
+from app import delais, demo, demo_data, demo_data_outils, quality_pipeline
 from app.deps import construire_contexte_dossier, get_dossier_or_404
 from app.security_guard import executer_garde_fou
 from app.schemas.greffier import (
@@ -100,7 +100,8 @@ def extraction(payload: ExtractionIn):
     temps que le changement de fournisseur : ils manquaient déjà sous
     Claude sur cette route (contrairement à /api/analyse/conclusions), ce
     n'est pas spécifique à DeepSeek."""
-    demo.exiger_cle_api()
+    if demo.mode_demo_effectif():
+        return demo_data_outils.extraction_demo(payload.texte)
     demo.exiger_cle_api_deepseek()
     executer_garde_fou(payload.texte)
     elements = legacy_analyse.extraire_elements_cles(payload.texte)
@@ -142,7 +143,8 @@ def exporter_extraction(payload: ExportExtractionIn):
 
 @router.post("/classement", response_model=ClassementOut)
 def classement(payload: ClassementIn):
-    demo.exiger_cle_api()
+    if demo.mode_demo_effectif():
+        return demo_data_outils.classement_demo(payload.texte)
     return legacy_analyse.classifier_document(payload.texte)
 
 
@@ -151,7 +153,8 @@ def controle_coherence(payload: CoherenceIn):
     """Extrait d'abord les éléments clés de chaque document (mêmes règles
     que /extraction), puis les compare — reproduit exactement le flux de
     PlaidIAApp._action_controle_coherence (gui.py)."""
-    demo.exiger_cle_api()
+    if demo.mode_demo_effectif():
+        return CoherenceOut(**demo_data_outils.coherence_demo([(d.nom_document, d.texte) for d in payload.documents]))
     elements_par_document = []
     elements_par_nom = {}
     for doc in payload.documents:
@@ -210,7 +213,8 @@ def pv_audience(payload: PvAudienceIn):
     d'entrée et contrôle déterministe des citations ajoutés ici en même
     temps que le changement de fournisseur : ils manquaient déjà sous
     Claude sur cette route."""
-    demo.exiger_cle_api()
+    if demo.mode_demo_effectif():
+        return PvAudienceOut(texte=demo_data_outils.pv_audience_demo(payload.notes))
     demo.exiger_cle_api_deepseek()
     executer_garde_fou(payload.notes)
     texte = legacy_analyse.rediger_pv(payload.notes)
@@ -239,9 +243,11 @@ def verification_procedurale(payload: VerificationProceduraleIn):
     même mécanisme que /plan et /simulateur -- pour qu'elle survive à une
     navigation ou un refresh (voir VerificationProceduralePage côté front)."""
     dossier = get_dossier_or_404(payload.dossier_id)
-    demo.exiger_cle_api()
-    contexte = construire_contexte_dossier(dossier)
-    resultat = legacy_analyse.verifier_procedure(contexte)
+    if demo.mode_demo_effectif():
+        resultat = demo_data_outils.verification_procedurale_demo()
+    else:
+        contexte = construire_contexte_dossier(dossier)
+        resultat = legacy_analyse.verifier_procedure(contexte)
     document = db.creer_document_genere(
         payload.dossier_id, "verification_procedurale", f"Vérification procédurale — {dossier['nom']}", {}, resultat,
     )
@@ -359,7 +365,8 @@ def requisitoire(payload: RequisitoireIn):
     d'entrée et contrôle déterministe des citations ajoutés ici en même
     temps que le changement de fournisseur : ils manquaient déjà sous
     Claude sur cette route."""
-    demo.exiger_cle_api()
+    if demo.mode_demo_effectif():
+        return demo_data_outils.requisitoire_demo()
     demo.exiger_cle_api_deepseek()
     executer_garde_fou(payload.texte)
     resultat = legacy_analyse.analyser_requisitoire(payload.texte)
@@ -376,7 +383,8 @@ def rapport_instruction(payload: RapportInstructionIn):
     d'entrée et contrôle déterministe des citations ajoutés ici en même
     temps que le changement de fournisseur : ils manquaient déjà sous
     Claude sur cette route."""
-    demo.exiger_cle_api()
+    if demo.mode_demo_effectif():
+        return demo_data_outils.rapport_instruction_demo()
     demo.exiger_cle_api_deepseek()
     executer_garde_fou(payload.texte)
     resultat = legacy_analyse.analyser_rapport_instruction(payload.texte)

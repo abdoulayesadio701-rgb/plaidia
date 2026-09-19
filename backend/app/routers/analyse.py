@@ -15,7 +15,7 @@ import time
 import analyse as legacy_analyse
 import db
 import export as legacy_export
-from app import demo, demo_data, quality_pipeline
+from app import demo, demo_data, demo_data_outils, quality_pipeline
 from app.deps import construire_contexte_dossier, get_dossier_or_404, libelle, sse_event, structurer_sortie_strategique
 from app.schemas.analyse import (
     ConclusionsIn,
@@ -24,6 +24,7 @@ from app.schemas.analyse import (
     ExportRapportCompletIn,
     ExportSimulateurIn,
     ExportStyleIn,
+    ExportResumeIn,
     ExportTraductionIn,
     PlanIn,
     PlanOut,
@@ -467,7 +468,8 @@ def rapport_complet(payload: RapportCompletIn):
 
 @router.post("/style", response_model=StyleOut)
 def analyser_style(payload: StyleIn):
-    demo.exiger_cle_api()
+    if demo.mode_demo_effectif():
+        return demo_data_outils.style_demo(payload.texte)
     # Profondeur adaptative (§2d du chantier "temps de traitement") :
     # reformulation/analyse dérivée d'un texte déjà fourni -- garde-fou
     # seul, pas le trio qualité complet (disproportionné pour ce type
@@ -478,7 +480,8 @@ def analyser_style(payload: StyleIn):
 
 @router.post("/traduire", response_model=TraductionOut)
 def traduire(payload: TraductionIn):
-    demo.exiger_cle_api()
+    if demo.mode_demo_effectif():
+        return demo_data_outils.traduction_demo(payload.texte)
     quality_pipeline.executer_garde_fou(payload.texte)
     return legacy_analyse.traduire_texte(payload.texte)
 
@@ -510,6 +513,32 @@ def exporter_style(payload: ExportStyleIn):
         lignes.append(payload.synthese_strategique)
 
     chemin = legacy_export.exporter_texte_libre_word("Analyse stylistique des conclusions adverses", "\n".join(lignes))
+    return FileResponse(
+        chemin,
+        filename=os.path.basename(chemin),
+        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    )
+
+
+@router.post("/resume/export")
+def exporter_resume(payload: ExportResumeIn):
+    """Export Word du résumé du dossier, à partir du résultat affiché (les
+    balises [ART:...]/[VERIF:...] sont converties en texte lisible par
+    export.exporter_texte_libre_word)."""
+    dossier = get_dossier_or_404(payload.dossier_id)
+    lignes = ["RÉSUMÉ", payload.resume_court, ""]
+    if payload.points_cles:
+        lignes.append("POINTS CLÉS")
+        lignes.extend(f"- {p}" for p in payload.points_cles)
+        lignes.append("")
+    if payload.elements_manquants:
+        lignes.append("ÉLÉMENTS MANQUANTS")
+        lignes.extend(f"- {e}" for e in payload.elements_manquants)
+    chemin = legacy_export.exporter_texte_libre_word(
+        f"{dossier['nom']} — Résumé du dossier",
+        "\n".join(lignes),
+        note_bas_page="Résumé généré automatiquement à vérifier manuellement -- ne remplace pas l'analyse d'un professionnel du droit.",
+    )
     return FileResponse(
         chemin,
         filename=os.path.basename(chemin),

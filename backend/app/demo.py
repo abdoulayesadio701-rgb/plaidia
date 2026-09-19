@@ -10,11 +10,13 @@ visiteurs. Dans les deux cas, un visiteur qui fournit SA PROPRE clé (en-tête
 X-Anthropic-Api-Key, voir le middleware dans main.py) repasse en mode réel
 pour ses propres requêtes : le mode démo ne le concerne plus.
 
-Les actions couvertes par des réponses préenregistrées réalistes (voir
-demo_data.py) court-circuitent entièrement analyse.py -- aucun appel
-Anthropic, aucun coût, disponibles même sans clé du tout. Les actions IA non
-couvertes lèvent une 503 explicite via exiger_cle_api() plutôt que de
-laisser échouer un appel Anthropic sans clé avec une erreur moins lisible.
+Toutes les actions IA de l'application sont couvertes par des réponses
+préenregistrées (demo_data.py) ou par un repérage simple du texte saisi
+(demo_data_outils.py) : elles court-circuitent entièrement analyse.py -- aucun
+appel Anthropic, aucun coût, disponibles même sans clé du tout. Une nouvelle
+route IA doit prévoir sa réponse démo ; à défaut, exiger_cle_api() lève une
+503 explicite plutôt que de laisser échouer un appel Anthropic sans clé avec
+une erreur moins lisible.
 """
 
 import os

@@ -16,7 +16,7 @@ import analyse as legacy_analyse
 import db
 import judilibre as legacy_judilibre
 import recherche_juridique as legacy_rj
-from app import demo, quality_pipeline
+from app import demo, demo_data_outils, quality_pipeline
 from app.deps import construire_contexte_dossier, extraire_texte_upload, libelle, structurer_sortie_strategique
 from app.security_guard import executer_garde_fou
 from app.schemas.jurisprudence import (
@@ -41,11 +41,21 @@ JURIDICTION_PAR_DEFAUT = "Légifrance (France)"
 
 @router.post("/consulter", response_model=ConsulterOut)
 def consulter(payload: ConsulterIn):
-    demo.exiger_cle_api()
     dossier_row = db.get_dossier(payload.dossier_id)
     dossier = dict(dossier_row) if dossier_row else None
     if not dossier:
         raise HTTPException(status_code=404, detail=libelle("dossier_introuvable", dossier_id=payload.dossier_id))
+    if demo.mode_demo_effectif():
+        resultat = demo_data_outils.consultation_jurisprudence_demo()
+        document = db.creer_document_genere(
+            payload.dossier_id,
+            "jurisprudence_consultation",
+            f"Consultation — {payload.question[:60]}",
+            {"question": payload.question, "but": payload.but, "source": payload.source},
+            resultat,
+            langue=legacy_analyse.langue_requete(),
+        )
+        return ConsulterOut(**resultat, document_id=document["id"], statut=document["statut"])
     # §2b du chantier "temps de traitement" : le garde-fou ne dépend en rien
     # de l'identification de notions ni de la recherche live -- il ne
     # screene que le texte brut de la question -- donc lancé EN PARALLÈLE de
@@ -112,6 +122,15 @@ def collecter(payload: CollecterIn):
     """Interroge Judilibre puis insère chaque décision en base, NON validée
     — exactement comme _action_collecter_jurisprudence : rien n'est
     utilisable en citation tant qu'un humain ne l'a pas validée."""
+    if demo.mode_demo_effectif():
+        # Décisions fictives, sans appel réseau (ni quota Judilibre consommé
+        # par un visiteur) ; jamais deux fois la même en base.
+        collectees = demo_data_outils.decisions_collectees_demo(payload.domaine)
+        deja_presentes = {j["reference"] for j in db.get_jurisprudence_en_attente() + db.get_jurisprudence_validee()}
+        for c in collectees:
+            if c["reference"] not in deja_presentes:
+                db.add_jurisprudence(reference=c["reference"], resume=c["resume"], domaine=c["domaine"], source=c["source"], validee=False)
+        return CollecterOut(decisions=collectees, nombre_collecte=len(collectees))
     collectees = legacy_judilibre.collecter_jurisprudence(
         query=payload.query, domaine=payload.domaine, max_results=10
     )

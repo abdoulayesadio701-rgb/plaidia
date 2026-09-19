@@ -7,7 +7,7 @@
 
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { analyse as analyseApi } from "@/api";
+import { analyse as analyseApi, downloadBlob } from "@/api";
 import type { ResumeResultat } from "@/api";
 import { useAppStore, useDossierActif } from "@/store/useAppStore";
 import { useLazyAction } from "@/hooks/useLazyAction";
@@ -26,6 +26,7 @@ export default function ResumerDossierPage() {
   const pousserToast = useAppStore((s) => s.pousserToast);
   const [suppressionEnCours, setSuppressionEnCours] = useState(false);
   const [confirmationSuppression, setConfirmationSuppression] = useState(false);
+  const [exportEnCours, setExportEnCours] = useState(false);
   const { data, loading, error, executer, definirDonnees, reinitialiser } = useLazyAction(() => analyseApi.resumerDossier(dossierActif!.id));
   // Recharge automatiquement, au montage, le dernier résumé déjà persisté
   // pour ce dossier -- une simple lecture, jamais un nouvel appel IA -- pour
@@ -37,6 +38,19 @@ export default function ResumerDossierPage() {
     definirDonnees({ ...(dernierDocument.contenu as unknown as ResumeResultat), document_id: dernierDocument.id, statut: dernierDocument.statut });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dernierDocument]);
+
+  const exporter = async () => {
+    if (!dossierActif || !data) return;
+    setExportEnCours(true);
+    try {
+      const { blob, filename } = await analyseApi.exporterResume(dossierActif.id, data);
+      downloadBlob(blob, filename ?? `${dossierActif.nom}_resume.docx`);
+    } catch (e) {
+      pousserToast("error", e instanceof Error ? e.message : t("arsenal.echecExport"));
+    } finally {
+      setExportEnCours(false);
+    }
+  };
 
   const supprimer = async () => {
     if (!data?.document_id) return;
@@ -67,6 +81,9 @@ export default function ResumerDossierPage() {
         </div>
         {data && (
           <div className="flex flex-wrap gap-2">
+            <Button variant="secondary" loading={exportEnCours} onClick={() => void exporter()}>
+              ⬇ {t("arsenal.exporterWord")}
+            </Button>
             <Button variant="ghost" loading={loading} onClick={() => void executer()}>
               🔄 {t("simulateur.relancer")}
             </Button>

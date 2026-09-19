@@ -8,7 +8,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { analyse as analyseApi } from "@/api";
+import { analyse as analyseApi, downloadBlob } from "@/api";
 import type { StatutDocument } from "@/api";
 import { useAppStore, useDossierActif } from "@/store/useAppStore";
 import { useLazyStream } from "@/hooks/useLazyStream";
@@ -39,6 +39,7 @@ export default function AnalyserConclusionsPage() {
   const [changementStatutEnCours, setChangementStatutEnCours] = useState(false);
   const [suppressionEnCours, setSuppressionEnCours] = useState(false);
   const [confirmationSuppression, setConfirmationSuppression] = useState(false);
+  const [exportEnCours, setExportEnCours] = useState(false);
 
   const lancerFlux = useCallback(
     (t: string, cb: Parameters<typeof analyseApi.streamAnalyserConclusions>[2], signal: AbortSignal) =>
@@ -80,6 +81,19 @@ export default function AnalyserConclusionsPage() {
       pousserToast("error", e instanceof Error ? e.message : t("arsenal.erreurSuppression"));
     } finally {
       setSuppressionEnCours(false);
+    }
+  };
+
+  const exporter = async () => {
+    if (!dossierActif || !data?.arguments) return;
+    setExportEnCours(true);
+    try {
+      const { blob, filename } = await analyseApi.exporterConclusions(dossierActif.id, data.arguments, data.points_attention);
+      downloadBlob(blob, filename ?? `${dossierActif.nom}_analyse.docx`);
+    } catch (e) {
+      pousserToast("error", e instanceof Error ? e.message : t("arsenal.echecExport"));
+    } finally {
+      setExportEnCours(false);
     }
   };
 
@@ -148,13 +162,20 @@ export default function AnalyserConclusionsPage() {
 
       {!derniereAnalyseLoading && !error && data?.arguments && (
         <div className="space-y-5">
+          {/* Export indépendant de l'enregistrement : en mode démo le résultat
+              n'est pas persisté (analyse_id vide) mais reste exportable. */}
+          <div className="flex justify-end">
+            <Button variant="secondary" loading={exportEnCours} onClick={() => void exporter()}>
+              ⬇ {t("arsenal.exporterWord")}
+            </Button>
+          </div>
           {data.analyse_id != null && (
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-center gap-2">
                 <p className="text-xs text-warmgray">✓ {t("arsenal.enregistreDansHistorique")}</p>
                 <StatutDocumentBadge statut={data.statut} />
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <StatutDocumentMenu statut={data.statut} loading={changementStatutEnCours} onChange={changerStatut} />
                 <PinButton
                   type="analyse"

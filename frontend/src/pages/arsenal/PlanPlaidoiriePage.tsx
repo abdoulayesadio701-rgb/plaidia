@@ -42,9 +42,15 @@ export default function PlanPlaidoiriePage() {
   const pousserToast = useAppStore((s) => s.pousserToast);
   const location = useLocation();
   const [searchParams] = useSearchParams();
-  const dureeInitiale = (location.state as NavigationState | null)?.dureeMinutesPreremplie ?? 15;
+  const dureeDemandee = (location.state as NavigationState | null)?.dureeMinutesPreremplie;
+  const dureeInitiale = dureeDemandee ?? 15;
 
+  // `duree` = celle du PROCHAIN plan (curseur, préremplie par la barre de
+  // commande) ; `dureeGeneree` = celle du plan affiché, relue de la base ou
+  // de la dernière génération. Séparées pour qu'un plan déjà enregistré ne
+  // remplace pas la durée que l'utilisateur vient de demander.
   const [duree, setDuree] = useState(dureeInitiale);
+  const [dureeGeneree, setDureeGeneree] = useState<number | null>(null);
   const [exportEnCours, setExportEnCours] = useState(false);
   const [statutEnCours, setStatutEnCours] = useState(false);
   const [suppressionEnCours, setSuppressionEnCours] = useState(false);
@@ -79,7 +85,10 @@ export default function PlanPlaidoiriePage() {
     if (!source || source.feature !== "plan" || source.dossier_id !== dossierActif?.id) return;
     definirDonnees({ ...(source.contenu as unknown as PlanResultat), document_id: source.id, statut: source.statut });
     const minutes = source.parametres.temps_minutes;
-    if (typeof minutes === "number") setDuree(minutes);
+    if (typeof minutes === "number") {
+      setDureeGeneree(minutes);
+      if (dureeDemandee === undefined) setDuree(minutes);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [document, dernierDocument, aDocument, dossierActif?.id, definirDonnees]);
 
@@ -140,7 +149,7 @@ export default function PlanPlaidoiriePage() {
       <div className="card space-y-5 p-6">
         <DureeSlider valeur={duree} onChange={setDuree} />
         <div className="flex justify-end">
-          <Button variant="primary" loading={loading} onClick={() => void executer(duree)}>
+          <Button variant="primary" loading={loading} onClick={() => { setDureeGeneree(duree); void executer(duree); }}>
             {t("planPlaidoirie.generer")}
           </Button>
         </div>
@@ -155,7 +164,7 @@ export default function PlanPlaidoiriePage() {
       {!documentLoading && !dernierDocumentLoading && !error && !documentError && data?.plan && (
         <div className="space-y-6">
           <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2"><p className="text-sm text-warmgray">{t("planPlaidoirie.genereePour", { duree })}</p><StatutDocumentBadge statut={data.statut ?? "Brouillon"} /></div>
+            <div className="flex items-center gap-2"><p className="text-sm text-warmgray">{t("planPlaidoirie.genereePour", { duree: dureeGeneree ?? duree })}</p><StatutDocumentBadge statut={data.statut ?? "Brouillon"} /></div>
             <div className="flex items-center gap-2">
               <StatutDocumentMenu statut={data.statut ?? "Brouillon"} loading={statutEnCours} onChange={changerStatut} />
               <Button variant="secondary" loading={exportEnCours} onClick={() => void exporter()}>⬇ {t("arsenal.exporterWord")}</Button>

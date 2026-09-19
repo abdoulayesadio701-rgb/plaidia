@@ -157,6 +157,13 @@ class TraductionOut(BaseModel):
     texte_traduit: str = ""
 
 
+class ExportResumeIn(BaseModel):
+    dossier_id: int
+    resume_court: str = Field("", max_length=MAX_TEXTE_CARACTERES)
+    points_cles: list[str] = []
+    elements_manquants: list[str] = []
+
+
 class ExportTraductionIn(BaseModel):
     langue_cible: str = ""
     texte_traduit: str = Field(..., min_length=1, max_length=MAX_TEXTE_CARACTERES)

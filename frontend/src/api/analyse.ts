@@ -159,6 +159,18 @@ export function exporterTraduction(resultat: TraductionResultat): Promise<{ blob
   });
 }
 
+export function exporterResume(dossierId: number, resultat: ResumeResultat): Promise<{ blob: Blob; filename?: string }> {
+  return apiRequestBlob("/api/analyse/resume/export", {
+    method: "POST",
+    body: {
+      dossier_id: dossierId,
+      resume_court: resultat.resume_court,
+      points_cles: resultat.points_cles,
+      elements_manquants: resultat.elements_manquants,
+    },
+  });
+}
+
 export function exporterConclusions(
   dossierId: number,
   argumentsData: ConclusionsResultat["arguments"],

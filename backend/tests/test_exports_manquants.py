@@ -113,3 +113,39 @@ def test_export_requisitoire_corps_vide_valeurs_par_defaut(client: TestClient):
     r = client.post("/api/greffier/requisitoire/export", json={})
     assert r.status_code == 200
     assert "non précisée" in _texte_docx(r.content)
+
+
+def test_export_resume_word(client: TestClient, dossier_demo_id: int):
+    r = client.post(
+        "/api/analyse/resume/export",
+        json={
+            "dossier_id": dossier_demo_id,
+            "resume_court": "M. Diallo conteste son licenciement.",
+            "points_cles": ["Cinq ans d'ancienneté"],
+            "elements_manquants": ["Règlement intérieur"],
+        },
+    )
+    assert r.status_code == 200
+    assert r.headers["content-type"] == "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    texte = _texte_docx(r.content)
+    assert "M. Diallo conteste son licenciement." in texte
+    assert "- Cinq ans d'ancienneté" in texte
+    assert "- Règlement intérieur" in texte
+
+
+def test_export_resume_dossier_inconnu_404(client: TestClient):
+    assert client.post("/api/analyse/resume/export", json={"dossier_id": 999999}).status_code == 404
+
+
+def test_export_conclusions_word_et_pdf(client: TestClient, dossier_demo_id: int):
+    corps = {
+        "dossier_id": dossier_demo_id,
+        "arguments": [{"resume": "Argument adverse", "fondement": "Pièce 4", "risque": "Moyen", "justification_risque": "x", "refutations": []}],
+        "points_attention": ["Vérifier le délai"],
+    }
+    word = client.post("/api/analyse/conclusions/export", json=corps)
+    assert word.status_code == 200
+    assert word.headers["content-type"] == "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    pdf = client.post("/api/analyse/conclusions/export", params={"format": "pdf"}, json=corps)
+    assert pdf.status_code == 200
+    assert pdf.content[:4] == b"%PDF"

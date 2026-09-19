@@ -168,18 +168,23 @@ def test_document_introuvable_en_anglais_si_x_langue_en(client: TestClient):
     assert r.json()["detail"] == "Document 999999 not found."
 
 
-def test_cle_api_requise_en_anglais_si_x_langue_en(client: TestClient):
-    """chat_contextuel n'a pas de réponse préenregistrée en mode démo (voir
-    test_demo_mode.py::test_chat_contextuel_bloque_en_mode_demo) -- même
-    503 que exiger_cle_api() ailleurs, maintenant bilingue."""
-    r = client.post(
-        "/api/chat/contextuel",
-        json={"feature": "conclusions", "resultat_actuel": {"arguments": []}, "message": "développe le premier argument"},
-        headers={"x-langue": "en"},
-    )
-    assert r.status_code == 503
-    assert "demo mode" in r.json()["detail"].lower()
-    assert "mode démo" not in r.json()["detail"].lower()
+def test_cle_api_requise_en_anglais_si_x_langue_en():
+    """Plus aucune route n'y aboutit en mode démo (toutes ont une réponse
+    préenregistrée, voir demo_data_outils.py), mais exiger_cle_api() reste le
+    garde-fou des futures routes IA : son message doit rester bilingue."""
+    import analyse as legacy_analyse
+    from app import demo
+    from fastapi import HTTPException
+
+    jeton = legacy_analyse.definir_langue_requete("en")
+    try:
+        with pytest.raises(HTTPException) as erreur:
+            demo.exiger_cle_api()
+    finally:
+        legacy_analyse.reinitialiser_langue_requete(jeton)
+    assert erreur.value.status_code == 503
+    assert "demo mode" in erreur.value.detail.lower()
+    assert "mode démo" not in erreur.value.detail.lower()
 
 
 def test_format_fichier_non_supporte_en_anglais_si_x_langue_en(client: TestClient, dossier_demo_id: int):

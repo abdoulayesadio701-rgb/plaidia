@@ -2,9 +2,11 @@
 test_demo_mode.py — Tests minimaux de l'API en mode démo (voir
 backend/app/demo.py). Portée volontairement réduite : vérifie que les
 actions démonstratives répondent avec des données cannées cohérentes avec
-leurs schémas, que les actions non couvertes sont bloquées proprement
-(503), et que les protections anti-abus de base (taille de texte) sont
-actives -- pas une couverture exhaustive de toutes les routes de l'API.
+leurs schémas, et que les protections anti-abus de base (taille de texte)
+sont actives -- pas une couverture exhaustive de toutes les routes de l'API.
+Les fonctions qui lisent le texte saisi ou ont un exemple fictif sont
+couvertes dans test_demo_outils.py ; leur chemin réel (avec une clé
+personnelle) dans test_chemin_reel.py.
 
 Tout tourne sur une base SQLite jetable (voir conftest.py) : ces tests
 n'appellent jamais l'API Anthropic et ne touchent jamais une base de
@@ -190,29 +192,38 @@ def test_dossier_inconnu_renvoie_404_meme_en_mode_demo(client: TestClient):
     assert r.status_code == 404
 
 
-def test_action_non_cannee_est_bloquee_en_mode_demo(client: TestClient):
-    """/api/analyse/style n'a pas de réponse préenregistrée -- doit
-    échouer proprement en 503 plutôt que de tenter (et rater) un vrai
-    appel à Claude sans clé API."""
-    r = client.post("/api/analyse/style", json={"texte": "un texte quelconque à analyser"})
-    assert r.status_code == 503
-    assert "detail" in r.json()
-    assert "mode démo" in r.json()["detail"].lower()
-
-
-def test_extraction_greffier_bloquee_en_mode_demo(client: TestClient):
-    r = client.post("/api/greffier/extraction", json={"texte": "un texte quelconque"})
-    assert r.status_code == 503
-
-
-def test_intention_degrade_proprement_en_mode_demo(client: TestClient):
-    """Pas de 503 ici par choix (voir intention.py) : la CommandBar sait
-    déjà orienter l'utilisateur vers la sidebar sur confiance basse."""
-    r = client.post("/api/intention/interpreter", json={"texte": "analyser ces conclusions"})
+def test_style_repond_en_mode_demo(client: TestClient):
+    """/api/analyse/style avait une 503 en mode démo ; il répond maintenant
+    par un repérage simple des formules d'atténuation et absolues."""
+    r = client.post("/api/analyse/style", json={"texte": "Il semblerait que le salarié ait manqué. Il n'a jamais contesté."})
     assert r.status_code == 200
     data = r.json()
-    assert data["action"] == "menu"
-    assert data["confiance"] == "basse"
+    assert data["langage_de_couverture"] and data["affirmations_absolues"]
+    assert data["synthese_strategique"]
+
+
+def test_extraction_greffier_repond_en_mode_demo(client: TestClient):
+    r = client.post("/api/greffier/extraction", json={"texte": "Le 12 mars 2024, M. Karim Diallo a saisi le tribunal."})
+    assert r.status_code == 200
+    data = r.json()
+    assert data["dates"] == ["12 mars 2024"]
+    assert data["personnes_et_parties"] == ["M. Karim Diallo"]
+
+
+def test_intention_par_mots_cles_en_mode_demo(client: TestClient):
+    """La barre de commande fonctionne en démo par mots-clés, sans modèle : son
+    exemple affiché (« établir un plan de 10 minutes ») doit aboutir."""
+    r = client.post("/api/intention/interpreter", json={"texte": "établir un plan de 10 minutes"})
+    assert r.status_code == 200
+    assert r.json() == {"action": "plan", "duree_minutes": 10, "confiance": "haute", "reformulation": "Compris : générer un plan de plaidoirie."}
+    assert client.post("/api/intention/interpreter", json={"texte": "analyser ces conclusions"}).json()["action"] == "analyser"
+
+
+def test_intention_inconnue_reste_orientee_vers_le_menu_en_mode_demo(client: TestClient):
+    """Pas de 503 ici par choix (voir intention.py) : sans correspondance, la
+    CommandBar sait orienter l'utilisateur vers la sidebar."""
+    data = client.post("/api/intention/interpreter", json={"texte": "bonjour, quel temps fait-il ?"}).json()
+    assert data["action"] == "menu" and data["confiance"] == "basse"
 
 
 def test_texte_trop_long_est_rejete(client: TestClient):
@@ -273,15 +284,18 @@ def test_chat_stream_demo_repond_en_anglais_si_x_langue_en(client: TestClient):
     assert "en droit du travail français" not in texte_reconstitue.lower()
 
 
-def test_chat_contextuel_bloque_en_mode_demo(client: TestClient):
-    """/api/chat/contextuel n'a pas de réponse préenregistrée -- même
-    garde-fou que /api/analyse/style (voir test_action_non_cannee_est_bloquee_en_mode_demo)."""
+def test_chat_contextuel_explique_le_mode_demo_sans_rien_modifier(client: TestClient):
+    """/api/chat/contextuel n'a pas d'édition préenregistrée : il répond par
+    une explication, sans jamais modifier le résultat affiché."""
     r = client.post(
         "/api/chat/contextuel",
         json={"feature": "conclusions", "resultat_actuel": {"arguments": []}, "message": "développe le premier argument"},
     )
-    assert r.status_code == 503
-    assert "mode démo" in r.json()["detail"].lower()
+    assert r.status_code == 200
+    data = r.json()
+    assert data["resultat_modifie"] is None
+    assert data["operation"] == "none"
+    assert "démo" in data["reponse_agent"].lower()
 
 
 def test_cle_personnelle_desactive_le_mode_demo_effectif(client: TestClient):

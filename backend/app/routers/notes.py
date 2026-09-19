@@ -12,7 +12,7 @@ import os
 import analyse as legacy_analyse
 import db
 import export as legacy_export
-from app import demo, quality_pipeline
+from app import demo, demo_data_outils, quality_pipeline
 from app.deps import construire_contexte_dossier, get_dossier_or_404
 from app.security_guard import executer_garde_fou
 from app.schemas.notes import ExportNoteClientIn, NoteClientIn, NoteClientOut, NoteCreate, NoteOut
@@ -28,14 +28,16 @@ def creer_note(payload: NoteCreate):
     d'entrée ajouté ici en même temps que le changement de fournisseur : il
     manquait déjà sous Claude sur cette route."""
     get_dossier_or_404(payload.dossier_id)
-    demo.exiger_cle_api()
-    demo.exiger_cle_api_deepseek()
-    executer_garde_fou(payload.note_brute)
-    resultat = legacy_analyse.traiter_notes(payload.note_brute)
-    for point in resultat.get("points_a_retenir", []):
-        for c in quality_pipeline.verifier_citations_deterministe(str(point), [payload.note_brute]):
-            if c["statut_deterministe"] != "VERIFIE":
-                print(f"[notes] citation non vérifiée dans une note DeepSeek : {c}", flush=True)
+    if demo.mode_demo_effectif():
+        resultat = demo_data_outils.note_structuree_demo(payload.note_brute)
+    else:
+        demo.exiger_cle_api_deepseek()
+        executer_garde_fou(payload.note_brute)
+        resultat = legacy_analyse.traiter_notes(payload.note_brute)
+        for point in resultat.get("points_a_retenir", []):
+            for c in quality_pipeline.verifier_citations_deterministe(str(point), [payload.note_brute]):
+                if c["statut_deterministe"] != "VERIFIE":
+                    print(f"[notes] citation non vérifiée dans une note DeepSeek : {c}", flush=True)
     note_id = db.ajouter_note(
         payload.dossier_id,
         payload.note_brute,
@@ -95,9 +97,11 @@ def rediger_note_client(payload: NoteClientIn):
     mécanisme que /plan et /simulateur -- pour que la note survive à une
     navigation ou un refresh (voir NoteClientPage côté front)."""
     dossier = get_dossier_or_404(payload.dossier_id)
-    demo.exiger_cle_api()
-    contexte = construire_contexte_dossier(dossier)
-    texte = legacy_analyse.rediger_note_client(contexte)
+    if demo.mode_demo_effectif():
+        texte = demo_data_outils.note_client_demo()
+    else:
+        contexte = construire_contexte_dossier(dossier)
+        texte = legacy_analyse.rediger_note_client(contexte)
     document = db.creer_document_genere(
         payload.dossier_id, "note_client", f"Note client — {dossier['nom']}", {}, {"texte": texte},
     )

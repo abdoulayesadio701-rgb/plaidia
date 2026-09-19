@@ -132,9 +132,9 @@ def test_chronologie_persistee_et_relue(client: TestClient, dossier_demo_id: int
 
 
 def test_note_client_persistee_et_relue(monkeypatch, client: TestClient, dossier_demo_id: int):
-    """Sans réponse préenregistrée en mode démo (voir notes.py::rediger_note_client) --
-    sort du mode démo via une clé personnelle factice, comme
-    test_consultation_est_rattachee_au_dossier ci-dessus."""
+    """Chemin RÉEL de la note client : sort du mode démo via une clé personnelle
+    factice (le mode démo a sa propre réponse, voir test_demo_outils.py),
+    comme test_consultation_est_rattachee_au_dossier ci-dessus."""
     import analyse as legacy_analyse
 
     monkeypatch.setattr(legacy_analyse, "rediger_note_client", lambda contexte: "Texte de note client de test.")
@@ -154,8 +154,8 @@ def test_note_client_persistee_et_relue(monkeypatch, client: TestClient, dossier
 
 
 def test_verification_procedurale_persistee_et_relue(monkeypatch, client: TestClient, dossier_demo_id: int):
-    """Même principe que test_note_client_persistee_et_relue ci-dessus --
-    pas de réponse préenregistrée en mode démo pour cette fonctionnalité."""
+    """Même principe que test_note_client_persistee_et_relue ci-dessus :
+    chemin réel de la vérification procédurale (hors mode démo)."""
     import analyse as legacy_analyse
 
     monkeypatch.setattr(
