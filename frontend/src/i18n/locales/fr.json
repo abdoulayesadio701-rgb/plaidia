@@ -10,6 +10,7 @@
     "supprimer": "Supprimer",
     "notes": "Notes",
     "erreurStatut": "Erreur {{status}}",
+    "serveurTropAncien": "Le serveur ne connaît pas cette fonctionnalité : il tourne probablement sur une version plus ancienne que l'interface. Redéployez le serveur (API) puis réessayez.",
     "serveurIndisponible": "Impossible de joindre le serveur. Vérifiez que le backend est lancé (voir backend/README.md)."
   },
   "niveauRisque": {

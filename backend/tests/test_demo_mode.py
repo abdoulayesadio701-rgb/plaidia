@@ -316,3 +316,10 @@ def test_cle_personnelle_desactive_le_mode_demo_effectif(client: TestClient):
         legacy_analyse.reinitialiser_cle_api_requete(jeton)
 
     assert demo.mode_demo_effectif() is True
+
+
+def test_config_expose_le_commit_deploye(client: TestClient, monkeypatch):
+    """Sur Render, RENDER_GIT_COMMIT identifie la version en ligne (7 caractères)."""
+    assert client.get("/api/config").json()["commit"] is None
+    monkeypatch.setenv("RENDER_GIT_COMMIT", "06ce1c5a1b2c3d4e5f60718293a4b5c6d7e8f901")
+    assert client.get("/api/config").json()["commit"] == "06ce1c5"

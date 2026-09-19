@@ -274,4 +274,7 @@ def config():
         "demo_mode": demo.mode_demo_serveur(),
         "max_texte_caracteres": demo.MAX_TEXTE_CARACTERES,
         "dossier_demo_nom": demo_data.NOM_DOSSIER_DEMO if demo.mode_demo_serveur() else None,
+        # Commit déployé (variable posée par Render) : permet de vérifier d'un
+        # coup d'œil que le serveur est à la même version que l'interface.
+        "commit": os.environ.get("RENDER_GIT_COMMIT", "")[:7] or None,
     }

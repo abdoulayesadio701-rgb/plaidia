@@ -50,6 +50,11 @@ function buildUrl(path: string, query?: Query): string {
  * — soit une chaîne (nos exception handlers), soit la liste d'erreurs de
  * validation Pydantic ({"detail": [{"msg": ..., "loc": [...]}]}). */
 function messageFromDetail(detail: unknown, status: number): string {
+  // « Not Found » nu = FastAPI n'a trouvé AUCUNE route (nos 404 métier portent
+  // un message : dossier ou document introuvable). C'est le signe d'un serveur
+  // plus ancien que l'interface : un message explicite évite de le prendre
+  // pour un défaut de la fonctionnalité.
+  if (status === 404 && detail === "Not Found") return i18nInstance.t("commun.serveurTropAncien");
   if (typeof detail === "string") return detail;
   if (Array.isArray(detail)) {
     const messages = detail

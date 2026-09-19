@@ -9,6 +9,8 @@ export interface ConfigServeur {
   demo_mode: boolean;
   max_texte_caracteres: number;
   dossier_demo_nom: string | null;
+  /** Commit déployé côté serveur (7 caractères), absent hors Render. */
+  commit?: string | null;
 }
 
 export function obtenirConfiguration(): Promise<ConfigServeur> {

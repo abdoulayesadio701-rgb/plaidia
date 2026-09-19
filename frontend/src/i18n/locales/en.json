@@ -10,6 +10,7 @@
     "supprimer": "Delete",
     "notes": "Notes",
     "erreurStatut": "Error {{status}}",
+    "serveurTropAncien": "The server does not know this feature: it is probably running an older version than the interface. Redeploy the server (API) and try again.",
     "serveurIndisponible": "Unable to reach the server. Check that the backend is running (see backend/README.md)."
   },
   "niveauRisque": {
