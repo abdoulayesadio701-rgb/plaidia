@@ -10,6 +10,8 @@ visible à chaque réponse.*
 
 **[Démo en ligne](https://plaidia.vercel.app)** (sans inscription, cliquer sur « Essayer la démo ») · [Documentation API](backend/README.md)
 
+[![CI](https://github.com/abdoulayesadio701-rgb/plaidia/actions/workflows/ci.yml/badge.svg)](https://github.com/abdoulayesadio701-rgb/plaidia/actions/workflows/ci.yml)
+
 </div>
 
 ---

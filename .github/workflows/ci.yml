@@ -1,0 +1,104 @@
+# Intégration continue Plaid'IA : à chaque push sur main et chaque pull request,
+# rejoue les trois suites de tests, le typage et le build du frontend, et
+# construit l'image Docker du backend en la démarrant réellement.
+#
+# Le job "docker" existe parce qu'un module racine oublié dans le COPY du
+# Dockerfile (usage_log.py, veille_lois.py) a fait échouer 29 déploiements
+# Render d'affilée sans qu'aucun test local ne le voie.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Une seule exécution par branche : un nouveau push annule la précédente.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  python:
+    name: Tests Python (racine et API)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: |
+            requirements.txt
+            backend/requirements.txt
+            backend/requirements-dev.txt
+
+      - name: Installer les dépendances
+        run: pip install -r requirements.txt -r backend/requirements-dev.txt
+
+      # Deux suites distinctes : pytest.ini fixe testpaths = tests, relatif au
+      # répertoire de lancement (voir README, section Tests).
+      - name: Modules métier (racine)
+        run: python -m pytest
+
+      - name: API backend
+        working-directory: backend
+        run: python -m pytest
+
+  frontend:
+    name: Frontend (typage, tests, build)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      # Vitest 5 exige Node 22.12 ou plus (voir package-lock.json).
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - run: npm ci
+      - name: Typage
+        run: npm run lint
+      - name: Tests
+        run: npm test
+      - name: Build
+        run: npm run build
+
+  docker:
+    name: Image Docker du backend
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      # Contexte = racine du dépôt (voir en-tête de backend/Dockerfile).
+      - name: Construire l'image
+        run: docker build -f backend/Dockerfile -t plaidia-api .
+
+      # Démarre vraiment le conteneur : un ModuleNotFoundError au lancement
+      # (module non copié dans l'image) se voit ici, pas dans les tests.
+      - name: Démarrer l'image et vérifier /api/health
+        run: |
+          docker run -d --name plaidia -p 8000:8000 \
+            -e DEMO_MODE=true -e DEMO_RESET_DB=true plaidia-api
+          for i in $(seq 1 30); do
+            if curl -fsS http://localhost:8000/api/health; then
+              echo
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Le conteneur n'a pas répondu à /api/health en 60 s. Logs :"
+          docker logs plaidia
+          exit 1
