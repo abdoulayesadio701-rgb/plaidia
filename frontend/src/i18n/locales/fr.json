@@ -1028,6 +1028,7 @@
     "copierReponse": "Copier la réponse",
     "copier": "Copier",
     "generationEnCours": "Génération en cours…",
+    "nouveauContenu": "↓ Nouveau contenu",
     "arreter": "Arrêter",
     "caracteresCount": "({{nombre}} car.)",
     "retirerPiece": "Retirer {{nom}}",

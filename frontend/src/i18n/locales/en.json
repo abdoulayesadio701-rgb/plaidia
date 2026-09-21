@@ -1028,6 +1028,7 @@
     "copierReponse": "Copy the response",
     "copier": "Copy",
     "generationEnCours": "Generating…",
+    "nouveauContenu": "↓ New content",
     "arreter": "Stop",
     "caracteresCount": "({{nombre}} chars)",
     "retirerPiece": "Remove {{nom}}",
