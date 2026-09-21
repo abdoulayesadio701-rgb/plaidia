@@ -22,7 +22,7 @@ RUN pip install --no-cache-dir -r backend/requirements.txt
 # un, JAMAIS un `COPY . .` qui embarquerait apikey.txt ou les fichiers
 # doublons ("- Copie") qui traînent au dépôt (voir .dockerignore, qui les
 # exclut de toute façon, mais on ne compte pas sur une seule protection).
-COPY analyse.py db.py recherche_juridique.py judilibre.py extract.py export.py legifrance.py paths.py ./
+COPY analyse.py db.py recherche_juridique.py judilibre.py extract.py export.py legifrance.py paths.py usage_log.py veille_lois.py ./
 
 # API FastAPI
 COPY backend/app ./backend/app
