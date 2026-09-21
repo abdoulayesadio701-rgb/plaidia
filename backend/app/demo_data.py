@@ -512,16 +512,86 @@ In the demonstration case, the dismissal was notified on 28 February 2024 and th
 
 *Prerecorded demo-mode answer.*"""
 
+REPONSE_CHAT_RESPONSABILITE_FR = """L'article 1240 du Code civil pose le principe de la **responsabilité civile délictuelle** : « tout fait quelconque de l'homme, qui cause à autrui un dommage, oblige celui par la faute duquel il est arrivé à le réparer » ([ART:1240:CCIV]). L'article suivant précise que la faute inclut la négligence et l'imprudence ([ART:1241:CCIV]).
+
+Trois conditions doivent être réunies :
+- **une faute** : un comportement que n'aurait pas eu une personne raisonnable placée dans les mêmes circonstances ;
+- **un dommage** : un préjudice certain, qu'il soit matériel, corporel ou moral ;
+- **un lien de causalité** entre la faute et le dommage.
+
+Il appartient en principe à la victime de prouver ces trois éléments ([ART:1353:CCIV]). L'action se prescrit par cinq ans à compter du jour où la victime a connu, ou aurait dû connaître, les faits lui permettant de l'exercer ([ART:2224:CCIV]).
+
+[VERIF:les règles de prescription et de preuve applicables varient selon le type de dommage (corporel, environnemental...) et selon qu'un régime spécial de responsabilité s'applique — à confirmer au cas par cas]
+
+[VERIF:la position de la Cour de cassation sur l'appréciation du lien de causalité en cas de causes multiples]
+
+*Réponse préenregistrée du mode démo, illustrant le format habituel de l'agent (balisage des citations, points à vérifier) — pas une analyse en direct de votre situation.*"""
+
+REPONSE_CHAT_PLAIDOIRIE_FR = """Voici la structure classique d'une plaidoirie civile de 10 minutes, avec un chronométrage indicatif :
+
+1. **Exorde (1 min)** : poser la question centrale du litige en une phrase, et annoncer le plan.
+2. **Exposé des faits (2 min)** : ne retenir que les faits utiles à la démonstration, dans l'ordre chronologique, sans qualification juridique prématurée.
+3. **Discussion (5 min)** : hiérarchiser les moyens.
+   - d'abord les moyens de procédure et les fins de non-recevoir, qui empêchent l'examen du fond ([ART:122:CPC]) ;
+   - puis les moyens de fond, du plus solide au plus fragile, chacun suivi de sa preuve ([ART:9:CPC]).
+4. **Réfutation (1 min)** : répondre aux deux ou trois arguments adverses les plus dangereux.
+5. **Dispositif (1 min)** : rappeler précisément ce qui est demandé au tribunal.
+
+Un conseil de méthode : n'annoncer que ce que l'on démontrera vraiment, et garder le meilleur argument pour la fin de la discussion.
+
+[VERIF:le temps de parole réellement alloué dépend de la juridiction, de la nature de l'audience et de la pratique du magistrat — à confirmer avant l'audience]
+
+Pour obtenir un plan chronométré complet, avec les arguments et les pièces du dossier, utilisez **« Générer un plan de plaidoirie »** sur le dossier de démonstration « Diallo c/ Atlas Logistique ».
+
+*Réponse préenregistrée du mode démo.*"""
+
+REPONSE_CHAT_RESPONSABILITE_EN = """Article 1240 of the French Civil Code sets out the principle of **tort liability** (responsabilité civile délictuelle): "any act whatsoever of a person which causes damage to another obliges the person by whose fault it occurred to make reparation" ([ART:1240:CCIV]). The following article clarifies that fault includes negligence and imprudence ([ART:1241:CCIV]).
+
+Three conditions must be met:
+- **a fault**: conduct that a reasonable person placed in the same circumstances would not have adopted;
+- **damage**: a certain harm, whether material, physical or moral;
+- **a causal link** between the fault and the damage.
+
+The victim must in principle prove all three elements ([ART:1353:CCIV]). The claim is time-barred after five years from the day the victim knew, or should have known, the facts enabling them to bring it ([ART:2224:CCIV]).
+
+[VERIF:the limitation and evidence rules vary with the type of damage (physical injury, environmental harm...) and with any special liability regime that may apply — to be confirmed case by case]
+
+[VERIF:the Court of Cassation's position on assessing causation where there are multiple causes]
+
+*Prerecorded demo-mode answer, illustrating the agent's usual format (citation tagging, points to verify) — not a live analysis of your own situation.*"""
+
+REPONSE_CHAT_PLAIDOIRIE_EN = """Here is the classic structure of a 10-minute civil pleading, with indicative timings:
+
+1. **Opening (1 min)**: state the central question of the dispute in one sentence, and announce the plan.
+2. **Statement of facts (2 min)**: keep only the facts that serve the argument, in chronological order, without premature legal characterisation.
+3. **Argument (5 min)**: rank the grounds.
+   - first the procedural grounds and inadmissibility objections, which prevent the merits from being examined ([ART:122:CPC]);
+   - then the substantive grounds, from strongest to weakest, each followed by its evidence ([ART:9:CPC]).
+4. **Rebuttal (1 min)**: answer the two or three most dangerous opposing arguments.
+5. **Relief sought (1 min)**: restate precisely what is being asked of the court.
+
+A methodological tip: only announce what you will genuinely prove, and keep your best argument for the end of the discussion.
+
+[VERIF:the speaking time actually allotted depends on the court, the type of hearing and the presiding judge's practice — to be confirmed before the hearing]
+
+For a full timed plan, with the arguments and exhibits of the case file, use **"Generate a pleading plan"** on the demonstration case "Diallo v. Atlas Logistique".
+
+*Prerecorded demo-mode answer.*"""
+
 _REPONSES_CHAT_PAR_LANGUE = {
     "fr": {
         "defaut": REPONSE_CHAT_DEFAUT_FR,
         "faute_grave": REPONSE_CHAT_FAUTE_GRAVE_FR,
         "delai": REPONSE_CHAT_DELAI_FR,
+        "responsabilite": REPONSE_CHAT_RESPONSABILITE_FR,
+        "plaidoirie": REPONSE_CHAT_PLAIDOIRIE_FR,
     },
     "en": {
         "defaut": REPONSE_CHAT_DEFAUT_EN,
         "faute_grave": REPONSE_CHAT_FAUTE_GRAVE_EN,
         "delai": REPONSE_CHAT_DELAI_EN,
+        "responsabilite": REPONSE_CHAT_RESPONSABILITE_EN,
+        "plaidoirie": REPONSE_CHAT_PLAIDOIRIE_EN,
     },
 }
 
@@ -543,4 +613,16 @@ def reponse_demo_pour_question(question: str) -> str:
         return reponses["faute_grave"]
     if any(mot in q for mot in ("délai", "delai", "prescription", "procédure", "procedure", "deadline", "statute of limitations")):
         return reponses["delai"]
+    # Plaidoirie avant responsabilité : "plan de plaidoirie sur l'article
+    # 1240" demande d'abord une structure, pas un cours sur l'article.
+    if any(mot in q for mot in ("plaidoirie", "plaider", "pleading", "oral argument", "closing argument")):
+        return reponses["plaidoirie"]
+    if any(
+        mot in q
+        for mot in (
+            "responsabilité", "responsabilite", "1240", "1241", "dommage", "préjudice", "prejudice",
+            "délictuel", "delictuel", "liability", "damages",
+        )
+    ):
+        return reponses["responsabilite"]
     return reponses["defaut"]
