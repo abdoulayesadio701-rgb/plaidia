@@ -8,7 +8,7 @@
 chronologie automatique, vérification procédurale — avec un garde-fou anti-hallucination
 visible à chaque réponse.*
 
-*Démo en ligne : à compléter après déploiement (voir [DEPLOIEMENT.md](DEPLOIEMENT.md))* · [Documentation API](backend/README.md)
+**[Démo en ligne](https://plaidia.vercel.app)** (sans inscription, cliquer sur « Essayer la démo ») · [Documentation API](backend/README.md)
 
 </div>
 
@@ -202,8 +202,9 @@ exhaustive.
 Guide complet, pas à pas, avec Dockerfile, `render.yaml`, `vercel.json` et
 la liste exacte des variables d'environnement : **[DEPLOIEMENT.md](DEPLOIEMENT.md)**.
 
-**Lien de démo** : `https://<à-compléter>.vercel.app` — à mettre à jour ici
-une fois le déploiement effectué.
+**Lien de démo** : [https://plaidia.vercel.app](https://plaidia.vercel.app) — sans inscription.
+Hébergement gratuit : le premier chargement peut prendre 30 à 60 secondes
+(réveil du serveur).
 
 ## Limitations connues
 
@@ -277,7 +278,7 @@ deployment instructions are in the French sections above and in
 [DEPLOIEMENT.md](DEPLOIEMENT.md) (deployment steps are language-neutral —
 commands and file names read the same either way).
 
-**Live demo**: `https://<to-fill-in>.vercel.app`
+**Live demo**: [https://plaidia.vercel.app](https://plaidia.vercel.app) (no sign-up; the first load may take 30-60 s while the free-tier server wakes up)
 
 **Author**: Abdoulaye Sadio — portfolio project, NLP. GitHub:
 [abdoulayesadio701-rgb](https://github.com/abdoulayesadio701-rgb) ·
