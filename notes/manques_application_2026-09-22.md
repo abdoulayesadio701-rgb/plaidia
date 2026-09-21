@@ -18,7 +18,7 @@ Pas de dossier `.github/workflows`. Les 333 tests backend et 64 tests front ne t
 ## 3. Pas de comptes ni d'isolation des données (impact usage réel : bloquant)
 
 - Aucun système de comptes : la base SQLite est unique et partagée, sans `user_id`. Toute personne qui a le lien voit les dossiers de toutes les autres
-- ~~La page de connexion (`ConnexionPage.tsx`) n'était pas reliée à une authentification~~ **Réglé le 2026-09-22 : page retirée** (l'adresse `/connexion` redirige vers la vitrine). Design récupérable avec `git show c83add4~:frontend/src/pages/ConnexionPage.tsx`
+- ~~La page de connexion (`ConnexionPage.tsx`) n'était pas reliée à une authentification~~ **Réglé le 2026-09-22 : page retirée** (l'adresse `/connexion` redirige vers la vitrine). Design récupérable : `git log --diff-filter=D --format=%h -1 -- frontend/src/pages/ConnexionPage.tsx` donne le commit de suppression `<h>`, puis `git show <h>~:frontend/src/pages/ConnexionPage.tsx`
 - Reste à faire : de vrais comptes (mots de passe hachés, JWT ou sessions, un `user_id` sur chaque table)
 - En attendant, garder le mode démo (données non conservées) sur le lien public
 
