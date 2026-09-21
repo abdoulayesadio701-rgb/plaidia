@@ -1056,25 +1056,6 @@
     "oui": "Yes",
     "echecSuppression": "Deletion failed."
   },
-  "connexion": {
-    "emailRequis": "Email address is required.",
-    "emailInvalide": "Invalid email address.",
-    "motDePasseRequis": "Password is required.",
-    "motDePasseCourt": "8 characters minimum.",
-    "codeAccesRequis": "Access code is required.",
-    "engagementAgentIa": "The AI agent's commitment",
-    "citation": "“All men are born and remain free and equal in rights.”",
-    "citationCourte": "“Free and equal in rights.”",
-    "citationSource": "Declaration of the Rights of Man and of the Citizen (1789)",
-    "baseline": "Informed justice, accessible to everyone, at every moment.",
-    "accederAgentIa": "Access the AI agent",
-    "reserveAvocatsGreffiers": "Reserved for invited lawyers and clerks.",
-    "adresseEmail": "Email address",
-    "motDePasse": "Password",
-    "codeAcces": "Access code",
-    "clefInvitation": "Invitation key",
-    "codeOublie": "Forgot your code? Request access"
-  },
   "domaine": {
     "Prud'hommes": "Labour law",
     "Pénal": "Criminal",

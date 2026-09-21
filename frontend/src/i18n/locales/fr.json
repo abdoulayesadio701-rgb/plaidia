@@ -1056,25 +1056,6 @@
     "oui": "Oui",
     "echecSuppression": "La suppression a échoué."
   },
-  "connexion": {
-    "emailRequis": "L'adresse e-mail est requise.",
-    "emailInvalide": "Adresse e-mail invalide.",
-    "motDePasseRequis": "Le mot de passe est requis.",
-    "motDePasseCourt": "8 caractères minimum.",
-    "codeAccesRequis": "Le code d'accès est requis.",
-    "engagementAgentIa": "L'engagement de l'agent IA",
-    "citation": "« Les hommes naissent et demeurent libres et égaux en droits. »",
-    "citationCourte": "« Libres et égaux en droits. »",
-    "citationSource": "Déclaration des droits de l'homme et du citoyen (1789)",
-    "baseline": "Une justice éclairée et accessible à chacun, à chaque instant.",
-    "accederAgentIa": "Accéder à l'agent IA",
-    "reserveAvocatsGreffiers": "Réservé aux avocats et greffiers invités.",
-    "adresseEmail": "Adresse e-mail",
-    "motDePasse": "Mot de passe",
-    "codeAcces": "Code d'accès",
-    "clefInvitation": "Clé d'invitation",
-    "codeOublie": "Code oublié ? Demander un accès"
-  },
   "domaine": {
     "Prud'hommes": "Prud'hommes",
     "Pénal": "Pénal",
