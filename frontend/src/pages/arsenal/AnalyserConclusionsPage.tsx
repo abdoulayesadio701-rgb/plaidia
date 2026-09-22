@@ -36,6 +36,7 @@ export default function AnalyserConclusionsPage() {
   const dossierActif = useDossierActif();
   const pousserToast = useAppStore((s) => s.pousserToast);
   const [texte, setTexte] = useState("");
+  const [anonymiser, setAnonymiser] = useState(false);
   const [changementStatutEnCours, setChangementStatutEnCours] = useState(false);
   const [suppressionEnCours, setSuppressionEnCours] = useState(false);
   const [confirmationSuppression, setConfirmationSuppression] = useState(false);
@@ -43,8 +44,8 @@ export default function AnalyserConclusionsPage() {
 
   const lancerFlux = useCallback(
     (t: string, cb: Parameters<typeof analyseApi.streamAnalyserConclusions>[2], signal: AbortSignal) =>
-      analyseApi.streamAnalyserConclusions(t, dossierActif?.id, cb, signal),
-    [dossierActif?.id]
+      analyseApi.streamAnalyserConclusions(t, dossierActif?.id, cb, signal, anonymiser),
+    [dossierActif?.id, anonymiser]
   );
   const { data, etape, loading, error, executer, definirDonnees, reinitialiser } = useLazyStream<ConclusionsResultat, [string]>(lancerFlux);
   const { enImport, survole, dragProps, importerFichiers, choixEnAttente, resoudreChoix } = useImportTexte({
@@ -150,6 +151,21 @@ export default function AnalyserConclusionsPage() {
             {t("analyserConclusions.analyser")}
           </Button>
         </div>
+        <label className="flex cursor-pointer items-start gap-2 text-xs text-warmgray" title={t("arsenal.anonymiserAide")}>
+          <input
+            type="checkbox"
+            checked={anonymiser}
+            onChange={(e) => setAnonymiser(e.target.checked)}
+            disabled={loading}
+            className="mt-0.5 h-3.5 w-3.5 shrink-0 accent-amethyst-400"
+          />
+          <span>
+            {t("arsenal.anonymiserLabel")}{" "}
+            <a href="/confidentialite" target="_blank" rel="noreferrer" className="underline hover:text-ivory">
+              {t("arsenal.enSavoirPlus")}
+            </a>
+          </span>
+        </label>
       </div>
 
       {choixEnAttente && <ChoixImportModal noms={choixEnAttente.noms} onChoisir={resoudreChoix} />}

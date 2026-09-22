@@ -398,6 +398,9 @@ export default function LandingPage() {
               <a href={URL_LINKEDIN} target="_blank" rel="noreferrer" className="block text-ivory hover:text-gold-500">
                 LinkedIn
               </a>
+              <Link to="/confidentialite" className="block text-ivory hover:text-gold-500">
+                {t("landing.confidentialite")}
+              </Link>
               <p className="pt-1 text-xs text-muted">{t("landing.projetPortfolio")}</p>
             </div>
           </div>

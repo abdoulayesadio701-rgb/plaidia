@@ -14,6 +14,7 @@ import AppLayout from "@/layout/AppLayout";
 import HomePage from "@/pages/HomePage";
 import ParametresPage from "@/pages/ParametresPage";
 import LandingPage from "@/pages/LandingPage";
+import ConfidentialitePage from "@/pages/ConfidentialitePage";
 import NotFoundPage from "@/pages/NotFoundPage";
 import Styleguide from "@/pages/Styleguide";
 import ChatPage from "@/pages/ChatPage";
@@ -102,6 +103,9 @@ export const router = createBrowserRouter([
   // l'app elle-même vit sous "/app" pour que ce chemin reste libre. Voir
   // LandingPage.tsx ; son bouton "Essayer la démo" mène à /app/chemise/dossiers.
   { path: "/", element: <LandingPage /> },
+  // Page légale autonome, hors AppLayout comme la landing -- accessible
+  // sans dossier ni navigation applicative (voir son en-tête de fichier).
+  { path: "/confidentialite", element: <ConfidentialitePage /> },
   // /styleguide a son propre habillage complet (hero, nav interne) -- rendu
   // hors AppLayout pour ne pas empiler deux barres de navigation.
   { path: "/styleguide", element: <Styleguide /> },

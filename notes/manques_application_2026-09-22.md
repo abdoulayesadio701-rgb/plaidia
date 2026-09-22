@@ -20,7 +20,10 @@ Pas de dossier `.github/workflows`. Les 333 tests backend et 64 tests front ne t
 - Reste à faire : de vrais comptes (mots de passe hachés, JWT ou sessions, un `user_id` sur chaque table)
 - En attendant, garder le mode démo (données non conservées) sur le lien public
 
-## 4. Confidentialité et conformité (impact usage réel)
+## 4. ~~Confidentialité et conformité~~ Réglé le 2026-09-22 : page `/confidentialite` et anonymisation optionnelle
+
+Page légale (liée depuis le footer de la landing et depuis Paramètres > À propos) : quelles données partent vers quel fournisseur, mode démo, clé personnelle, jurisprudence, limites du projet.
+- **Anonymisation optionnelle** sur « Analyser des conclusions adverses » (`anonymisation.py`) : détection locale (aucun appel externe) des noms de personnes, pseudonymisation avant tout appel au modèle (garde-fou, agent, vérificateur, critique inclus), résultat affiché et enregistré avec les vrais noms. 19 tests dédiés + 6 tests d'intégration prouvant qu'aucun vrai nom ne fuit vers le modèle.
 
 Des avocats manipulent des données couvertes par le secret professionnel, envoyées à un fournisseur américain (Anthropic, et éventuellement NVIDIA/DeepSeek). Le dépôt ne mentionne ni RGPD, ni politique de confidentialité, ni où vont les données.
 - À faire : une page "Confidentialité" (quelles données partent, vers quel fournisseur, durée de conservation), une mention claire avant l'envoi d'un document, et une option d'anonymisation des noms avant appel au modèle (extension naturelle du projet, très valorisable en NLP)
@@ -47,5 +50,5 @@ Des avocats manipulent des données couvertes par le secret professionnel, envoy
 | 2 | ~~CI GitHub Actions~~ fait | 1 h | Crédibilité, évite un nouveau bug Docker |
 | 3 | ~~Retirer la fausse page de connexion~~ fait | 30 min | Évite une fausse impression de sécurité |
 | 4 | Jeu d'évaluation anti-hallucination avec chiffres | 1 à 2 jours | Le meilleur argument du portfolio |
-| 5 | Page confidentialité + anonymisation optionnelle | 1 à 2 jours | Réponse à l'objection n°1 d'un avocat |
+| 5 | ~~Page confidentialité + anonymisation optionnelle~~ fait | 1 à 2 jours | Réponse à l'objection n°1 d'un avocat |
 | 6 | Vrais comptes et isolation des données | plusieurs jours | Passage de démo à produit |

@@ -623,6 +623,9 @@
   "arsenal": {
     "dossierActif": "Dossier actif",
     "formatsAjoutesAuxFaits": "PDF, Word, Excel, image — le texte extrait est aussi ajouté aux faits du dossier.",
+    "anonymiserLabel": "Anonymiser les noms de personnes avant l'envoi au modèle (détection locale, sans appel externe).",
+    "anonymiserAide": "Remplace les noms détectés (ex. « M. Diallo ») par des pseudonymes avant l'analyse par l'IA. Le résultat affiché et enregistré dans le dossier garde les vrais noms — seul ce qui part vers le modèle est masqué. Détection heuristique, pas garantie exhaustive.",
+    "enSavoirPlus": "En savoir plus",
     "enregistreDansHistorique": "Enregistré dans l'historique de ce dossier.",
     "libelleAnalyse": "Analyse",
     "diagnostic": "Diagnostic",
@@ -929,6 +932,7 @@
     "essayerDemoSansFleche": "Essayer la démo",
     "contact": "Contact",
     "projetPortfolio": "Projet portfolio, Abdoulaye Sadio, NLP / TAL",
+    "confidentialite": "Confidentialité",
     "aucuneDonneeDemo": "Aucune donnée n'est conservée en mode démo.",
     "demoArgument": {
       "resume": "Les trois retards des 5, 8 et 9 février 2024 caractérisent un manquement réitéré à l'obligation de ponctualité.",
@@ -1008,7 +1012,8 @@
     "aPropos": "À propos",
     "aProposTexte1": "Les passages marqués",
     "aProposTexte2": "signalent un point à vérifier manuellement ; les passages marqués comme une citation, par exemple",
-    "codeSourceGithub": "Voir le code source sur GitHub"
+    "codeSourceGithub": "Voir le code source sur GitHub",
+    "confidentialite": "Confidentialité et anonymisation"
   },
   "chatPage": {
     "analyseDocumentsJoints": "Analyse les documents joints.",
@@ -1107,5 +1112,51 @@
     "Convention": "Convention",
     "Jurisprudence": "Jurisprudence",
     "Autre": "Autre"
-  }
+  },
+  "confidentialite": {
+      "kicker": "Politique de confidentialité",
+      "titre": "Confidentialité et données",
+      "chapeau": "Plaid'IA est un projet portfolio en accès public — voici, honnêtement, ce qui se passe quand vous saisissez du texte dans l'application.",
+      "retourAccueil": "← Retour à l'accueil",
+      "donnees": {
+        "titre": "Quelles données partent où",
+        "intro": "Aucune donnée saisie dans Plaid'IA n'est vendue, partagée à des fins publicitaires, ni transmise à un tiers autre que ceux listés ici.",
+        "anthropic": "Anthropic (Claude) — reçoit le texte envoyé pour générer une réponse, à chaque analyse ou question réelle (hors mode démo). C'est le seul fournisseur utilisé pour l'analyse juridique elle-même, la génération de plaidoiries et le chat.",
+        "deepseek": "NVIDIA (hébergeant le modèle DeepSeek) — optionnel, utilisé uniquement si une clé NVIDIA est configurée sur le serveur, pour quelques tâches de structuration de contenu déjà fourni (extraction d'éléments clés, résumé de dossier).",
+        "judilibre": "Judilibre / Légifrance — optionnel, utilisé uniquement si vous activez la recherche live ou la collecte de jurisprudence, pour interroger ces bases publiques (aucune donnée de votre dossier ne leur est envoyée, seulement des termes de recherche).",
+        "aucunAutre": "Aucun autre service tiers ne reçoit vos données. Pas de suivi publicitaire, pas de revente d'analyses d'usage à des tiers."
+      },
+      "entrainement": {
+        "titre": "Entraînement des modèles",
+        "texte": "Selon la politique commerciale d'Anthropic pour l'usage de son API (à vérifier sur anthropic.com/legal, elle peut évoluer), les données envoyées via l'API ne sont pas utilisées pour entraîner leurs modèles par défaut. Plaid'IA n'a par ailleurs aucun contrôle sur les pratiques réelles d'un fournisseur tiers : cette page reflète notre compréhension de leur politique publique, pas un engagement contractuel que nous pourrions garantir."
+      },
+      "modeDemo": {
+        "titre": "Mode démo",
+        "texte": "Sur un déploiement public sans clé API configurée côté serveur (le cas de la démo en ligne), aucune donnée saisie ne part vers Anthropic ni vers aucun autre fournisseur : les réponses sont préenregistrées, et la base de données est réinitialisée à chaque redémarrage du serveur."
+      },
+      "clePersonnelle": {
+        "titre": "Clé API personnelle",
+        "texte": "Si vous fournissez votre propre clé Anthropic pour sortir du mode démo, elle reste stockée uniquement dans votre navigateur (sessionStorage, effacée à la fermeture de l'onglet), envoyée à chaque requête dans un en-tête HTTP, et n'est jamais journalisée ni enregistrée côté serveur."
+      },
+      "anonymisation": {
+        "titre": "Anonymiser les noms avant l'envoi",
+        "texte1": "Sur « Analyser des conclusions adverses », une case à cocher permet de pseudonymiser les noms de personnes détectés dans le texte avant qu'il ne parte vers Anthropic (garde-fou, agent d'analyse, vérificateur et critique inclus) — chaque nom devient « Personne A », « Personne B »...",
+        "texte2": "La détection se fait entièrement sur le serveur, sans aucun appel externe pour repérer les noms : ils ne partent donc jamais vers un tiers pour cette étape. Le résultat affiché à l'écran et enregistré dans votre dossier, lui, affiche les vrais noms — seul ce qui est réellement envoyé au modèle reste masqué.",
+        "limite": "Limite honnête : la détection est une heuristique (civilité + motif « Prénom NOM »), pas un outil de reconnaissance d'entités nommées entraîné. Elle peut manquer un nom sans marqueur évident, ou repérer à tort un nom propre qui n'est pas une personne. À utiliser comme réduction du risque, jamais comme garantie d'anonymat total."
+      },
+      "jurisprudence": {
+        "titre": "Jurisprudence collectée automatiquement",
+        "texte": "Toute décision collectée automatiquement (recherche live, collecte Judilibre) reste au statut « en attente » et n'est jamais citable par l'assistant tant qu'un avocat ne l'a pas validée manuellement."
+      },
+      "perimetre": {
+        "titre": "Ce que cette page n'est pas",
+        "texte1": "Plaid'IA est un projet personnel de portfolio, pas un produit audité ni accompagné d'un contrat de sous-traitance de données (DPA) avec ses fournisseurs. Cette page décrit le fonctionnement réel de l'application, pas un engagement juridique contractuel.",
+        "texte2": "Si vous envisagez un usage réel avec des données couvertes par le secret professionnel, vérifiez vous-même les conditions actuelles d'Anthropic (et, le cas échéant, de NVIDIA) avant tout usage, et n'y déposez rien que vous ne seriez pas prêt à voir quitter votre poste."
+      },
+      "contact": {
+        "titre": "Contact",
+        "texte": "Une question sur cette page ou sur le fonctionnement de Plaid'IA ? Écrivez via le profil GitHub ou LinkedIn indiqué en pied de la page d'accueil."
+      },
+      "derniereMaj": "Dernière mise à jour : 22 septembre 2026."
+    }
 }
