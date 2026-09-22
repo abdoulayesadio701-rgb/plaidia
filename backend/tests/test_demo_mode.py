@@ -29,17 +29,17 @@ def test_config_signale_le_mode_demo(client: TestClient):
     assert r.status_code == 200
     data = r.json()
     assert data["demo_mode"] is True
-    assert data["dossier_demo_nom"] == "Vasseur c/ Atlas Logistique"
+    assert data["dossier_demo_nom"] is None
     assert data["max_texte_caracteres"] > 0
 
 
-def test_dossier_demo_ensemence_automatiquement(client: TestClient):
+def test_aucun_dossier_preseme_en_mode_demo(client: TestClient):
+    """Depuis le retrait du dossier fictif préchargé : la base démarre vide,
+    un visiteur doit créer son propre dossier pour voir l'app fonctionner
+    (voir main.py::lifespan)."""
     r = client.get("/api/dossiers/")
     assert r.status_code == 200
-    dossiers = r.json()
-    assert len(dossiers) == 1
-    assert dossiers[0]["nom"] == "Vasseur c/ Atlas Logistique"
-    assert dossiers[0]["domaine"] == "Prud'hommes"
+    assert r.json() == []
 
 
 def test_analyser_conclusions_renvoie_les_donnees_cannees(client: TestClient, dossier_demo_id: int):

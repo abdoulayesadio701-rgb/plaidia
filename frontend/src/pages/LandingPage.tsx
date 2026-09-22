@@ -109,8 +109,6 @@ export default function LandingPage() {
   const ARGUMENT_VITRINE = argumentVitrine(t);
   const navigate = useNavigate();
   const chargerConfiguration = useAppStore((s) => s.chargerConfiguration);
-  const chargerDossiers = useAppStore((s) => s.chargerDossiers);
-  const selectionnerDossier = useAppStore((s) => s.selectionnerDossier);
   const demoMode = useAppStore((s) => s.demoMode);
 
   useEffect(() => {
@@ -119,25 +117,12 @@ export default function LandingPage() {
     void chargerConfiguration();
   }, [chargerConfiguration]);
 
-  // En mode démo, saute directement sur la fiche du dossier de
-  // démonstration déjà semé en base (nom, faits et une analyse déjà
-  // générée -- voir main.py::_ensemencer_dossier_demo) plutôt que sur la
-  // liste des dossiers, vide de toute sélection : zéro clic ni saisie
-  // supplémentaire pour voir l'app fonctionner. Hors mode démo (un vrai
-  // déploiement avec clé API), comportement inchangé -- il n'existe pas de
-  // dossier de démonstration à sélectionner.
+  // Aucun dossier n'est préchargé en mode démo (voir backend/app/main.py::
+  // lifespan) : "Essayer la démo" mène donc toujours à la liste des
+  // dossiers, où le visiteur crée le sien -- les réponses cannées de
+  // demo_data.py s'appliquent ensuite à n'importe quel dossier qu'il crée.
   const essayerLaDemo = async () => {
     await chargerConfiguration();
-    const { demoMode: demoModeActuel, dossierDemoNom } = useAppStore.getState();
-    if (demoModeActuel && dossierDemoNom) {
-      await chargerDossiers();
-      const dossierDemo = useAppStore.getState().dossiers.find((d) => d.nom === dossierDemoNom);
-      if (dossierDemo) {
-        selectionnerDossier(dossierDemo.id);
-        navigate("/app/chemise/historique");
-        return;
-      }
-    }
     navigate("/app/chemise/dossiers");
   };
 

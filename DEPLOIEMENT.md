@@ -123,12 +123,12 @@ front vers l'API avec une erreur CORS dans la console.
 1. Ouvrez l'URL Vercel dans un navigateur en navigation privée (évite tout
    cache).
 2. La page d'accueil publique doit s'afficher (voir `frontend/src/pages/LandingPage.tsx`).
-3. Cliquez **Essayer la démo** → vous arrivez sur `/app/chemise/dossiers`
-   avec le dossier fictif « Vasseur c/ Atlas Logistique » déjà présent.
+3. Cliquez **Essayer la démo** → vous arrivez sur `/app/chemise/dossiers`,
+   vide (aucun dossier n'est préchargé). Créez-en un (n'importe quel nom).
 4. Ouvrez-le, lancez **Analyser des conclusions adverses** : la réponse
    doit apparaître en quelques secondes (préenregistrée, pas d'appel réel
-   à Claude) et le bandeau **Mode démo** doit être visible en haut de
-   l'app.
+   à Claude, indépendante du contenu saisi) et le bandeau **Mode démo**
+   doit être visible en haut de l'app.
 5. Si le tout premier chargement de l'étape 3 semble bloqué ~30-60 s, c'est
    le réveil du service Render gratuit (voir avertissement étape 1) — pas
    un bug.

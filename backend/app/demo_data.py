@@ -1,22 +1,20 @@
 """
-demo_data.py — Contenu préenregistré du mode démo (voir demo.py) : un
-dossier fictif de droit du travail ("Vasseur c/ Atlas Logistique") avec son
-analyse de conclusions adverses, son plan de plaidoirie, son simulateur
-d'objections et sa chronologie -- au format exact des schémas Pydantic
-correspondants, pour que le front n'ait strictement rien à distinguer entre
-une réponse démo et une réponse réelle.
+demo_data.py — Contenu préenregistré du mode démo (voir demo.py) : des
+réponses génériques de droit du travail (analyse de conclusions adverses,
+plan de plaidoirie, simulateur d'objections, chronologie...) au format exact
+des schémas Pydantic correspondants, pour que le front n'ait strictement
+rien à distinguer entre une réponse démo et une réponse réelle. Elles
+s'appliquent à N'IMPORTE QUEL dossier créé par un visiteur en mode démo --
+aucun dossier n'est préchargé en base (voir l'ancien main.py::
+_ensemencer_dossier_demo, retiré : le visiteur crée lui-même son dossier
+avant de déclencher une action).
 
 Toute ressemblance avec une affaire réelle est fortuite : noms, dates et
 pièces sont inventés pour l'exercice.
 
 Chaque jeu de données existe en FR et en EN (suffixes _FR/_EN) et se
 sélectionne via analyse.langue_requete() (posé par le middleware X-Langue de
-main.py), à l'exception de DOSSIER_DEMO : contrairement aux autres, ce
-dossier est ensemencé UNE SEULE FOIS en base au démarrage du serveur (voir
-main.py::lifespan), partagé par tous les visiteurs -- il ne peut donc pas
-varier selon la langue de la requête courante, faute de quoi son contenu
-changerait de langue sous les pieds d'un visiteur déjà en train de le
-consulter. Les constantes sans suffixe (CONCLUSIONS_DEMO, PLAN_DEMO, ...)
+main.py). Les constantes sans suffixe (CONCLUSIONS_DEMO, PLAN_DEMO, ...)
 restent exportées pour compatibilité ascendante -- toujours la version
 française -- mais le code applicatif doit passer par les fonctions
 conclusions_demo()/plan_demo()/simulateur_demo()/chronologie_demo()/
@@ -24,29 +22,6 @@ resume_demo() ci-dessous, jamais les constantes directement.
 """
 
 import analyse as legacy_analyse
-
-NOM_DOSSIER_DEMO = "Vasseur c/ Atlas Logistique"
-
-DOSSIER_DEMO = {
-    "nom": NOM_DOSSIER_DEMO,
-    "numero_dossier": "RG 24/01187 (démonstration)",
-    "domaine": "Prud'hommes",
-    "parties": "M. Karim Vasseur (demandeur, salarié) c/ SAS Atlas Logistique (défenderesse, employeur)",
-    "faits": (
-        "M. Karim Vasseur, magasinier-cariste, a été engagé le 3 juin 2019 par la SAS Atlas Logistique "
-        "(Bondy, 93) en contrat à durée indéterminée. Le 14 février 2024, il est convoqué à un entretien "
-        "préalable à un licenciement pour faute grave, notifié le 28 février 2024. L'employeur invoque "
-        "trois retards consécutifs (5, 8 et 9 février 2024) ainsi qu'un refus d'obtempérer face à son "
-        "supérieur hiérarchique le 9 février. M. Vasseur conteste les faits : les retards seraient liés à "
-        "un mouvement de grève sur la ligne RER B, et l'échange du 9 février relèverait d'un désaccord "
-        "verbal sur une réaffectation de poste, non d'une insubordination caractérisée. Il n'a fait "
-        "l'objet d'aucun avertissement en cinq ans d'ancienneté. Il saisit le conseil de prud'hommes de "
-        "Bobigny en contestation du licenciement et sollicite sa requalification en licenciement sans "
-        "cause réelle et sérieuse, ainsi que des dommages et intérêts.\n\n"
-        "[Dossier de démonstration — contenu entièrement fictif, généré pour illustrer Plaid'IA.]"
-    ),
-    "statut": "en cours",
-}
 
 CONCLUSIONS_DEMO_FR = {
     "arguments": [
