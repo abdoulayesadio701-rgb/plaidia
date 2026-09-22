@@ -2,12 +2,10 @@
 
 Basé sur ce que j'ai observé dans le code et sur le site en ligne. Classé par impact, deux angles : portfolio (convaincre un recruteur) et usage réel (avocats).
 
-## 1. Aucune mesure de la fiabilité (impact portfolio : le plus fort)
+## 1. ~~Aucune mesure de la fiabilité~~ Réglé le 2026-09-22 : jeu d'évaluation construit et exécuté
 
-Le cœur du projet est "anti-hallucination", mais rien ne le mesure. Aucun jeu d'évaluation dans le dépôt.
-- Constaté en direct : le garde-fou a refusé à tort une demande normale 2 fois sur 6. Les tests existants simulent le modèle, ils ne l'auraient jamais vu
-- À faire : un jeu de 30 à 50 questions juridiques avec réponse connue, et mesurer (a) le taux de citations inventées, (b) le taux de citations correctement balisées `[ART]` / `[VERIF]`, (c) le taux de faux refus du garde-fou, (d) ce que le vérificateur rattrape par rapport à l'agent principal seul
-- Résultat : un tableau de chiffres à mettre en tête du README, CV et lettre ("réduit les citations non vérifiées de X % à Y %")
+`evaluation/` : 25 demandes légitimes, 11 attaques, 20 questions de fond, 13 questions-pièges. Run réel (381 appels, 2,89 $), revue manuelle sur Légifrance. Résultat : 98 % des citations exactes, 0 % des sources fictives adoptées, 0 % de faux refus après correction. Détail : `evaluation/resultats/2026-09-22_09h15/RESULTATS.md`.
+- Limite trouvée et documentée : sans corpus de sources (chat simple), le vérificateur marque à tort 55 % des citations réelles comme "non vérifiées" — sur-prudence, pas une faille
 
 ## 2. ~~Pas de CI~~ Réglé le 2026-09-22 (`.github/workflows/ci.yml`, badge dans le README, 3 jobs verts)
 

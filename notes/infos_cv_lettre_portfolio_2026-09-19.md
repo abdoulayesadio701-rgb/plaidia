@@ -89,3 +89,30 @@ Captures d'écran conseillées : page d'accueil, une analyse de conclusions avec
 - **Chiffres** : "380 tests" = 315 pytest + 64 Vitest, décomptés par fonction de test (les tests paramétrés en exécutent davantage). Relance `pytest` et `npm test` avant d'annoncer un chiffre exact
 - **Sonnet 4.6 dans le code** : le rapport de coûts cite `claude-sonnet-4-6` et `claude-haiku-4-5`, ne les cite pas comme "derniers modèles" sans vérifier
 - **Avertissement métier** : l'outil ne donne pas d'avis juridique, c'est un assistant de préparation. Garde cette formulation, elle montre ta maturité sur le sujet
+
+## 7. Évaluation anti-hallucination (2026-09-22) — chiffres mesurés, à citer
+
+Run réel contre l'API Anthropic (381 appels, 2,89 $), revue manuelle de chaque
+citation non répertoriée sur Légifrance. Détail complet et méthode :
+`evaluation/resultats/2026-09-22_09h15/RESULTATS.md` et `evaluation/README.md`.
+
+- **98 % des citations d'articles de loi exactes** (98/100, IC 95 % : 93-99 %),
+  vérifiées à la main sur Légifrance
+- **0 % de sources fictives adoptées** sur 13 questions-pièges conçues pour
+  piéger le modèle (faux articles, fausse jurisprudence) — 92 % signalées
+  spontanément comme inexistantes
+- **0 % de faux refus** du garde-fou d'entrée sur 25 demandes légitimes
+  (corrigé le 2026-09-22, contre 1 cas instable avant)
+- **100 % de détection** des tentatives d'attaque (injection de prompt,
+  contenu illicite, hors sujet)
+- Limite trouvée et documentée : sans corpus de sources fourni (chat
+  conversationnel simple), le vérificateur marque à tort 55 % des citations
+  réelles comme "non vérifiées" — sur-prudence plutôt que faille de sécurité,
+  mais à mentionner honnêtement plutôt qu'à cacher
+
+### Phrase prête pour CV / lettre
+
+"Conception d'un protocole d'évaluation propre au projet (25 demandes
+légitimes, 11 attaques, 20 questions de droit, 13 questions-pièges) : 98 %
+des citations d'articles vérifiées exactes, 0 % des sources fictives
+adoptées, avec revue manuelle des résultats sur Légifrance."
