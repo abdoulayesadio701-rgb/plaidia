@@ -29,7 +29,7 @@ def test_config_signale_le_mode_demo(client: TestClient):
     assert r.status_code == 200
     data = r.json()
     assert data["demo_mode"] is True
-    assert data["dossier_demo_nom"] == "Diallo c/ Atlas Logistique"
+    assert data["dossier_demo_nom"] == "Vasseur c/ Atlas Logistique"
     assert data["max_texte_caracteres"] > 0
 
 
@@ -38,7 +38,7 @@ def test_dossier_demo_ensemence_automatiquement(client: TestClient):
     assert r.status_code == 200
     dossiers = r.json()
     assert len(dossiers) == 1
-    assert dossiers[0]["nom"] == "Diallo c/ Atlas Logistique"
+    assert dossiers[0]["nom"] == "Vasseur c/ Atlas Logistique"
     assert dossiers[0]["domaine"] == "Prud'hommes"
 
 
@@ -153,7 +153,7 @@ def test_simulateur_objections_canne(client: TestClient, dossier_demo_id: int):
 def test_simulateur_objections_canne_en_anglais_si_x_langue_en(client: TestClient, dossier_demo_id: int):
     r = client.post("/api/analyse/simulateur", json={"dossier_id": dossier_demo_id}, headers={"x-langue": "en"})
     assert r.status_code == 200
-    assert "diallo" in r.json()["point_le_plus_faible"].lower()
+    assert "vasseur" in r.json()["point_le_plus_faible"].lower()
     assert "l'absence" not in r.json()["point_le_plus_faible"].lower()
 
 

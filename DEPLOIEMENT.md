@@ -124,7 +124,7 @@ front vers l'API avec une erreur CORS dans la console.
    cache).
 2. La page d'accueil publique doit s'afficher (voir `frontend/src/pages/LandingPage.tsx`).
 3. Cliquez **Essayer la démo** → vous arrivez sur `/app/chemise/dossiers`
-   avec le dossier fictif « Diallo c/ Atlas Logistique » déjà présent.
+   avec le dossier fictif « Vasseur c/ Atlas Logistique » déjà présent.
 4. Ouvrez-le, lancez **Analyser des conclusions adverses** : la réponse
    doit apparaître en quelques secondes (préenregistrée, pas d'appel réel
    à Claude) et le bandeau **Mode démo** doit être visible en haut de
