@@ -7,10 +7,10 @@ import { obtenirClePersonnelle } from "./cleApiPersonnelle";
 import { entetesSse, lireFluxSse } from "./sse";
 import type { ConclusionsResultat, DocumentGenere, PlanResultat, RapportCompletResultat, ResumeResultat, SimulateurResultat, StatutDocument, StyleResultat, TraductionResultat, Verification } from "./types";
 
-export function analyserConclusions(texte: string, dossierId?: number, anonymiser?: boolean): Promise<ConclusionsResultat> {
+export function analyserConclusions(texte: string, dossierId?: number): Promise<ConclusionsResultat> {
   return apiRequest<ConclusionsResultat>("/api/analyse/conclusions", {
     method: "POST",
-    body: { texte, dossier_id: dossierId ?? null, anonymiser: anonymiser ?? false },
+    body: { texte, dossier_id: dossierId ?? null },
   });
 }
 
@@ -48,17 +48,11 @@ export function streamAnalyserConclusions(
   texte: string,
   dossierId: number | undefined,
   callbacks: CallbacksFluxPipeline<ConclusionsResultat>,
-  signal?: AbortSignal,
-  anonymiser?: boolean
+  signal?: AbortSignal
 ): Promise<void> {
   return lireFluxSse(
     `${BASE_URL}/api/analyse/conclusions/stream`,
-    {
-      method: "POST",
-      headers: entetesAvecClePersonnelle(),
-      body: JSON.stringify({ texte, dossier_id: dossierId ?? null, anonymiser: anonymiser ?? false }),
-      signal,
-    },
+    { method: "POST", headers: entetesAvecClePersonnelle(), body: JSON.stringify({ texte, dossier_id: dossierId ?? null }), signal },
     {
       etape: (data) => callbacks.onEtape?.(data as EtapePipeline),
       principal: (data) => callbacks.onPrincipal?.(data as Partial<ConclusionsResultat>),

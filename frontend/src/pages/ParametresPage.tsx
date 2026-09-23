@@ -9,7 +9,6 @@
  * voir router.tsx, ajouté hors de la liste pilotée par navigation.ts.
  */
 
-import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useAppStore } from "@/store/useAppStore";
 import ClePersonnelleForm from "@/components/ClePersonnelleForm";
@@ -117,14 +116,9 @@ function AProposSection() {
         <mark className="marker-verify">{t("richOutput.aVerifier")} : ...</mark> {t("parametres.aProposTexte2")}{" "}
         <span className="marker-citation">art. 1240 du Code civil</span>.
       </p>
-      <div className="flex flex-wrap gap-x-5 gap-y-2">
-        <a href={URL_GITHUB} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-sm text-amethyst-400 hover:underline">
-          {t("parametres.codeSourceGithub")}
-        </a>
-        <Link to="/confidentialite" target="_blank" className="inline-flex items-center gap-1.5 text-sm text-amethyst-400 hover:underline">
-          {t("parametres.confidentialite")}
-        </Link>
-      </div>
+      <a href={URL_GITHUB} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-sm text-amethyst-400 hover:underline">
+        {t("parametres.codeSourceGithub")}
+      </a>
     </section>
   );
 }

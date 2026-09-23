@@ -1,20 +1,22 @@
 """
-demo_data.py — Contenu préenregistré du mode démo (voir demo.py) : des
-réponses génériques de droit du travail (analyse de conclusions adverses,
-plan de plaidoirie, simulateur d'objections, chronologie...) au format exact
-des schémas Pydantic correspondants, pour que le front n'ait strictement
-rien à distinguer entre une réponse démo et une réponse réelle. Elles
-s'appliquent à N'IMPORTE QUEL dossier créé par un visiteur en mode démo --
-aucun dossier n'est préchargé en base (voir l'ancien main.py::
-_ensemencer_dossier_demo, retiré : le visiteur crée lui-même son dossier
-avant de déclencher une action).
+demo_data.py — Contenu préenregistré du mode démo (voir demo.py) : un
+dossier fictif de droit du travail ("Diallo c/ Atlas Logistique") avec son
+analyse de conclusions adverses, son plan de plaidoirie, son simulateur
+d'objections et sa chronologie -- au format exact des schémas Pydantic
+correspondants, pour que le front n'ait strictement rien à distinguer entre
+une réponse démo et une réponse réelle.
 
 Toute ressemblance avec une affaire réelle est fortuite : noms, dates et
 pièces sont inventés pour l'exercice.
 
 Chaque jeu de données existe en FR et en EN (suffixes _FR/_EN) et se
 sélectionne via analyse.langue_requete() (posé par le middleware X-Langue de
-main.py). Les constantes sans suffixe (CONCLUSIONS_DEMO, PLAN_DEMO, ...)
+main.py), à l'exception de DOSSIER_DEMO : contrairement aux autres, ce
+dossier est ensemencé UNE SEULE FOIS en base au démarrage du serveur (voir
+main.py::lifespan), partagé par tous les visiteurs -- il ne peut donc pas
+varier selon la langue de la requête courante, faute de quoi son contenu
+changerait de langue sous les pieds d'un visiteur déjà en train de le
+consulter. Les constantes sans suffixe (CONCLUSIONS_DEMO, PLAN_DEMO, ...)
 restent exportées pour compatibilité ascendante -- toujours la version
 française -- mais le code applicatif doit passer par les fonctions
 conclusions_demo()/plan_demo()/simulateur_demo()/chronologie_demo()/
@@ -22,6 +24,29 @@ resume_demo() ci-dessous, jamais les constantes directement.
 """
 
 import analyse as legacy_analyse
+
+NOM_DOSSIER_DEMO = "Diallo c/ Atlas Logistique"
+
+DOSSIER_DEMO = {
+    "nom": NOM_DOSSIER_DEMO,
+    "numero_dossier": "RG 24/01187 (démonstration)",
+    "domaine": "Prud'hommes",
+    "parties": "M. Karim Diallo (demandeur, salarié) c/ SAS Atlas Logistique (défenderesse, employeur)",
+    "faits": (
+        "M. Karim Diallo, magasinier-cariste, a été engagé le 3 juin 2019 par la SAS Atlas Logistique "
+        "(Bondy, 93) en contrat à durée indéterminée. Le 14 février 2024, il est convoqué à un entretien "
+        "préalable à un licenciement pour faute grave, notifié le 28 février 2024. L'employeur invoque "
+        "trois retards consécutifs (5, 8 et 9 février 2024) ainsi qu'un refus d'obtempérer face à son "
+        "supérieur hiérarchique le 9 février. M. Diallo conteste les faits : les retards seraient liés à "
+        "un mouvement de grève sur la ligne RER B, et l'échange du 9 février relèverait d'un désaccord "
+        "verbal sur une réaffectation de poste, non d'une insubordination caractérisée. Il n'a fait "
+        "l'objet d'aucun avertissement en cinq ans d'ancienneté. Il saisit le conseil de prud'hommes de "
+        "Bobigny en contestation du licenciement et sollicite sa requalification en licenciement sans "
+        "cause réelle et sérieuse, ainsi que des dommages et intérêts.\n\n"
+        "[Dossier de démonstration — contenu entièrement fictif, généré pour illustrer Plaid'IA.]"
+    ),
+    "statut": "en cours",
+}
 
 CONCLUSIONS_DEMO_FR = {
     "arguments": [
@@ -31,18 +56,18 @@ CONCLUSIONS_DEMO_FR = {
             "raisonnement": {
                 "probleme_de_droit": "Des retards répétés, même de courte durée, peuvent-ils à eux seuls caractériser une faute grave justifiant un licenciement sans préavis ni indemnité ?",
                 "regle_applicable": "La faute grave suppose un manquement rendant impossible le maintien du salarié dans l'entreprise pendant la durée du préavis. [VERIF:la qualification retenue par la jurisprudence pour des retards isolés sans avertissement préalable]",
-                "application_aux_faits": "M. Vasseur n'a fait l'objet d'aucune sanction disciplinaire en cinq ans d'ancienneté ; les trois retards invoqués sont concentrés sur une semaine coïncidant avec un mouvement de grève RER B (pièce 7), ce qui affaiblit sensiblement le caractère fautif et délibéré retenu par l'employeur.",
+                "application_aux_faits": "M. Diallo n'a fait l'objet d'aucune sanction disciplinaire en cinq ans d'ancienneté ; les trois retards invoqués sont concentrés sur une semaine coïncidant avec un mouvement de grève RER B (pièce 7), ce qui affaiblit sensiblement le caractère fautif et délibéré retenu par l'employeur.",
             },
             "risque": "Moyen",
             "justification_risque": "L'absence de tout antécédent disciplinaire et la coïncidence avec une grève des transports fragilisent la qualification de faute grave, sans l'exclure totalement si l'employeur démontre qu'un trajet alternatif était raisonnablement praticable.",
             "refutations": [
-                {"angle": "Factuel", "piste": "Produire l'attestation SNCF/RATP de perturbation du trafic sur la ligne empruntée par M. Vasseur aux dates visées."},
+                {"angle": "Factuel", "piste": "Produire l'attestation SNCF/RATP de perturbation du trafic sur la ligne empruntée par M. Diallo aux dates visées."},
                 {"angle": "Juridique", "piste": "[VERIF:rechercher un arrêt de la chambre sociale excluant la faute grave en cas de retards liés à un mouvement de grève des transports]"},
             ],
         },
         {
             "resume": "Le refus d'obtempérer du 9 février 2024 face à M. Bertrand, chef d'équipe, constitue un acte d'insubordination caractérisée.",
-            "fondement": "Attestation de M. Bertrand (pièce 6) selon laquelle M. Vasseur aurait « refusé catégoriquement » de reprendre le poste de conditionnement qui lui était assigné.",
+            "fondement": "Attestation de M. Bertrand (pièce 6) selon laquelle M. Diallo aurait « refusé catégoriquement » de reprendre le poste de conditionnement qui lui était assigné.",
             "raisonnement": {
                 "probleme_de_droit": "Un désaccord ponctuel sur l'affectation d'un poste, exprimé verbalement, suffit-il à caractériser une insubordination fautive ?",
                 "regle_applicable": "L'insubordination suppose un refus délibéré et injustifié d'exécuter une instruction relevant du pouvoir de direction de l'employeur, appréciée au regard du contexte et de la teneur exacte des propos échangés.",
@@ -57,7 +82,7 @@ CONCLUSIONS_DEMO_FR = {
         },
         {
             "resume": "L'ancienneté du salarié ne fait pas obstacle à la qualification de faute grave dès lors que les faits sont établis.",
-            "fondement": "Argument de principe soulevé par l'employeur en réponse à l'absence d'antécédents disciplinaires de M. Vasseur.",
+            "fondement": "Argument de principe soulevé par l'employeur en réponse à l'absence d'antécédents disciplinaires de M. Diallo.",
             "raisonnement": {
                 "probleme_de_droit": "L'ancienneté et l'absence de tout antécédent disciplinaire doivent-elles être prises en compte dans l'appréciation de la gravité de la faute reprochée ?",
                 "regle_applicable": "[VERIF:la jurisprudence sociale intègre traditionnellement l'ancienneté et le comportement antérieur du salarié parmi les éléments d'appréciation de la gravité d'un manquement, sans que ce soit un obstacle absolu]",
@@ -84,18 +109,18 @@ CONCLUSIONS_DEMO_EN = {
             "raisonnement": {
                 "probleme_de_droit": "Can repeated instances of lateness, even brief ones, on their own amount to serious misconduct justifying dismissal without notice or severance pay?",
                 "regle_applicable": "Serious misconduct requires a failure that makes it impossible to keep the employee on during the notice period. [VERIF:the qualification applied by case law to isolated instances of lateness with no prior warning]",
-                "application_aux_faits": "Mr. Vasseur has faced no disciplinary sanction in five years of tenure; the three instances of lateness relied upon are concentrated within one week coinciding with an RER B rail strike (exhibit 7), which significantly weakens the wrongful and deliberate character claimed by the employer.",
+                "application_aux_faits": "Mr. Diallo has faced no disciplinary sanction in five years of tenure; the three instances of lateness relied upon are concentrated within one week coinciding with an RER B rail strike (exhibit 7), which significantly weakens the wrongful and deliberate character claimed by the employer.",
             },
             "risque": "Moyen",
             "justification_risque": "The absence of any disciplinary record and the coincidence with a transport strike weaken the case for serious misconduct, without ruling it out entirely if the employer shows that a reasonable alternative route was available.",
             "refutations": [
-                {"angle": "Factuel", "piste": "Produce the SNCF/RATP certificate confirming the traffic disruption on the line used by Mr. Vasseur on the dates in question."},
+                {"angle": "Factuel", "piste": "Produce the SNCF/RATP certificate confirming the traffic disruption on the line used by Mr. Diallo on the dates in question."},
                 {"angle": "Juridique", "piste": "[VERIF:find a ruling from the labour chamber excluding serious misconduct in the case of lateness linked to a transport strike]"},
             ],
         },
         {
             "resume": "The refusal to comply on 9 February 2024 towards Mr. Bertrand, team leader, constitutes a clear act of insubordination.",
-            "fondement": "Statement from Mr. Bertrand (exhibit 6) stating that Mr. Vasseur \"categorically refused\" to return to the packing station he had been assigned.",
+            "fondement": "Statement from Mr. Bertrand (exhibit 6) stating that Mr. Diallo \"categorically refused\" to return to the packing station he had been assigned.",
             "raisonnement": {
                 "probleme_de_droit": "Is a one-off, verbally expressed disagreement over a job assignment enough to amount to wrongful insubordination?",
                 "regle_applicable": "Insubordination requires a deliberate and unjustified refusal to carry out an instruction falling within the employer's managerial authority, assessed in light of the context and the exact content of the words exchanged.",
@@ -110,7 +135,7 @@ CONCLUSIONS_DEMO_EN = {
         },
         {
             "resume": "The employee's seniority does not preclude a finding of serious misconduct once the facts are established.",
-            "fondement": "Argument of principle raised by the employer in response to the absence of any disciplinary record for Mr. Vasseur.",
+            "fondement": "Argument of principle raised by the employer in response to the absence of any disciplinary record for Mr. Diallo.",
             "raisonnement": {
                 "probleme_de_droit": "Should seniority and the absence of any disciplinary record be taken into account when assessing the seriousness of the misconduct alleged?",
                 "regle_applicable": "[VERIF:labour case law traditionally factors in seniority and the employee's prior conduct among the elements used to assess the seriousness of a failure, without this being an absolute bar]",
@@ -183,7 +208,7 @@ PLAN_DEMO_FR = {
     ),
     "points_attention": [
         "Préparer une réponse orale si l'employeur produit à l'audience des pièces non communiquées.",
-        "Vérifier la présence effective de M. Vasseur à l'audience pour un éventuel interrogatoire.",
+        "Vérifier la présence effective de M. Diallo à l'audience pour un éventuel interrogatoire.",
     ],
 }
 
@@ -231,7 +256,7 @@ PLAN_DEMO_EN = {
     ),
     "points_attention": [
         "Prepare an oral response in case the employer produces undisclosed evidence at the hearing.",
-        "Check that Mr. Vasseur will actually be present at the hearing in case of questioning.",
+        "Check that Mr. Diallo will actually be present at the hearing in case of questioning.",
     ],
 }
 
@@ -260,18 +285,18 @@ SIMULATEUR_DEMO_FR = {
         {
             "origine": "Partie adverse",
             "question": "Si les propos du 9 février n'étaient qu'un désaccord anodin, pourquoi votre client ne les a-t-il pas contestés lors de l'entretien préalable ?",
-            "piege": "Faire peser sur le silence de M. Vasseur lors de l'entretien une présomption d'aveu implicite.",
+            "piege": "Faire peser sur le silence de M. Diallo lors de l'entretien une présomption d'aveu implicite.",
             "piste_reponse": "Rappeler que l'entretien préalable n'est pas un débat contradictoire mais une formalité procédurale asymétrique, et que le silence du salarié ne vaut jamais reconnaissance des faits. [VERIF:citer un arrêt en ce sens si disponible]",
         },
         {
             "origine": "Magistrat",
-            "question": "M. Vasseur occupait-il un poste à responsabilité particulière justifiant une exigence de ponctualité renforcée ?",
+            "question": "M. Diallo occupait-il un poste à responsabilité particulière justifiant une exigence de ponctualité renforcée ?",
             "piege": "Faire ressortir un élément du contrat de travail non anticipé par la défense.",
             "piste_reponse": "Vérifier précisément les termes du contrat de travail et de la fiche de poste avant l'audience plutôt que d'y répondre dans l'incertitude.",
         },
     ],
     "point_le_plus_faible": (
-        "L'absence, à ce stade du dossier, de toute pièce contemporaine confirmant la version de M. Vasseur "
+        "L'absence, à ce stade du dossier, de toute pièce contemporaine confirmant la version de M. Diallo "
         "sur l'échange du 9 février — la défense repose largement sur la fragilité de la preuve adverse "
         "plutôt que sur une preuve positive propre."
     ),
@@ -294,19 +319,19 @@ SIMULATEUR_DEMO_EN = {
         {
             "origine": "Partie adverse",
             "question": "If the remarks on 9 February were only a trivial disagreement, why did your client not dispute them at the preliminary meeting?",
-            "piege": "Treat Mr. Vasseur's silence at the meeting as an implicit admission.",
+            "piege": "Treat Mr. Diallo's silence at the meeting as an implicit admission.",
             "piste_reponse": "Recall that the preliminary meeting is not an adversarial debate but an asymmetric procedural formality, and that an employee's silence never amounts to an admission of the facts. [VERIF:cite a ruling to this effect if available]",
         },
         {
             "origine": "Magistrat",
-            "question": "Did Mr. Vasseur hold a position of particular responsibility justifying a heightened requirement of punctuality?",
+            "question": "Did Mr. Diallo hold a position of particular responsibility justifying a heightened requirement of punctuality?",
             "piege": "Bring out a term of the employment contract not anticipated by the defence.",
             "piste_reponse": "Check the exact terms of the employment contract and job description before the hearing rather than answering while uncertain.",
         },
     ],
     "point_le_plus_faible": (
         "The absence, at this stage of the case, of any evidence contemporaneous with the facts confirming "
-        "Mr. Vasseur's account of the exchange on 9 February — the defence rests largely on the weakness of "
+        "Mr. Diallo's account of the exchange on 9 February — the defence rests largely on the weakness of "
         "the opposing evidence rather than on positive evidence of its own."
     ),
 }
@@ -322,7 +347,7 @@ def simulateur_demo() -> dict:
 CHRONOLOGIE_DEMO_FR = {
     "periode_couverte": "3 juin 2019 – 15 avril 2024",
     "evenements": [
-        {"date": "3 juin 2019", "evenement": "Embauche de M. Karim Vasseur en qualité de magasinier-cariste au sein de la SAS Atlas Logistique (CDI)."},
+        {"date": "3 juin 2019", "evenement": "Embauche de M. Karim Diallo en qualité de magasinier-cariste au sein de la SAS Atlas Logistique (CDI)."},
         {"date": "5 février 2024", "evenement": "Premier retard relevé (22 minutes), coïncidant avec un mouvement de grève sur la ligne RER B."},
         {"date": "8 février 2024", "evenement": "Second retard relevé (35 minutes)."},
         {"date": "9 février 2024", "evenement": "Troisième retard relevé (41 minutes) ; échange contesté avec M. Bertrand, chef d'équipe, sur une réaffectation de poste."},
@@ -333,14 +358,14 @@ CHRONOLOGIE_DEMO_FR = {
     ],
     "elements_manquants": [
         "Date exacte de réception de la lettre de licenciement par le salarié (fait courir le délai de contestation).",
-        "Éventuels échanges écrits entre M. Vasseur et sa hiérarchie antérieurs au 5 février 2024.",
+        "Éventuels échanges écrits entre M. Diallo et sa hiérarchie antérieurs au 5 février 2024.",
     ],
 }
 
 CHRONOLOGIE_DEMO_EN = {
     "periode_couverte": "3 June 2019 – 15 April 2024",
     "evenements": [
-        {"date": "3 June 2019", "evenement": "Mr. Karim Vasseur hired as a warehouse operator/forklift driver by SAS Atlas Logistique (open-ended contract)."},
+        {"date": "3 June 2019", "evenement": "Mr. Karim Diallo hired as a warehouse operator/forklift driver by SAS Atlas Logistique (open-ended contract)."},
         {"date": "5 February 2024", "evenement": "First instance of lateness recorded (22 minutes), coinciding with a strike on the RER B line."},
         {"date": "8 February 2024", "evenement": "Second instance of lateness recorded (35 minutes)."},
         {"date": "9 February 2024", "evenement": "Third instance of lateness recorded (41 minutes); disputed exchange with Mr. Bertrand, team leader, over a job reassignment."},
@@ -351,7 +376,7 @@ CHRONOLOGIE_DEMO_EN = {
     ],
     "elements_manquants": [
         "Exact date the dismissal letter was received by the employee (starts the time limit to challenge it running).",
-        "Any written exchanges between Mr. Vasseur and his management before 5 February 2024.",
+        "Any written exchanges between Mr. Diallo and his management before 5 February 2024.",
     ],
 }
 
@@ -365,7 +390,7 @@ def chronologie_demo() -> dict:
 
 RESUME_DEMO_FR = {
     "resume_court": (
-        "M. Karim Vasseur, magasinier-cariste depuis 2019 chez Atlas Logistique, conteste son licenciement "
+        "M. Karim Diallo, magasinier-cariste depuis 2019 chez Atlas Logistique, conteste son licenciement "
         "pour faute grave notifié le 28 février 2024, motivé par trois retards imputés à une grève des "
         "transports et un désaccord verbal avec son chef d'équipe rapporté par un témoin unique. Il "
         "sollicite la requalification en licenciement sans cause réelle et sérieuse."
@@ -385,7 +410,7 @@ RESUME_DEMO_FR = {
 
 RESUME_DEMO_EN = {
     "resume_court": (
-        "Mr. Karim Vasseur, a warehouse operator/forklift driver at Atlas Logistique since 2019, is "
+        "Mr. Karim Diallo, a warehouse operator/forklift driver at Atlas Logistique since 2019, is "
         "challenging his dismissal for serious misconduct notified on 28 February 2024, based on three "
         "instances of lateness attributed to a transport strike and a verbal disagreement with his team "
         "leader reported by a single witness. He is seeking reclassification as a dismissal without real "
@@ -425,7 +450,7 @@ def resume_demo() -> dict:
 
 REPONSE_CHAT_DEFAUT_FR = """Vous êtes en **mode démo** de Plaid'IA : aucune clé API n'est configurée sur ce serveur public, je ne peux donc pas traiter librement une question ici.
 
-Ce que vous pouvez explorer dès maintenant, avec des données réalistes préenregistrées sur le dossier de démonstration « Vasseur c/ Atlas Logistique » :
+Ce que vous pouvez explorer dès maintenant, avec des données réalistes préenregistrées sur le dossier de démonstration « Diallo c/ Atlas Logistique » :
 - **Analyser des conclusions adverses**
 - **Générer un plan de plaidoirie** chronométré
 - **Simuler les objections** probables du magistrat ou de la partie adverse
@@ -435,7 +460,7 @@ Pour poser une vraie question et obtenir une réponse générée en direct, util
 
 [VERIF:comme toute réponse de Plaid'IA, même hors mode démo, ceci resterait à vérifier avant tout usage professionnel — c'est tout l'esprit de ce garde-fou]."""
 
-REPONSE_CHAT_FAUTE_GRAVE_FR = """Dans le dossier de démonstration (Vasseur c/ Atlas Logistique), la qualification de faute grave retenue par l'employeur repose sur des retards répétés et un incident d'insubordination.
+REPONSE_CHAT_FAUTE_GRAVE_FR = """Dans le dossier de démonstration (Diallo c/ Atlas Logistique), la qualification de faute grave retenue par l'employeur repose sur des retards répétés et un incident d'insubordination.
 
 En droit du travail français, la faute grave est celle qui rend impossible le maintien du salarié dans l'entreprise, même pendant la durée du préavis : elle prive le salarié de son préavis et de son indemnité de licenciement.
 
@@ -457,7 +482,7 @@ Dans le dossier de démonstration, le licenciement a été notifié le 28 févri
 
 REPONSE_CHAT_DEFAUT_EN = """You are in Plaid'IA's **demo mode**: no API key is configured on this public server, so I can't freely process a question here.
 
-What you can explore right now, with realistic prerecorded data on the demonstration case "Vasseur v. Atlas Logistique":
+What you can explore right now, with realistic prerecorded data on the demonstration case "Diallo v. Atlas Logistique":
 - **Analyse opposing submissions**
 - **Generate a timed pleading plan**
 - **Simulate** the judge's or opposing party's likely **objections**
@@ -467,7 +492,7 @@ To ask a real question and get a live-generated answer, use **"Use my own Anthro
 
 [VERIF:like any Plaid'IA answer, even outside demo mode, this would still need to be checked before any professional use — that's the whole point of this safeguard]."""
 
-REPONSE_CHAT_FAUTE_GRAVE_EN = """In the demonstration case (Vasseur v. Atlas Logistique), the serious misconduct claimed by the employer rests on repeated lateness and an insubordination incident.
+REPONSE_CHAT_FAUTE_GRAVE_EN = """In the demonstration case (Diallo v. Atlas Logistique), the serious misconduct claimed by the employer rests on repeated lateness and an insubordination incident.
 
 Under French employment law, serious misconduct ("faute grave") is a failure that makes it impossible to keep the employee on even during the notice period: it deprives the employee of both notice and severance pay.
 
@@ -487,86 +512,16 @@ In the demonstration case, the dismissal was notified on 28 February 2024 and th
 
 *Prerecorded demo-mode answer.*"""
 
-REPONSE_CHAT_RESPONSABILITE_FR = """L'article 1240 du Code civil pose le principe de la **responsabilité civile délictuelle** : « tout fait quelconque de l'homme, qui cause à autrui un dommage, oblige celui par la faute duquel il est arrivé à le réparer » ([ART:1240:CCIV]). L'article suivant précise que la faute inclut la négligence et l'imprudence ([ART:1241:CCIV]).
-
-Trois conditions doivent être réunies :
-- **une faute** : un comportement que n'aurait pas eu une personne raisonnable placée dans les mêmes circonstances ;
-- **un dommage** : un préjudice certain, qu'il soit matériel, corporel ou moral ;
-- **un lien de causalité** entre la faute et le dommage.
-
-Il appartient en principe à la victime de prouver ces trois éléments ([ART:1353:CCIV]). L'action se prescrit par cinq ans à compter du jour où la victime a connu, ou aurait dû connaître, les faits lui permettant de l'exercer ([ART:2224:CCIV]).
-
-[VERIF:les règles de prescription et de preuve applicables varient selon le type de dommage (corporel, environnemental...) et selon qu'un régime spécial de responsabilité s'applique — à confirmer au cas par cas]
-
-[VERIF:la position de la Cour de cassation sur l'appréciation du lien de causalité en cas de causes multiples]
-
-*Réponse préenregistrée du mode démo, illustrant le format habituel de l'agent (balisage des citations, points à vérifier) — pas une analyse en direct de votre situation.*"""
-
-REPONSE_CHAT_PLAIDOIRIE_FR = """Voici la structure classique d'une plaidoirie civile de 10 minutes, avec un chronométrage indicatif :
-
-1. **Exorde (1 min)** : poser la question centrale du litige en une phrase, et annoncer le plan.
-2. **Exposé des faits (2 min)** : ne retenir que les faits utiles à la démonstration, dans l'ordre chronologique, sans qualification juridique prématurée.
-3. **Discussion (5 min)** : hiérarchiser les moyens.
-   - d'abord les moyens de procédure et les fins de non-recevoir, qui empêchent l'examen du fond ([ART:122:CPC]) ;
-   - puis les moyens de fond, du plus solide au plus fragile, chacun suivi de sa preuve ([ART:9:CPC]).
-4. **Réfutation (1 min)** : répondre aux deux ou trois arguments adverses les plus dangereux.
-5. **Dispositif (1 min)** : rappeler précisément ce qui est demandé au tribunal.
-
-Un conseil de méthode : n'annoncer que ce que l'on démontrera vraiment, et garder le meilleur argument pour la fin de la discussion.
-
-[VERIF:le temps de parole réellement alloué dépend de la juridiction, de la nature de l'audience et de la pratique du magistrat — à confirmer avant l'audience]
-
-Pour obtenir un plan chronométré complet, avec les arguments et les pièces du dossier, utilisez **« Générer un plan de plaidoirie »** sur le dossier de démonstration « Vasseur c/ Atlas Logistique ».
-
-*Réponse préenregistrée du mode démo.*"""
-
-REPONSE_CHAT_RESPONSABILITE_EN = """Article 1240 of the French Civil Code sets out the principle of **tort liability** (responsabilité civile délictuelle): "any act whatsoever of a person which causes damage to another obliges the person by whose fault it occurred to make reparation" ([ART:1240:CCIV]). The following article clarifies that fault includes negligence and imprudence ([ART:1241:CCIV]).
-
-Three conditions must be met:
-- **a fault**: conduct that a reasonable person placed in the same circumstances would not have adopted;
-- **damage**: a certain harm, whether material, physical or moral;
-- **a causal link** between the fault and the damage.
-
-The victim must in principle prove all three elements ([ART:1353:CCIV]). The claim is time-barred after five years from the day the victim knew, or should have known, the facts enabling them to bring it ([ART:2224:CCIV]).
-
-[VERIF:the limitation and evidence rules vary with the type of damage (physical injury, environmental harm...) and with any special liability regime that may apply — to be confirmed case by case]
-
-[VERIF:the Court of Cassation's position on assessing causation where there are multiple causes]
-
-*Prerecorded demo-mode answer, illustrating the agent's usual format (citation tagging, points to verify) — not a live analysis of your own situation.*"""
-
-REPONSE_CHAT_PLAIDOIRIE_EN = """Here is the classic structure of a 10-minute civil pleading, with indicative timings:
-
-1. **Opening (1 min)**: state the central question of the dispute in one sentence, and announce the plan.
-2. **Statement of facts (2 min)**: keep only the facts that serve the argument, in chronological order, without premature legal characterisation.
-3. **Argument (5 min)**: rank the grounds.
-   - first the procedural grounds and inadmissibility objections, which prevent the merits from being examined ([ART:122:CPC]);
-   - then the substantive grounds, from strongest to weakest, each followed by its evidence ([ART:9:CPC]).
-4. **Rebuttal (1 min)**: answer the two or three most dangerous opposing arguments.
-5. **Relief sought (1 min)**: restate precisely what is being asked of the court.
-
-A methodological tip: only announce what you will genuinely prove, and keep your best argument for the end of the discussion.
-
-[VERIF:the speaking time actually allotted depends on the court, the type of hearing and the presiding judge's practice — to be confirmed before the hearing]
-
-For a full timed plan, with the arguments and exhibits of the case file, use **"Generate a pleading plan"** on the demonstration case "Vasseur v. Atlas Logistique".
-
-*Prerecorded demo-mode answer.*"""
-
 _REPONSES_CHAT_PAR_LANGUE = {
     "fr": {
         "defaut": REPONSE_CHAT_DEFAUT_FR,
         "faute_grave": REPONSE_CHAT_FAUTE_GRAVE_FR,
         "delai": REPONSE_CHAT_DELAI_FR,
-        "responsabilite": REPONSE_CHAT_RESPONSABILITE_FR,
-        "plaidoirie": REPONSE_CHAT_PLAIDOIRIE_FR,
     },
     "en": {
         "defaut": REPONSE_CHAT_DEFAUT_EN,
         "faute_grave": REPONSE_CHAT_FAUTE_GRAVE_EN,
         "delai": REPONSE_CHAT_DELAI_EN,
-        "responsabilite": REPONSE_CHAT_RESPONSABILITE_EN,
-        "plaidoirie": REPONSE_CHAT_PLAIDOIRIE_EN,
     },
 }
 
@@ -588,16 +543,4 @@ def reponse_demo_pour_question(question: str) -> str:
         return reponses["faute_grave"]
     if any(mot in q for mot in ("délai", "delai", "prescription", "procédure", "procedure", "deadline", "statute of limitations")):
         return reponses["delai"]
-    # Plaidoirie avant responsabilité : "plan de plaidoirie sur l'article
-    # 1240" demande d'abord une structure, pas un cours sur l'article.
-    if any(mot in q for mot in ("plaidoirie", "plaider", "pleading", "oral argument", "closing argument")):
-        return reponses["plaidoirie"]
-    if any(
-        mot in q
-        for mot in (
-            "responsabilité", "responsabilite", "1240", "1241", "dommage", "préjudice", "prejudice",
-            "délictuel", "delictuel", "liability", "damages",
-        )
-    ):
-        return reponses["responsabilite"]
     return reponses["defaut"]

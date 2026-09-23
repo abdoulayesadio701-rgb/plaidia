@@ -20,7 +20,7 @@ def test_notifications_vides_par_defaut(client: TestClient):
 def test_verifier_en_mode_demo_ne_fait_rien(client: TestClient):
     """DEMO_MODE=true dans les tests (voir conftest.py) -- un déploiement
     de démonstration public ne doit jamais consommer le quota Judilibre/
-    Légifrance."""
+    Légifrance pour le dossier fictif."""
     assert demo.mode_demo_serveur() is True
     assert veille_serveur.executer_un_passage() is False
 

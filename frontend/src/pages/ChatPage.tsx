@@ -20,10 +20,6 @@ import RichOutput from "@/components/RichOutput";
 import TexteLongModal from "@/components/TexteLongModal";
 import VerificationPanel from "@/components/VerificationPanel";
 
-/** Distance (px) au bas du fil en deçà de laquelle l'utilisateur est considéré
- * "en bas" : le défilement automatique du streaming ne le suit que dans ce cas. */
-const SEUIL_BAS_PX = 100;
-
 interface StatutRecherche {
   enCours: boolean;
   resultat: { n_articles: number; n_jurisprudence: number } | null;
@@ -77,10 +73,7 @@ export default function ChatPage() {
   const [indexMessageCopie, setIndexMessageCopie] = useState<number | null>(null);
   const [piecesJointes, setPiecesJointes] = useState<PieceJointe[]>([]);
   const [importPieceJointeEnCours, setImportPieceJointeEnCours] = useState(false);
-  const [nouveauContenuEnBas, setNouveauContenuEnBas] = useState(false);
 
-  // Vrai tant que l'utilisateur est proche du bas du fil (voir surDefilement).
-  const colleAuBasRef = useRef(true);
   const abortControllerRef = useRef<AbortController | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const conteneurRef = useRef<HTMLDivElement>(null);
@@ -114,37 +107,10 @@ export default function ChatPage() {
   // Défilement automatique vers le dernier message -- pas de scrollIntoView
   // animé ici : à chaque fragment reçu pendant le streaming, un défilement
   // "smooth" répété deviendrait saccadé. scrollTop direct = instantané.
-  //
-  // Pendant le streaming, on ne recale en bas que si l'utilisateur y était
-  // déjà (à moins de SEUIL_BAS_PX) : s'il est remonté relire le début de la
-  // réponse, on ne le ramène pas de force, on lui propose seulement un
-  // bouton "Nouveau contenu". Hors streaming (chargement d'une conversation,
-  // nouvelle conversation), le comportement d'origine est conservé.
   useEffect(() => {
     const el = conteneurRef.current;
-    if (!el) return;
-    if (colleAuBasRef.current || !genererEnCours) {
-      el.scrollTop = el.scrollHeight;
-    } else {
-      setNouveauContenuEnBas(true);
-    }
+    if (el) el.scrollTop = el.scrollHeight;
   }, [chatHistorique]);
-
-  const surDefilement = () => {
-    const el = conteneurRef.current;
-    if (!el) return;
-    const proche = el.scrollHeight - el.scrollTop - el.clientHeight <= SEUIL_BAS_PX;
-    colleAuBasRef.current = proche;
-    if (proche) setNouveauContenuEnBas(false);
-  };
-
-  const allerEnBas = () => {
-    const el = conteneurRef.current;
-    if (!el) return;
-    colleAuBasRef.current = true;
-    setNouveauContenuEnBas(false);
-    el.scrollTop = el.scrollHeight;
-  };
 
   // Zone de saisie qui grandit avec son contenu, plafonnée pour ne pas
   // avaler toute la page si on colle un pavé de texte.
@@ -186,10 +152,6 @@ export default function ChatPage() {
     if (!contenu) return;
 
     const historiqueEnvoi: MessageChat[] = [...useAppStore.getState().chatHistorique, { role: "user", content: contenu }];
-
-    // Un nouvel envoi ramène toujours en bas, même si l'utilisateur relisait plus haut.
-    colleAuBasRef.current = true;
-    setNouveauContenuEnBas(false);
 
     ajouterMessageChat({ role: "user", content: contenu });
     ajouterMessageChat({ role: "assistant", content: "" }); // rempli au fil du flux SSE
@@ -355,8 +317,7 @@ export default function ChatPage() {
       </div>
 
       {/* Fil de discussion */}
-      <div className="relative flex min-h-0 flex-1 flex-col">
-      <div ref={conteneurRef} onScroll={surDefilement} className="flex-1 space-y-4 overflow-y-auto pb-2 pr-1">
+      <div ref={conteneurRef} className="flex-1 space-y-4 overflow-y-auto pb-2 pr-1">
         {chatHistorique.length === 0 && (
           <p className="py-10 text-center text-sm text-warmgray">
             {t("chatPage.videConsigne", { nouvelleConversation: t("chatPage.nouvelleConversation") })}
@@ -425,17 +386,6 @@ export default function ChatPage() {
         {!genererEnCours && verificationDerniereReponse && (
           <VerificationPanel verification={verificationDerniereReponse} />
         )}
-      </div>
-
-      {nouveauContenuEnBas && (
-        <button
-          type="button"
-          onClick={allerEnBas}
-          className="absolute bottom-3 left-1/2 -translate-x-1/2 rounded-pill border border-gold-600/40 bg-surface-2 px-3 py-1.5 text-xs font-medium text-ivory shadow-lg transition-colors hover:bg-surface-3"
-        >
-          {t("chatPage.nouveauContenu")}
-        </button>
-      )}
       </div>
 
       {/* Zone de saisie */}

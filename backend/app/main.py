@@ -35,11 +35,45 @@ from slowapi.errors import RateLimitExceeded  # noqa: E402
 from slowapi.middleware import SlowAPIMiddleware  # noqa: E402
 from slowapi.util import get_remote_address  # noqa: E402
 
-from app import demo  # noqa: E402
+from app import demo, demo_data  # noqa: E402
 from app.deps import libelle  # noqa: E402
 from app import veille  # noqa: E402
 from app.routers import analyse, bordereau, chat, documents, dossiers, entrainement, epingles, generations, greffier, intention, jurisprudence, notes, versions, veille as veille_router  # noqa: E402
 from app.security_guard import DemandeRefusee  # noqa: E402
+
+
+def _ensemencer_dossier_demo():
+    """Ajoute le dossier fictif de démonstration s'il n'existe pas déjà --
+    idempotent et jamais destructeur, contrairement à
+    db.reinitialiser_donnees_demo() (voir demo.DEMO_RESET_DB).
+
+    Ensemence aussi une analyse de conclusions déjà générée (toujours en
+    français, comme DOSSIER_DEMO lui-même -- voir l'en-tête de demo_data.py)
+    pour qu'un visiteur cliquant "Essayer la démo" tombe directement sur un
+    dossier avec au moins un résultat visible, sans devoir lancer lui-même
+    une analyse. Les autres actions (plan, simulateur...) restent
+    déclenchées à la demande : seule l'analyse de conclusions a besoin
+    d'être pré-générée puisque c'est elle qui alimente l'historique visible
+    en arrivant sur la fiche du dossier (voir HistoriqueDossierPage.tsx)."""
+    dossier_existant = next((d for d in db.list_dossiers() if d["nom"] == demo_data.NOM_DOSSIER_DEMO), None)
+    if dossier_existant is None:
+        dossier_id = db.create_dossier(
+            nom=demo_data.DOSSIER_DEMO["nom"],
+            domaine=demo_data.DOSSIER_DEMO["domaine"],
+            parties=demo_data.DOSSIER_DEMO["parties"],
+            faits=demo_data.DOSSIER_DEMO["faits"],
+            numero_dossier=demo_data.DOSSIER_DEMO["numero_dossier"],
+        )
+    else:
+        dossier_id = dossier_existant["id"]
+
+    if not db.get_analyses_for_dossier(dossier_id):
+        db.save_analyse(
+            dossier_id,
+            demo_data.CONCLUSIONS_DEMO_FR["arguments"],
+            demo_data.CONCLUSIONS_DEMO_FR["points_attention"],
+            langue="fr",
+        )
 
 
 @asynccontextmanager
@@ -49,13 +83,17 @@ async def lifespan(app: FastAPI):
         # par défaut dès que DEMO_MODE=true, sauf DEMO_RESET_DB=false) :
         # base vidée et reconstruite à chaque démarrage -- aucune donnée
         # saisie par un visiteur n'y survit (voir db.py::
-        # reinitialiser_donnees_demo). Aucun dossier n'est réensemencé : un
-        # visiteur en mode démo crée lui-même son propre dossier (voir
-        # demo_data.py -- les réponses cannées s'appliquent à n'importe quel
-        # dossier, pas à un dossier fictif préchargé).
+        # reinitialiser_donnees_demo), puis réensemencée avec le dossier
+        # fictif de démonstration.
         db.reinitialiser_donnees_demo()
+        _ensemencer_dossier_demo()
     else:
         db.init_db()  # crée/complète le schéma SQLite si besoin, comme main() dans gui.py
+        if demo.mode_demo_serveur():
+            # DEMO_RESET_DB=false : mode démo actif (réponses cannées,
+            # bandeau...) mais base existante préservée -- on ajoute
+            # seulement le dossier de démo s'il manque, sans rien effacer.
+            _ensemencer_dossier_demo()
     # Toute génération restée 'en_cours' en base ne peut être qu'un
     # reliquat d'un arrêt brutal du serveur (redémarrage, crash) --
     # inutile après un reset démo (la table vient d'être reconstruite
@@ -235,10 +273,7 @@ def config():
     return {
         "demo_mode": demo.mode_demo_serveur(),
         "max_texte_caracteres": demo.MAX_TEXTE_CARACTERES,
-        # Aucun dossier n'est préchargé en mode démo (voir lifespan
-        # ci-dessus) -- champ conservé pour compatibilité avec le front
-        # (useAppStore::dossierDemoNom, DemoBanner), toujours null désormais.
-        "dossier_demo_nom": None,
+        "dossier_demo_nom": demo_data.NOM_DOSSIER_DEMO if demo.mode_demo_serveur() else None,
         # Commit déployé (variable posée par Render) : permet de vérifier d'un
         # coup d'œil que le serveur est à la même version que l'interface.
         "commit": os.environ.get("RENDER_GIT_COMMIT", "")[:7] or None,

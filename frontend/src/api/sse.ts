@@ -55,16 +55,6 @@ export async function lireFluxSse(
   const decoder = new TextDecoder("utf-8");
   let buffer = "";
 
-  // Posé à true dès qu'une trame "done" ou "error" a bien été reçue et
-  // transmise -- sert à distinguer une fin de flux normale d'une coupure de
-  // connexion silencieuse (proxy, timeout réseau...) : dans ce second cas,
-  // reader.read() renvoie simplement done:true sans qu'aucune trame finale
-  // n'ait jamais été envoyée par le serveur, et sans cet indicateur, l'appelant
-  // (ex. ChatPage.tsx) ne serait jamais informé -- l'état "génération en
-  // cours" resterait bloqué indéfiniment, sans le moindre message (bug
-  // diagnostiqué le 2026-09-23).
-  let flotConclu = false;
-
   const dispatch = (rawEvent: string) => {
     let eventName = "message";
     let dataLine = "";
@@ -79,7 +69,6 @@ export async function lireFluxSse(
     } catch {
       return;
     }
-    if (eventName === "done" || eventName === "error") flotConclu = true;
     gestionnaires[eventName]?.(data);
   };
 
@@ -103,13 +92,5 @@ export async function lireFluxSse(
     // -- silencieuse, ce n'est pas une erreur à afficher.
     if (e instanceof DOMException && e.name === "AbortError") return;
     onError?.("La connexion a été interrompue pendant la génération.");
-    return;
-  }
-
-  if (!flotConclu) {
-    // Le flux HTTP s'est fermé proprement (reader.read() -> done:true) sans
-    // qu'aucune trame "done" ni "error" n'ait jamais été reçue -- coupure
-    // de connexion silencieuse plutôt qu'une fin normale.
-    onError?.("La connexion a été interrompue pendant la génération. Veuillez réessayer.");
   }
 }

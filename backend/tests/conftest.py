@@ -52,21 +52,14 @@ from app.main import app  # noqa: E402
 def client():
     """Un TestClient par test : le lifespan (voir main.py) réinitialise la
     base jetable à chaque entrée dans le `with`, donc chaque test démarre
-    sur un état propre et vide (aucun dossier préchargé)."""
+    sur un état propre (le seul dossier fictif de démo, rien d'autre)."""
     with TestClient(app) as c:
         yield c
 
 
 @pytest.fixture()
 def dossier_demo_id(client: TestClient) -> int:
-    """Id d'un dossier créé pour le test -- aucun dossier n'est préchargé en
-    mode démo (voir main.py::lifespan) : les tests qui ont besoin d'un
-    dossier existant en créent un eux-mêmes, comme le ferait un visiteur
-    réel. Le nom/domaine n'a pas d'incidence : les réponses cannées de
-    demo_data.py ne dépendent pas du contenu du dossier."""
-    r = client.post(
-        "/api/dossiers/",
-        json={"nom": "Dossier de test", "domaine": "Prud'hommes"},
-    )
-    assert r.status_code == 201
-    return r.json()["id"]
+    """Id du dossier fictif de démonstration, réensemencé à chaque test."""
+    dossiers = client.get("/api/dossiers/").json()
+    assert len(dossiers) == 1, "Le mode démo ne devrait ensemencer qu'un seul dossier fictif."
+    return dossiers[0]["id"]

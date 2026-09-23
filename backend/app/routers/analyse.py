@@ -13,7 +13,6 @@ import os
 import time
 
 import analyse as legacy_analyse
-import anonymisation
 import db
 import export as legacy_export
 from app import demo, demo_data, demo_data_outils, quality_pipeline
@@ -51,17 +50,6 @@ router = APIRouter(prefix="/api/analyse", tags=["analyse"])
 
 def _duree_ms(t0: float) -> int:
     return int((time.monotonic() - t0) * 1000)
-
-
-def _texte_pour_modele(texte: str, anonymiser: bool) -> tuple[str, dict[str, str]]:
-    """Point d'entrée commun de l'option "Anonymiser les noms avant l'envoi"
-    (voir ConclusionsIn.anonymiser et anonymisation.py) : renvoie le texte
-    effectivement envoyé au modèle (pseudonymisé si demandé -- y compris au
-    garde-fou d'entrée, lui aussi un appel externe) et le mapping à
-    appliquer en sens inverse sur le résultat avant de le renvoyer/l'enregistrer."""
-    if not anonymiser:
-        return texte, {}
-    return anonymisation.anonymiser_texte(texte)
 
 
 def _strategie_combative_si_pertinente(
@@ -106,50 +94,35 @@ def analyser_conclusions(payload: ConclusionsIn):
     # validation finale. Le texte source lui-même sert de référence au
     # contrôle déterministe des citations (analyser_conclusions ne cite
     # normalement que ce qui figure dans les conclusions adverses fournies).
-    #
-    # Option "Anonymiser les noms avant l'envoi" (ConclusionsIn.anonymiser,
-    # voir anonymisation.py) : c'est le texte PSEUDONYMISÉ qui part vers le
-    # garde-fou et l'agent principal -- le résultat, lui, est dépseudonymisé
-    # avant sauvegarde et avant d'être renvoyé, pour que le dossier de
-    # l'avocat garde les vrais noms.
-    texte_modele, mapping_anonymisation = _texte_pour_modele(payload.texte, payload.anonymiser)
     contexte_dossier = construire_contexte_dossier(dossier) if dossier else ""
     pipeline = quality_pipeline.executer_pipeline_complet(
         feature="conclusions",
-        texte_a_screener=texte_modele,
+        texte_a_screener=payload.texte,
         # §2e du chantier "temps de traitement" : découpe le texte en
         # moyens et les analyse en parallèle -- reste séquentiel et
         # identique à avant ce chantier si un seul moyen est détecté.
-        fonction_principale=lambda: legacy_analyse.analyser_conclusions_par_moyens(texte_modele),
-        sources_textes=[texte_modele],
+        fonction_principale=lambda: legacy_analyse.analyser_conclusions_par_moyens(payload.texte),
+        sources_textes=[payload.texte],
         contexte_dossier=contexte_dossier,
     )
-    # `resultat` reste pseudonymisé jusqu'ici (mêmes pseudonymes que
-    # `texte_modele`) : la stratégie combative ci-dessous est elle aussi un
-    # appel au modèle, qui ne doit pas recevoir les vrais noms. Tout est
-    # dépseudonymisé d'un coup, juste avant la sauvegarde et la réponse.
     resultat = pipeline.resultat_principal
-    strategie_combative = _strategie_combative_si_pertinente(dossier, contexte_dossier, resultat.get("arguments", []))
-    sections = anonymisation.deanonymiser(
-        structurer_sortie_strategique(
-            {"arguments": resultat.get("arguments", []), "points_attention": resultat.get("points_attention", [])},
-            dossier or {"id": 0, "nom": "", "faits": "", "parties": ""},
-            "conclusions",
-            strategie_combative=strategie_combative,
-        ),
-        mapping_anonymisation,
-    )
-    verification = anonymisation.deanonymiser(pipeline.verification, mapping_anonymisation)
     analyse_id = None
     if payload.dossier_id is not None:
         analyse_id = db.save_analyse(
-            payload.dossier_id, sections["arguments"], sections["points_attention"], langue=legacy_analyse.langue_requete()
+            payload.dossier_id, resultat.get("arguments", []), resultat.get("points_attention", []), langue=legacy_analyse.langue_requete()
         )
+    strategie_combative = _strategie_combative_si_pertinente(dossier, contexte_dossier, resultat.get("arguments", []))
+    sections = structurer_sortie_strategique(
+        {"arguments": resultat.get("arguments", []), "points_attention": resultat.get("points_attention", [])},
+        dossier or {"id": 0, "nom": "", "faits": "", "parties": ""},
+        "conclusions",
+        strategie_combative=strategie_combative,
+    )
     return ConclusionsOut(
-        arguments=sections["arguments"],
-        points_attention=sections["points_attention"],
+        arguments=resultat.get("arguments", []),
+        points_attention=resultat.get("points_attention", []),
         analyse_id=analyse_id,
-        verification=verification,
+        verification=pipeline.verification,
         diagnostic=sections["diagnostic"],
         strategie=sections["strategie"],
     )
@@ -198,23 +171,14 @@ def analyser_conclusions_stream(payload: ConclusionsIn):
     def event_stream():
         trace: list[quality_pipeline.EtapeTrace] = []
         try:
-            # Voir la même option sur /conclusions ci-dessus : seul le texte
-            # pseudonymisé part vers le garde-fou et l'agent principal ;
-            # tout ce qui est émis au front est dépseudonymisé au moment du yield.
-            texte_modele, mapping_anonymisation = _texte_pour_modele(payload.texte, payload.anonymiser)
-
             t0 = time.monotonic()
             yield sse_event("etape", {"etape": "garde_fou", "libelle": libelle("etape_verification_demande")})
-            garde = quality_pipeline.executer_garde_fou(texte_modele)
+            garde = quality_pipeline.executer_garde_fou(payload.texte)
             trace.append(quality_pipeline.EtapeTrace("garde_fou_entree", "ok", _duree_ms(t0), garde.get("reason", "")))
 
             t0 = time.monotonic()
             yield sse_event("etape", {"etape": "analyse", "libelle": libelle("etape_analyse_conclusions")})
-            # `resultat` reste pseudonymisé (mêmes pseudonymes que `texte_modele`)
-            # jusqu'à ce qu'il soit explicitement dépseudonymisé, à chaque yield
-            # et avant la sauvegarde ci-dessous -- jamais renvoyé tel quel au
-            # vérificateur/critique ni au front avec les vrais noms entre-temps.
-            resultat = legacy_analyse.analyser_conclusions_par_moyens(texte_modele)
+            resultat = legacy_analyse.analyser_conclusions_par_moyens(payload.texte)
             trace.append(quality_pipeline.EtapeTrace("agent_principal", "ok", _duree_ms(t0)))
 
             contexte_dossier = construire_contexte_dossier(dossier) if dossier else ""
@@ -225,27 +189,25 @@ def analyser_conclusions_stream(payload: ConclusionsIn):
                 "conclusions",
                 strategie_combative=strategie_combative,
             )
-            yield sse_event("principal", anonymisation.deanonymiser({
+            yield sse_event("principal", {
                 "arguments": sections["arguments"],
                 "points_attention": sections["points_attention"],
                 "diagnostic": sections["diagnostic"],
                 "strategie": sections["strategie"],
                 "statut": "Brouillon",
-            }, mapping_anonymisation))
+            })
 
             yield sse_event("etape", {"etape": "verification", "libelle": libelle("etape_verification_sources_critique")})
             verification, trace_trio = quality_pipeline.executer_trio_qualite(
-                quality_pipeline.texte_pour_verification(resultat), [texte_modele], contexte_dossier
+                quality_pipeline.texte_pour_verification(resultat), [payload.texte], contexte_dossier
             )
-            verification = anonymisation.deanonymiser(verification, mapping_anonymisation)
             trace.extend(trace_trio)
             yield sse_event("verification", {"verification": verification})
 
             analyse_id = None
             if payload.dossier_id is not None:
-                resultat_reel = anonymisation.deanonymiser(resultat, mapping_anonymisation)
                 analyse_id = db.save_analyse(
-                    payload.dossier_id, resultat_reel.get("arguments", []), resultat_reel.get("points_attention", []),
+                    payload.dossier_id, resultat.get("arguments", []), resultat.get("points_attention", []),
                     langue=legacy_analyse.langue_requete(),
                 )
             yield sse_event("document", {"analyse_id": analyse_id})
