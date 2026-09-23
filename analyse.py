@@ -707,7 +707,15 @@ def repondre_conversation_stream(messages: list[dict], contexte_recherche: str |
     Usage :
         for fragment in repondre_conversation_stream(messages):
             afficher(fragment)
-    """
+
+    Contrairement aux appels non-streamés (_appeler_modele,
+    _appeler_claude_secours), une troncature par max_tokens N'EST PAS une
+    exception SDK ici : stream.text_stream s'arrête simplement de produire,
+    comme une fin normale -- sans ce contrôle explicite du stop_reason final,
+    l'appelant (chat.py::event_stream) enchaînait sur un event "done" comme
+    si la réponse était complète, sans la moindre trace ni côté logs ni côté
+    utilisateur (bug diagnostiqué le 2026-09-23 : réponse de chat coupée en
+    plein milieu, sans aucun message d'erreur visible)."""
     system = QUESTION_SYSTEM_PROMPT + _directive_langue()
     if contexte_recherche:
         system += contexte_recherche
@@ -715,12 +723,23 @@ def repondre_conversation_stream(messages: list[dict], contexte_recherche: str |
     client = _client()
     with client.messages.stream(
         model=MODEL_ACTIF,
-        max_tokens=2800,
+        max_tokens=4000,
         system=system,
         messages=messages,
     ) as stream:
         for texte in stream.text_stream:
             yield texte
+        message_final = stream.get_final_message()
+
+    usage_log.journaliser_usage(
+        "claude", "chat", MODEL_ACTIF,
+        message_final.usage.input_tokens, message_final.usage.output_tokens,
+    )
+    if message_final.stop_reason == "max_tokens":
+        raise ReponseTronqueeError(
+            "Réponse de chat tronquée : la limite de tokens a été atteinte avant la fin de la génération.",
+            "".join(bloc.text for bloc in message_final.content if bloc.type == "text"),
+        )
 
 
 PLAN_SYSTEM_PROMPT = """Tu es un assistant qui aide un avocat francophone à structurer sa plaidoirie orale.
