@@ -144,6 +144,7 @@ front vers l'API avec une erreur CORS dans la console.
 | `DEMO_MODE` | `true` | Recommandé sur un lien public partagé |
 | `DEMO_RESET_DB` | `true` | Oui si `DEMO_MODE=true` (sinon la base grossit indéfiniment) |
 | `CORS_ORIGINS` | `https://<votre-projet>.vercel.app` | Oui — sans ça, le front ne peut pas appeler l'API |
+| `ACCESS_PASSWORD` | *(un mot de passe de votre choix)* | Non en mode démo. **Oui dès que `DEMO_MODE` est désactivé** : sinon tout visiteur utilise votre clé Anthropic. Le front affiche alors un formulaire de mot de passe |
 | `RATE_LIMIT_DEFAUT` | `60/minute` | Non (défaut déjà correct) |
 | `MAX_TEXTE_CARACTERES` | `50000` | Non (défaut déjà correct) |
 | `ANTHROPIC_API_KEY` | *(laisser vide pour rester en mode démo)* | Non — uniquement si vous voulez désactiver le mode démo sur ce déploiement public |

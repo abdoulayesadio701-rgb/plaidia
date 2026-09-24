@@ -38,6 +38,10 @@ services:
       # Judilibre/Légifrance. Jamais commitées dans ce fichier.
       - key: ANTHROPIC_API_KEY
         sync: false
+      # Mot de passe d'accès (voir backend/app/acces.py) : à définir dans le
+      # tableau de bord Render dès que le mode démo est désactivé.
+      - key: ACCESS_PASSWORD
+        sync: false
       - key: JUDILIBRE_KEY_ID
         sync: false
       - key: JUDILIBRE_ENV

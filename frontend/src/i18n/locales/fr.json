@@ -1158,5 +1158,13 @@
         "texte": "Une question sur cette page ou sur le fonctionnement de Plaid'IA ? Écrivez via le profil GitHub ou LinkedIn indiqué en pied de la page d'accueil."
       },
       "derniereMaj": "Dernière mise à jour : 22 septembre 2026."
+    },
+  "acces": {
+      "verification": "Vérification de l'accès...",
+      "titre": "Accès protégé",
+      "description": "Cette instance de Plaid'IA est réservée. Saisissez le mot de passe d'accès pour continuer.",
+      "motDePasse": "Mot de passe d'accès",
+      "valider": "Entrer",
+      "incorrect": "Mot de passe incorrect."
     }
 }

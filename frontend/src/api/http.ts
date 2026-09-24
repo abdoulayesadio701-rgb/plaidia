@@ -8,6 +8,7 @@
 
 import { useActivityStore } from "@/store/useActivityStore";
 import { obtenirClePersonnelle } from "./cleApiPersonnelle";
+import { EN_TETE_ACCES, obtenirMotDePasseAcces } from "./accesMotDePasse";
 import i18nInstance from "@/i18n";
 
 const BASE_URL = (import.meta.env.VITE_API_URL ?? "http://localhost:8000").replace(/\/$/, "");
@@ -99,6 +100,10 @@ async function doFetch(path: string, options: RequestOptions, extraHeaders?: Hea
   // jamais sur disque (voir backend/app/main.py).
   const clePersonnelle = obtenirClePersonnelle();
   if (clePersonnelle) (headers as Record<string, string>)["X-Anthropic-Api-Key"] = clePersonnelle;
+  // Mot de passe d'accès au serveur, s'il en demande un (voir
+  // accesMotDePasse.ts et backend/app/acces.py).
+  const motDePasseAcces = obtenirMotDePasseAcces();
+  if (motDePasseAcces) (headers as Record<string, string>)[EN_TETE_ACCES] = motDePasseAcces;
   // Internationalisation FR/EN -- la langue choisie dans la barre de tâches
   // (voir frontend/src/i18n) est envoyée avec CHAQUE appel, lue par le
   // backend via le même idiome de ContextVar que la clé API personnelle

@@ -1158,5 +1158,13 @@
         "texte": "A question about this page or how Plaid'IA works? Reach out via the GitHub or LinkedIn profile listed in the homepage footer."
       },
       "derniereMaj": "Last updated: September 22, 2026."
+    },
+  "acces": {
+      "verification": "Checking access...",
+      "titre": "Protected access",
+      "description": "This Plaid'IA instance is private. Enter the access password to continue.",
+      "motDePasse": "Access password",
+      "valider": "Enter",
+      "incorrect": "Incorrect password."
     }
 }

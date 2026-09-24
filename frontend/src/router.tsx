@@ -11,6 +11,7 @@
 import type { ReactElement } from "react";
 import { createBrowserRouter, Navigate } from "react-router-dom";
 import AppLayout from "@/layout/AppLayout";
+import AccesGate from "@/components/AccesGate";
 import HomePage from "@/pages/HomePage";
 import ParametresPage from "@/pages/ParametresPage";
 import LandingPage from "@/pages/LandingPage";
@@ -114,7 +115,11 @@ export const router = createBrowserRouter([
   { path: "/connexion", element: <Navigate to="/" replace /> },
   {
     path: "/app",
-    element: <AppLayout />,
+    element: (
+      <AccesGate>
+        <AppLayout />
+      </AccesGate>
+    ),
     children: [
       { index: true, element: <HomePage /> },
       // Hors de navigation.ts : réglage transversal accessible en permanence

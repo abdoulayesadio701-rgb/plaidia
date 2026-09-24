@@ -11,6 +11,7 @@
  */
 
 import i18nInstance from "@/i18n";
+import { EN_TETE_ACCES, obtenirMotDePasseAcces } from "./accesMotDePasse";
 
 export type GestionnairesSse = Record<string, (data: unknown) => void>;
 
@@ -19,7 +20,10 @@ export type GestionnairesSse = Record<string, (data: unknown) => void>;
  * passent pas par doFetch (ils ont besoin de response.body en flux), donc
  * l'en-tête est ajouté ici plutôt qu'oublié. */
 export function entetesSse(extra?: Record<string, string>): Record<string, string> {
-  return { "Content-Type": "application/json", "X-Langue": i18nInstance.language || "fr", ...extra };
+  const entetes: Record<string, string> = { "Content-Type": "application/json", "X-Langue": i18nInstance.language || "fr", ...extra };
+  const motDePasseAcces = obtenirMotDePasseAcces();
+  if (motDePasseAcces) entetes[EN_TETE_ACCES] = motDePasseAcces;
+  return entetes;
 }
 
 export async function lireFluxSse(

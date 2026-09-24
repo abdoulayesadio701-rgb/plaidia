@@ -36,6 +36,7 @@ from slowapi.middleware import SlowAPIMiddleware  # noqa: E402
 from slowapi.util import get_remote_address  # noqa: E402
 
 from app import demo  # noqa: E402
+from app import acces  # noqa: E402
 from app.deps import libelle  # noqa: E402
 from app import veille  # noqa: E402
 from app.routers import analyse, bordereau, chat, documents, dossiers, entrainement, epingles, generations, greffier, intention, jurisprudence, notes, versions, veille as veille_router  # noqa: E402
@@ -78,6 +79,12 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan,
 )
+
+# --- Mot de passe d'accès (optionnel, voir acces.py) ------------------------
+# Ajouté AVANT le CORS : Starlette empile les middlewares de l'intérieur vers
+# l'extérieur, donc celui-ci passe à l'intérieur du CORS et sa réponse 401
+# reçoit les en-têtes CORS (sans quoi le navigateur ne pourrait pas la lire).
+app.add_middleware(acces.AccesMiddleware)
 
 # --- CORS -------------------------------------------------------------------
 # Origines autorisées configurables via CORS_ORIGINS (liste séparée par des
@@ -226,6 +233,13 @@ def health():
     return {"status": "ok", "service": "plaidia-api"}
 
 
+@app.post("/api/acces/verifier", tags=["health"], status_code=204)
+def verifier_acces():
+    """Atteinte seulement si le mot de passe est correct (ou non requis) :
+    AccesMiddleware a déjà répondu 401 sinon. Sert au formulaire du front."""
+    return None
+
+
 @app.get("/api/config", tags=["health"])
 def config():
     """Consommé par le front au démarrage pour afficher le bandeau "Mode
@@ -239,6 +253,8 @@ def config():
         # ci-dessus) -- champ conservé pour compatibilité avec le front
         # (useAppStore::dossierDemoNom, DemoBanner), toujours null désormais.
         "dossier_demo_nom": None,
+        # Le front affiche un formulaire de mot de passe si vrai (voir acces.py).
+        "acces_protege": acces.mot_de_passe_requis() is not None,
         # Commit déployé (variable posée par Render) : permet de vérifier d'un
         # coup d'œil que le serveur est à la même version que l'interface.
         "commit": os.environ.get("RENDER_GIT_COMMIT", "")[:7] or None,
