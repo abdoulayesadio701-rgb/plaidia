@@ -165,6 +165,14 @@ def chat_stream(payload: ChatStreamIn):
                     yield _sse("verification", verification)
 
             yield _sse("done", {})
+        except legacy_analyse.ReponseTronqueeError as e:
+            # Troncature par max_tokens détectée dans repondre_conversation_stream
+            # (voir son en-tête) -- pas une panne, mais doit être signalée
+            # explicitement plutôt que de laisser la réponse partielle déjà
+            # affichée passer pour complète (voir le fragments_accumules
+            # déjà envoyés en delta ci-dessus, conservés côté front).
+            _log_chat(f"reponse tronquee par max_tokens (mode reel) : {e}")
+            yield _sse("error", {"detail": libelle("chat_reponse_tronquee")})
         except Exception as e:
             _log_chat(f"erreur en cours de flux (mode reel) : {e}")
             yield _sse("error", {"detail": str(e)})

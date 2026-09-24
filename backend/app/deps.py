@@ -27,6 +27,10 @@ from fastapi import HTTPException, UploadFile
 # (faits saisis, domaine, partie représentée...) restent affichées telles
 # quelles : ce sont des données du dossier, pas des libellés d'interface.
 _LIBELLES = {
+    "chat_reponse_tronquee": {
+        "fr": "La réponse a été interrompue : la limite de longueur a été atteinte. Réessayez ou reformulez votre question plus brièvement.",
+        "en": "The response was cut off: the length limit was reached. Try again or ask a shorter question.",
+    },
     "faits": {"fr": "Faits", "en": "Facts"},
     "parties": {"fr": "Parties", "en": "Parties"},
     "partie_representee": {"fr": "Partie représentée", "en": "Party represented"},

@@ -1,0 +1,22 @@
+{
+  "run_id": "2026-09-22_09h15",
+  "date": "2026-09-22",
+  "commit": "9632d93",
+  "modele_principal": "claude-sonnet-4-6",
+  "modele_leger": "claude-haiku-4-5-20251001",
+  "repetitions": 3,
+  "simule": false,
+  "interrompu": null,
+  "cout_usd": 2.886,
+  "appels": 381,
+  "tokens": {
+    "claude-haiku-4-5-20251001": [
+      320845,
+      33957
+    ],
+    "claude-sonnet-4-6": [
+      226302,
+      114426
+    ]
+  }
+}

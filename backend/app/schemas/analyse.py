@@ -13,6 +13,14 @@ class ConclusionsIn(BaseModel):
     dossier_id: Optional[int] = Field(
         None, description="Si fourni, le résultat est automatiquement enregistré pour ce dossier"
     )
+    anonymiser: bool = Field(
+        False,
+        description=(
+            "Si vrai, les noms de personnes détectés localement (voir anonymisation.py) sont remplacés par des "
+            "pseudonymes avant tout appel au modèle -- le résultat renvoyé et enregistré affiche les vrais noms, "
+            "seul ce qui part vers le modèle reste pseudonymisé. Sans effet en mode démo (aucun appel réel)."
+        ),
+    )
 
 
 class RaisonnementOut(BaseModel):

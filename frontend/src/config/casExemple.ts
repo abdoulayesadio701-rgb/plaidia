@@ -36,7 +36,7 @@ export const CAS_EXEMPLE_PENAL: CasExemple = {
   // Les parties (accusé, coaccusés, victime) sont nommées dans le récit des
   // faits ci-dessous -- aucune page de l'app n'a de champ "parties" séparé
   // à ce jour, seule la fiche du dossier l'affiche s'il est rempli via
-  // l'API (voir DOSSIER_DEMO côté backend, qui l'utilise directement).
+  // l'API.
   faits:
     "Le 14 novembre 2023, vers 4h50 du matin, une jeep se gare devant Le Verlaine, un bar du " +
     "quartier de Saint-Germain-des-Prés à Paris. Deux hommes en descendent, MM. Kévin Lorrain et " +

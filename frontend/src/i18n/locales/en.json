@@ -623,6 +623,9 @@
   "arsenal": {
     "dossierActif": "Active case",
     "formatsAjoutesAuxFaits": "PDF, Word, Excel, image — the extracted text is also added to the case facts.",
+    "anonymiserLabel": "Anonymize person names before sending to the model (detection done locally, no external call).",
+    "anonymiserAide": "Replaces detected names (e.g. \"Mr. Martin\") with pseudonyms before the AI analysis. The result shown and saved in the case file keeps the real names — only what is sent to the model is masked. Heuristic detection, not guaranteed to be exhaustive.",
+    "enSavoirPlus": "Learn more",
     "enregistreDansHistorique": "Saved in this case's history.",
     "libelleAnalyse": "Analysis",
     "diagnostic": "Diagnosis",
@@ -896,6 +899,7 @@
     "etape3Titre": "Get a structured, verifiable analysis",
     "etape3Description": "Every answer flags its own limits — never a claim presented as settled without solid grounds.",
     "codeSourceGithub": "Source code on GitHub",
+    "confidentialite": "Privacy",
     "modeDemo": "This public instance runs in demo mode — the demo uses a fictional case and pre-recorded answers, independent of any API key.",
     "ceQueFaitLoutil": "What the tool does",
     "sixEspaces": "Six workspaces, one same principle: verify before asserting",
@@ -935,7 +939,7 @@
       "fondement": "Time-clock record submitted as exhibit 4 by the employer, showing three instances of lateness of 22 to 41 minutes.",
       "problemeDeDroit": "Can repeated instances of lateness, even brief ones, on their own amount to serious misconduct?",
       "regleApplicable": "Serious misconduct requires a failure that makes it impossible to keep the employee on during the notice period. [VERIF:the qualification applied to isolated instances of lateness with no prior warning]",
-      "applicationAuxFaits": "Mr. Diallo has faced no sanction in five years of tenure; the instances of lateness coincide with an RER B rail strike (exhibit 7), which weakens the wrongful character claimed by the employer.",
+      "applicationAuxFaits": "Mr. Vasseur has faced no sanction in five years of tenure; the instances of lateness coincide with an RER B rail strike (exhibit 7), which weakens the wrongful character claimed by the employer.",
       "justificationRisque": "The absence of any prior record and the coincidence with the strike weaken the case for serious misconduct, without ruling it out entirely.",
       "refutation1Angle": "Factual",
       "refutation1Piste": "Produce the SNCF certificate confirming the traffic disruption on the dates in question.",
@@ -1008,7 +1012,8 @@
     "aPropos": "About",
     "aProposTexte1": "Passages marked",
     "aProposTexte2": "indicate a point to verify manually; passages marked as a citation, for example",
-    "codeSourceGithub": "View the source code on GitHub"
+    "codeSourceGithub": "View the source code on GitHub",
+    "confidentialite": "Privacy and anonymization"
   },
   "chatPage": {
     "analyseDocumentsJoints": "Analyze the attached documents.",
@@ -1028,6 +1033,7 @@
     "copierReponse": "Copy the response",
     "copier": "Copy",
     "generationEnCours": "Generating…",
+    "nouveauContenu": "↓ New content",
     "arreter": "Stop",
     "caracteresCount": "({{nombre}} chars)",
     "retirerPiece": "Remove {{nom}}",
@@ -1054,25 +1060,6 @@
     "confirmer": "Confirm?",
     "oui": "Yes",
     "echecSuppression": "Deletion failed."
-  },
-  "connexion": {
-    "emailRequis": "Email address is required.",
-    "emailInvalide": "Invalid email address.",
-    "motDePasseRequis": "Password is required.",
-    "motDePasseCourt": "8 characters minimum.",
-    "codeAccesRequis": "Access code is required.",
-    "engagementAgentIa": "The AI agent's commitment",
-    "citation": "“All men are born and remain free and equal in rights.”",
-    "citationCourte": "“Free and equal in rights.”",
-    "citationSource": "Declaration of the Rights of Man and of the Citizen (1789)",
-    "baseline": "Informed justice, accessible to everyone, at every moment.",
-    "accederAgentIa": "Access the AI agent",
-    "reserveAvocatsGreffiers": "Reserved for invited lawyers and clerks.",
-    "adresseEmail": "Email address",
-    "motDePasse": "Password",
-    "codeAcces": "Access code",
-    "clefInvitation": "Invitation key",
-    "codeOublie": "Forgot your code? Request access"
   },
   "domaine": {
     "Prud'hommes": "Labour law",
@@ -1125,5 +1112,51 @@
     "Convention": "Convention",
     "Jurisprudence": "Case law",
     "Autre": "Other"
-  }
+  },
+  "confidentialite": {
+      "kicker": "Privacy policy",
+      "titre": "Privacy and data",
+      "chapeau": "Plaid'IA is a publicly accessible portfolio project — here is, honestly, what happens when you enter text into the app.",
+      "retourAccueil": "← Back to home",
+      "donnees": {
+        "titre": "What data goes where",
+        "intro": "No data entered into Plaid'IA is sold, shared for advertising purposes, or sent to any third party other than those listed here.",
+        "anthropic": "Anthropic (Claude) — receives the text sent to generate a response, for every real analysis or question (outside demo mode). It is the only provider used for the legal analysis itself, pleading generation and the chat.",
+        "deepseek": "NVIDIA (hosting the DeepSeek model) — optional, used only if an NVIDIA key is configured on the server, for a few tasks that structure already-provided content (key-element extraction, case summary).",
+        "judilibre": "Judilibre / Legifrance — optional, used only if you enable live search or case-law collection, to query these public databases (no data from your case is sent to them, only search terms).",
+        "aucunAutre": "No other third-party service receives your data. No advertising tracking, no resale of usage analytics to third parties."
+      },
+      "entrainement": {
+        "titre": "Model training",
+        "texte": "Under Anthropic's current commercial API terms (check anthropic.com/legal, as it may change), data sent via the API is not used to train their models by default. Plaid'IA has no control over a third-party provider's actual practices: this page reflects our understanding of their public policy, not a contractual guarantee we can make on their behalf."
+      },
+      "modeDemo": {
+        "titre": "Demo mode",
+        "texte": "On a public deployment with no API key configured server-side (the case for the live demo), no data you enter ever reaches Anthropic or any other provider: answers are pre-recorded, and the database is reset every time the server restarts."
+      },
+      "clePersonnelle": {
+        "titre": "Personal API key",
+        "texte": "If you provide your own Anthropic key to leave demo mode, it stays stored only in your browser (sessionStorage, cleared when the tab closes), sent with each request in an HTTP header, and is never logged or stored server-side."
+      },
+      "anonymisation": {
+        "titre": "Anonymizing names before sending",
+        "texte1": "On \"Analyze opposing submissions\", a checkbox lets you pseudonymize detected person names in the text before it reaches Anthropic (guardrail, analysis agent, verifier and critic included) -- each name becomes \"Person A\", \"Person B\"...",
+        "texte2": "Detection happens entirely on the server, with no external call to spot names: they never reach a third party for this step. The result shown on screen and saved in your case file, however, shows the real names -- only what is actually sent to the model stays masked.",
+        "limite": "An honest limit: detection is a heuristic (civility title + \"First Last\" pattern), not a trained named-entity-recognition tool. It can miss a name with no obvious marker, or wrongly flag a proper noun that isn't a person. Use it to reduce risk, never as a guarantee of full anonymity."
+      },
+      "jurisprudence": {
+        "titre": "Automatically collected case law",
+        "texte": "Any decision collected automatically (live search, Judilibre collection) stays \"pending\" and is never citable by the assistant until a lawyer has manually validated it."
+      },
+      "perimetre": {
+        "titre": "What this page is not",
+        "texte1": "Plaid'IA is a personal portfolio project, not an audited product backed by a data processing agreement (DPA) with its providers. This page describes how the app actually works, not a binding legal commitment.",
+        "texte2": "If you're considering real use with data covered by professional secrecy, verify Anthropic's (and, where relevant, NVIDIA's) current terms yourself before any use, and don't enter anything you wouldn't be comfortable leaving your machine."
+      },
+      "contact": {
+        "titre": "Contact",
+        "texte": "A question about this page or how Plaid'IA works? Reach out via the GitHub or LinkedIn profile listed in the homepage footer."
+      },
+      "derniereMaj": "Last updated: September 22, 2026."
+    }
 }
