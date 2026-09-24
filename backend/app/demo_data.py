@@ -21,6 +21,8 @@ conclusions_demo()/plan_demo()/simulateur_demo()/chronologie_demo()/
 resume_demo() ci-dessous, jamais les constantes directement.
 """
 
+import re
+
 import analyse as legacy_analyse
 
 CONCLUSIONS_DEMO_FR = {
@@ -425,7 +427,7 @@ def resume_demo() -> dict:
 
 REPONSE_CHAT_DEFAUT_FR = """Vous êtes en **mode démo** de Plaid'IA : aucune clé API n'est configurée sur ce serveur public, je ne peux donc pas traiter librement une question ici.
 
-Ce que vous pouvez explorer dès maintenant, avec des données réalistes préenregistrées sur le dossier de démonstration « Vasseur c/ Atlas Logistique » :
+Ce que vous pouvez explorer dès maintenant : créez un dossier (le nom n'a pas d'importance), puis lancez l'une de ces actions, avec des données réalistes préenregistrées :
 - **Analyser des conclusions adverses**
 - **Générer un plan de plaidoirie** chronométré
 - **Simuler les objections** probables du magistrat ou de la partie adverse
@@ -457,7 +459,7 @@ Dans le dossier de démonstration, le licenciement a été notifié le 28 févri
 
 REPONSE_CHAT_DEFAUT_EN = """You are in Plaid'IA's **demo mode**: no API key is configured on this public server, so I can't freely process a question here.
 
-What you can explore right now, with realistic prerecorded data on the demonstration case "Vasseur v. Atlas Logistique":
+What you can explore right now: create a case (the name doesn't matter), then run any of these actions, with realistic prerecorded data:
 - **Analyse opposing submissions**
 - **Generate a timed pleading plan**
 - **Simulate** the judge's or opposing party's likely **objections**
@@ -553,9 +555,30 @@ For a full timed plan, with the arguments and exhibits of the case file, use **"
 
 *Prerecorded demo-mode answer.*"""
 
+REPONSE_CHAT_ACCUEIL_FR = """Bonjour ! Vous êtes sur la démo de Plaid'IA, en **mode démo** : les réponses sont préenregistrées, elles ne sont pas générées en direct.
+
+Pour voir à quoi ressemblent les réponses, posez par exemple une question sur :
+- **la faute grave** ou **un licenciement**
+- **les délais** de contestation
+- **l'article 1240** et **la responsabilité civile**
+- **la structure d'une plaidoirie**
+
+Pour obtenir une vraie réponse à votre propre question, utilisez **« Utiliser ma propre clé Anthropic »** dans le bandeau en haut de la page — votre clé reste dans votre navigateur."""
+
+REPONSE_CHAT_ACCUEIL_EN = """Hello! You are on the Plaid'IA demo, in **demo mode**: answers are prerecorded, not generated live.
+
+To see what the answers look like, try asking about:
+- **serious misconduct** or **a dismissal**
+- **time limits** for a challenge
+- **article 1240** and **civil liability**
+- **how to structure a pleading**
+
+To get a real answer to your own question, use **"Use my own Anthropic key"** in the banner at the top of the page — your key stays in your browser."""
+
 _REPONSES_CHAT_PAR_LANGUE = {
     "fr": {
         "defaut": REPONSE_CHAT_DEFAUT_FR,
+        "accueil": REPONSE_CHAT_ACCUEIL_FR,
         "faute_grave": REPONSE_CHAT_FAUTE_GRAVE_FR,
         "delai": REPONSE_CHAT_DELAI_FR,
         "responsabilite": REPONSE_CHAT_RESPONSABILITE_FR,
@@ -563,6 +586,7 @@ _REPONSES_CHAT_PAR_LANGUE = {
     },
     "en": {
         "defaut": REPONSE_CHAT_DEFAUT_EN,
+        "accueil": REPONSE_CHAT_ACCUEIL_EN,
         "faute_grave": REPONSE_CHAT_FAUTE_GRAVE_EN,
         "delai": REPONSE_CHAT_DELAI_EN,
         "responsabilite": REPONSE_CHAT_RESPONSABILITE_EN,
@@ -600,4 +624,8 @@ def reponse_demo_pour_question(question: str) -> str:
         )
     ):
         return reponses["responsabilite"]
+    # Simple salutation (message court, aucun mot-clé juridique reconnu plus
+    # haut) : un accueil bref plutôt que le long message de repli.
+    if len(q.split()) <= 6 and re.search(r"\b(bonjour|bonsoir|salut|coucou|hello|hey|hi)\b", q):
+        return reponses["accueil"]
     return reponses["defaut"]
