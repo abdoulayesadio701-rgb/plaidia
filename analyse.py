@@ -255,7 +255,11 @@ Références de jurisprudence déjà validées par l'avocat pour ce domaine (tu 
 
 
 def _client():
-    api_key = _cle_api_requete.get() or os.environ.get("ANTHROPIC_API_KEY")
+    # strip() : une clé collée dans un tableau de bord d'hébergeur emporte
+    # souvent un espace ou un retour à la ligne invisible. Le SDK ne le
+    # signale pas comme une clé invalide (401) mais comme "Connection error.",
+    # un message qui ne mène nulle part (constaté en production, 2026-09-25).
+    api_key = (_cle_api_requete.get() or os.environ.get("ANTHROPIC_API_KEY") or "").strip()
     if not api_key and KEY_FILE.exists():
         api_key = KEY_FILE.read_text(encoding="utf-8").strip()
     if not api_key:
@@ -268,7 +272,7 @@ def _client():
 
 
 def _cle_api_nvidia() -> str:
-    cle = os.environ.get("NVIDIA_API_KEY")
+    cle = (os.environ.get("NVIDIA_API_KEY") or "").strip()
     if not cle and NVIDIA_KEY_FILE.exists():
         cle = NVIDIA_KEY_FILE.read_text(encoding="utf-8").strip()
     if not cle:
